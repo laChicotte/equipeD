@@ -1,6 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service.js';
-import { conflict, forbidden, isConstraintViolation, notFound, unprocessable } from '../../common/errors.js';
+import {
+  conflict,
+  forbidden,
+  isConstraintViolation,
+  notFound,
+  unprocessable,
+} from '../../common/errors.js';
 import type { AuthUser } from '../../common/auth/auth-user.js';
 import type { Prisma } from '../../generated/prisma/client.js';
 import type { MentorshipRequestStatus } from '../../generated/prisma/enums.js';
@@ -13,7 +19,13 @@ const requestInclude = {
     select: {
       ...personSelect,
       menteeProfile: {
-        select: { situation: true, goalsSummary: true, preferredModality: true, city: true, desiredSkills: true },
+        select: {
+          situation: true,
+          goalsSummary: true,
+          preferredModality: true,
+          city: true,
+          desiredSkills: true,
+        },
       },
     },
   },
@@ -37,17 +49,28 @@ export class MentorshipRequestsService {
       select: { id: true },
     });
     if (!menteeProfile) {
-      throw unprocessable('PROFILE_REQUIRED', 'Complétez votre profil avant d’envoyer une demande.');
+      throw unprocessable(
+        'PROFILE_REQUIRED',
+        'Complétez votre profil avant d’envoyer une demande.',
+      );
     }
 
     const mentor = await this.prisma.user.findFirst({
-      where: { id: dto.mentorId, role: 'MENTOR', status: 'ACTIVE', mentorProfile: { isPublished: true } },
+      where: {
+        id: dto.mentorId,
+        role: 'MENTOR',
+        status: 'ACTIVE',
+        mentorProfile: { isPublished: true },
+      },
       select: { id: true, mentorProfile: { select: { domains: { select: { domainId: true } } } } },
     });
     if (!mentor) throw notFound('MENTOR_NOT_FOUND', 'Ce mentor est introuvable.');
 
     if (dto.domainId && !mentor.mentorProfile!.domains.some((d) => d.domainId === dto.domainId)) {
-      throw unprocessable('INVALID_DOMAIN', 'Ce domaine ne fait pas partie des domaines du mentor.');
+      throw unprocessable(
+        'INVALID_DOMAIN',
+        'Ce domaine ne fait pas partie des domaines du mentor.',
+      );
     }
 
     const active = await this.prisma.mentorship.findFirst({
@@ -70,7 +93,10 @@ export class MentorshipRequestsService {
       });
     } catch (error) {
       if (isConstraintViolation(error, 'mentorship_requests_one_pending')) {
-        throw conflict('REQUEST_ALREADY_PENDING', 'Une demande est déjà en attente auprès de ce mentor.');
+        throw conflict(
+          'REQUEST_ALREADY_PENDING',
+          'Une demande est déjà en attente auprès de ce mentor.',
+        );
       }
       throw error;
     }
@@ -95,7 +121,10 @@ export class MentorshipRequestsService {
   }
 
   async getOne(user: AuthUser, id: string) {
-    const request = await this.prisma.mentorshipRequest.findUnique({ where: { id }, include: requestInclude });
+    const request = await this.prisma.mentorshipRequest.findUnique({
+      where: { id },
+      include: requestInclude,
+    });
     if (!request) throw notFound('REQUEST_NOT_FOUND', 'Demande introuvable.');
     if (request.menteeId !== user.id && request.mentorId !== user.id) {
       throw forbidden('NOT_PARTICIPANT', 'Cette demande ne vous concerne pas.');
@@ -117,7 +146,10 @@ export class MentorshipRequestsService {
 
     const [activeCount, profile] = await Promise.all([
       this.prisma.mentorship.count({ where: { mentorId: user.id, status: 'ACTIVE' } }),
-      this.prisma.mentorProfile.findUnique({ where: { userId: user.id }, select: { maxMentees: true } }),
+      this.prisma.mentorProfile.findUnique({
+        where: { userId: user.id },
+        select: { maxMentees: true },
+      }),
     ]);
     if (profile && activeCount >= profile.maxMentees) {
       throw conflict(
@@ -160,7 +192,8 @@ export class MentorshipRequestsService {
       where: { id, mentorId: user.id, status: 'PENDING' },
       data: { status: 'DECLINED', respondedAt: new Date(), decisionNote: dto.note ?? null },
     });
-    if (updated.count === 0) throw conflict('INVALID_TRANSITION', 'Cette demande a déjà été traitée.');
+    if (updated.count === 0)
+      throw conflict('INVALID_TRANSITION', 'Cette demande a déjà été traitée.');
     return this.getOne(user, id);
   }
 
@@ -180,7 +213,8 @@ export class MentorshipRequestsService {
       where: { id, menteeId: user.id, status: 'PENDING' },
       data: { status: 'CANCELLED', respondedAt: new Date() },
     });
-    if (updated.count === 0) throw conflict('INVALID_TRANSITION', 'Cette demande a déjà été traitée.');
+    if (updated.count === 0)
+      throw conflict('INVALID_TRANSITION', 'Cette demande a déjà été traitée.');
     return this.getOne(user, id);
   }
 
@@ -191,7 +225,10 @@ export class MentorshipRequestsService {
     });
     if (!request) throw notFound('REQUEST_NOT_FOUND', 'Demande introuvable.');
     if (request.mentorId !== user.id) {
-      throw forbidden('NOT_REQUEST_MENTOR', 'Seul le mentor sollicité peut répondre à cette demande.');
+      throw forbidden(
+        'NOT_REQUEST_MENTOR',
+        'Seul le mentor sollicité peut répondre à cette demande.',
+      );
     }
     return request;
   }

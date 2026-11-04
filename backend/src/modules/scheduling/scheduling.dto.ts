@@ -1,5 +1,17 @@
-import { Transform } from 'class-transformer';
-import { IsEnum, IsIn, IsISO8601, IsOptional, IsString, IsUrl, Length, MaxLength } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import {
+  IsEnum,
+  IsIn,
+  IsInt,
+  IsISO8601,
+  IsOptional,
+  IsString,
+  IsUrl,
+  Length,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 import { Modality } from '../../generated/prisma/enums.js';
 
 const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
@@ -42,7 +54,10 @@ export class ConfirmSessionDto {
   /** Lien de réunion externe (option temporaire, pas de visio native). */
   @Transform(emptyToUndefined)
   @IsOptional()
-  @IsUrl({ protocols: ['https'], require_protocol: true }, { message: 'Le lien doit être une URL https.' })
+  @IsUrl(
+    { protocols: ['https'], require_protocol: true },
+    { message: 'Le lien doit être une URL https.' },
+  )
   @MaxLength(500)
   meetingUrl?: string;
 
@@ -51,6 +66,20 @@ export class ConfirmSessionDto {
   @IsString()
   @MaxLength(200)
   location?: string;
+}
+
+export class SessionFeedbackDto {
+  @Type(() => Number)
+  @IsInt({ message: 'La note doit être un entier.' })
+  @Min(1, { message: 'La note minimale est 1.' })
+  @Max(5, { message: 'La note maximale est 5.' })
+  rating!: number;
+
+  @Transform(trim)
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000, { message: 'Le commentaire contient au plus 1000 caractères.' })
+  comment?: string;
 }
 
 export class ListSessionsQuery {

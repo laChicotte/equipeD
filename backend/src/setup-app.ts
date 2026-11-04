@@ -30,7 +30,9 @@ export function setupApp(app: INestApplication): void {
       app,
       new DocumentBuilder()
         .setTitle('Talents Connectés — API')
-        .setDescription('API REST de la plateforme de mentorat (authentification par cookie de session HttpOnly).')
+        .setDescription(
+          'API REST de la plateforme de mentorat (authentification par cookie de session HttpOnly).',
+        )
         .setVersion('1.0')
         .addCookieAuth(config.get('SESSION_COOKIE_NAME'))
         .build(),

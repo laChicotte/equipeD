@@ -11,7 +11,9 @@ export const ROLES_KEY = 'roles';
 export const Roles = (...roles: Role[]) => SetMetadata(ROLES_KEY, roles);
 
 /** Injecte l'utilisateur authentifié courant. */
-export const CurrentUser = createParamDecorator((_data: unknown, ctx: ExecutionContext): AuthUser => {
-  const req = ctx.switchToHttp().getRequest<AuthenticatedRequest>();
-  return req.user as AuthUser;
-});
+export const CurrentUser = createParamDecorator(
+  (_data: unknown, ctx: ExecutionContext): AuthUser => {
+    const req = ctx.switchToHttp().getRequest<AuthenticatedRequest>();
+    return req.user as AuthUser;
+  },
+);

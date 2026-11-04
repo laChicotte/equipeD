@@ -19,7 +19,10 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto, userAgent?: string) {
-    const existing = await this.prisma.user.findUnique({ where: { email: dto.email }, select: { id: true } });
+    const existing = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+      select: { id: true },
+    });
     if (existing) throw conflict('EMAIL_TAKEN', 'Un compte existe déjà avec cette adresse email.');
 
     const passwordHash = await hashPassword(dto.password);

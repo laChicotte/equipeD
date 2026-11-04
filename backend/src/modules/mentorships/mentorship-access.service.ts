@@ -37,7 +37,10 @@ export class MentorshipAccessService {
   async assertActiveParticipant(user: AuthUser, mentorshipId: string): Promise<MentorshipAccess> {
     const access = await this.assertParticipant(user, mentorshipId);
     if (access.status !== 'ACTIVE') {
-      throw conflict('MENTORSHIP_NOT_ACTIVE', 'Ce mentorat n’est plus actif : il est consultable en lecture seule.');
+      throw conflict(
+        'MENTORSHIP_NOT_ACTIVE',
+        'Ce mentorat n’est plus actif : il est consultable en lecture seule.',
+      );
     }
     return access;
   }

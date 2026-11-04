@@ -12,7 +12,11 @@
 import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../src/generated/prisma/client.js';
-import type { MenteeSituation, Modality, VerificationStatus } from '../src/generated/prisma/enums.js';
+import type {
+  MenteeSituation,
+  Modality,
+  VerificationStatus,
+} from '../src/generated/prisma/enums.js';
 import { hashPassword } from '../src/modules/auth/password.js';
 import { normalizeSearch } from '../src/common/text.js';
 
@@ -31,42 +35,80 @@ const DOMAINS = [
     name: 'Entrepreneuriat et gestion d’entreprise',
     icon: 'rocket',
     description: 'Créer, structurer et développer une entreprise ou un projet entrepreneurial.',
-    topics: ['Création d’entreprise', 'Structuration de projet', 'Gestion administrative et financière', 'Recherche de financements', 'Développement commercial'],
+    topics: [
+      'Création d’entreprise',
+      'Structuration de projet',
+      'Gestion administrative et financière',
+      'Recherche de financements',
+      'Développement commercial',
+    ],
   },
   {
     slug: 'numerique-technologies',
     name: 'Numérique et technologies',
     icon: 'code',
-    description: 'Développement informatique, IA, cybersécurité, marketing digital et design numérique.',
-    topics: ['Développement web', 'Développement informatique', 'Intelligence artificielle', 'Cybersécurité', 'Marketing digital', 'Design et création numérique'],
+    description:
+      'Développement informatique, IA, cybersécurité, marketing digital et design numérique.',
+    topics: [
+      'Développement web',
+      'Développement informatique',
+      'Intelligence artificielle',
+      'Cybersécurité',
+      'Marketing digital',
+      'Design et création numérique',
+    ],
   },
   {
     slug: 'orientation-insertion',
     name: 'Orientation et insertion professionnelle',
     icon: 'compass',
     description: 'Construire son parcours, réussir ses candidatures et développer son réseau.',
-    topics: ['Parcours professionnel', 'Entretiens d’embauche', 'CV et lettre de motivation', 'Recherche d’emploi', 'Réseau professionnel', 'Vie en entreprise'],
+    topics: [
+      'Parcours professionnel',
+      'Entretiens d’embauche',
+      'CV et lettre de motivation',
+      'Recherche d’emploi',
+      'Réseau professionnel',
+      'Vie en entreprise',
+    ],
   },
   {
     slug: 'culture-industries-creatives',
     name: 'Culture, littérature et industries créatives',
     icon: 'book-open',
     description: 'Écriture, édition, métiers du livre, création de contenu et audiovisuel.',
-    topics: ['Écriture et édition', 'Métiers du livre', 'Création de contenu', 'Production audiovisuelle', 'Entrepreneuriat culturel'],
+    topics: [
+      'Écriture et édition',
+      'Métiers du livre',
+      'Création de contenu',
+      'Production audiovisuelle',
+      'Entrepreneuriat culturel',
+    ],
   },
   {
     slug: 'gestion-finance-administration',
     name: 'Gestion, finance et administration',
     icon: 'landmark',
     description: 'Comptabilité, gestion de projets, management, RH et analyse financière.',
-    topics: ['Comptabilité et gestion', 'Gestion de projets', 'Management et RH', 'Finance et analyse économique'],
+    topics: [
+      'Comptabilité et gestion',
+      'Gestion de projets',
+      'Management et RH',
+      'Finance et analyse économique',
+    ],
   },
   {
     slug: 'developpement-personnel-leadership',
     name: 'Développement personnel et leadership',
     icon: 'sparkles',
     description: 'Prise de parole, confiance en soi, leadership, organisation et relations.',
-    topics: ['Prise de parole en public', 'Confiance en soi', 'Leadership et gestion d’équipe', 'Gestion du temps', 'Capacités relationnelles'],
+    topics: [
+      'Prise de parole en public',
+      'Confiance en soi',
+      'Leadership et gestion d’équipe',
+      'Gestion du temps',
+      'Capacités relationnelles',
+    ],
   },
   {
     slug: 'campus-france',
@@ -74,7 +116,14 @@ const DOMAINS = [
     icon: 'graduation-cap',
     description:
       'Conseil et orientation pour préparer un projet d’études en France. Cet accompagnement ne garantit ni l’admission ni l’obtention d’un visa.',
-    topics: ['Choix des formations', 'Projet d’études', 'Dossier de candidature', 'Entretien Campus France', 'Démarches de mobilité', 'Retours d’anciens étudiants'],
+    topics: [
+      'Choix des formations',
+      'Projet d’études',
+      'Dossier de candidature',
+      'Entretien Campus France',
+      'Démarches de mobilité',
+      'Retours d’anciens étudiants',
+    ],
   },
 ] as const;
 
@@ -110,7 +159,14 @@ const MENTORS: DemoMentor[] = [
     currentPosition: 'Lead développeuse',
     organization: 'Studio numérique (fictif)',
     yearsExperience: 10,
-    expertise: ['Développement web', 'React', 'TypeScript', 'Node.js', 'Portfolio', 'Entretien technique'],
+    expertise: [
+      'Développement web',
+      'React',
+      'TypeScript',
+      'Node.js',
+      'Portfolio',
+      'Entretien technique',
+    ],
     languages: ['Français', 'Anglais', 'Soussou'],
     modalities: ['REMOTE', 'HYBRID'],
     city: 'Conakry',
@@ -127,7 +183,13 @@ const MENTORS: DemoMentor[] = [
     currentPosition: 'Directeur général',
     organization: 'Cabinet de conseil (fictif)',
     yearsExperience: 15,
-    expertise: ['Business plan', 'Levée de fonds', 'Modèle économique', 'Prévisionnel financier', 'Développement commercial'],
+    expertise: [
+      'Business plan',
+      'Levée de fonds',
+      'Modèle économique',
+      'Prévisionnel financier',
+      'Développement commercial',
+    ],
     languages: ['Français', 'Pular'],
     modalities: ['IN_PERSON', 'REMOTE'],
     city: 'Conakry',
@@ -161,7 +223,13 @@ const MENTORS: DemoMentor[] = [
     currentPosition: 'Responsable sécurité',
     organization: 'Opérateur télécom (fictif)',
     yearsExperience: 12,
-    expertise: ['Cybersécurité', 'Sécurité des applications', 'Intelligence artificielle', 'Données', 'Certifications'],
+    expertise: [
+      'Cybersécurité',
+      'Sécurité des applications',
+      'Intelligence artificielle',
+      'Données',
+      'Certifications',
+    ],
     languages: ['Français', 'Anglais', 'Malinké'],
     modalities: ['REMOTE', 'HYBRID'],
     city: 'Kankan',
@@ -195,7 +263,13 @@ const MENTORS: DemoMentor[] = [
     currentPosition: 'Formateur indépendant',
     organization: 'Indépendant',
     yearsExperience: 18,
-    expertise: ['Prise de parole', 'Leadership', 'Gestion du temps', 'Gestion de projets', 'Management'],
+    expertise: [
+      'Prise de parole',
+      'Leadership',
+      'Gestion du temps',
+      'Gestion de projets',
+      'Management',
+    ],
     languages: ['Français', 'Anglais'],
     modalities: ['REMOTE', 'IN_PERSON'],
     city: 'Conakry',
@@ -254,7 +328,13 @@ async function seedDomains() {
     const row = await prisma.expertiseDomain.upsert({
       where: { slug: d.slug },
       create: { ...d, topics: [...d.topics], sortOrder: index },
-      update: { name: d.name, icon: d.icon, description: d.description, topics: [...d.topics], sortOrder: index },
+      update: {
+        name: d.name,
+        icon: d.icon,
+        description: d.description,
+        topics: [...d.topics],
+        sortOrder: index,
+      },
       select: { id: true },
     });
     ids.set(d.slug, row.id);
@@ -262,7 +342,13 @@ async function seedDomains() {
   return ids;
 }
 
-async function upsertUser(key: string, firstName: string, lastName: string, role: 'MENTOR' | 'MENTEE' | 'ADMIN', passwordHash: string) {
+async function upsertUser(
+  key: string,
+  firstName: string,
+  lastName: string,
+  role: 'MENTOR' | 'MENTEE' | 'ADMIN',
+  passwordHash: string,
+) {
   return prisma.user.upsert({
     where: { email: email(key) },
     create: { email: email(key), passwordHash, firstName, lastName, role, onboardedAt: new Date() },
@@ -273,11 +359,17 @@ async function upsertUser(key: string, firstName: string, lastName: string, role
 
 /** Créneaux d'une heure sur les 14 prochains jours ouvrés (heure de Conakry = UTC). */
 function plannedSlots(seedIndex: number): { startsAt: Date; endsAt: Date }[] {
-  const hours = [[10, 0], [15, 0], [17, 30]] as const;
+  const hours = [
+    [10, 0],
+    [15, 0],
+    [17, 30],
+  ] as const;
   const slots: { startsAt: Date; endsAt: Date }[] = [];
   const today = new Date();
   for (let day = 1; day <= 14; day++) {
-    const date = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() + day));
+    const date = new Date(
+      Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() + day),
+    );
     const weekday = date.getUTCDay();
     if (weekday === 0) continue; // pas le dimanche
     if ((day + seedIndex) % 2 !== 0 && weekday !== 6) continue; // un jour sur deux, varié selon le mentor
@@ -295,11 +387,18 @@ async function seedSlots(mentorId: string, seedIndex: number) {
   let created = 0;
   for (const slot of plannedSlots(seedIndex)) {
     const exists = await prisma.availabilitySlot.findFirst({
-      where: { mentorId, isActive: true, startsAt: { lt: slot.endsAt }, endsAt: { gt: slot.startsAt } },
+      where: {
+        mentorId,
+        isActive: true,
+        startsAt: { lt: slot.endsAt },
+        endsAt: { gt: slot.startsAt },
+      },
       select: { id: true },
     });
     if (exists) continue;
-    await prisma.availabilitySlot.create({ data: { mentorId, ...slot, timezone: 'Africa/Conakry' } });
+    await prisma.availabilitySlot.create({
+      data: { mentorId, ...slot, timezone: 'Africa/Conakry' },
+    });
     created++;
   }
   return created;
@@ -337,7 +436,16 @@ async function main() {
     const domains = m.domains.map((slug) => domainIds.get(slug)!);
     const domainMeta = DOMAINS.filter((d) => m.domains.includes(d.slug));
     const searchText = normalizeSearch(
-      [m.firstName, m.lastName, m.headline, m.currentPosition, m.organization, m.city, ...m.expertise, ...domainMeta.flatMap((d) => [d.name, ...d.topics])].join(' '),
+      [
+        m.firstName,
+        m.lastName,
+        m.headline,
+        m.currentPosition,
+        m.organization,
+        m.city,
+        ...m.expertise,
+        ...domainMeta.flatMap((d) => [d.name, ...d.topics]),
+      ].join(' '),
     );
     const data = {
       headline: m.headline,
@@ -361,7 +469,9 @@ async function main() {
       select: { id: true },
     });
     await prisma.mentorDomain.deleteMany({ where: { mentorProfileId: profile.id } });
-    await prisma.mentorDomain.createMany({ data: domains.map((domainId) => ({ mentorProfileId: profile.id, domainId })) });
+    await prisma.mentorDomain.createMany({
+      data: domains.map((domainId) => ({ mentorProfileId: profile.id, domainId })),
+    });
     slotCount += await seedSlots(user.id, index);
   }
 
@@ -384,7 +494,10 @@ async function main() {
     });
     await prisma.menteeInterest.deleteMany({ where: { menteeProfileId: profile.id } });
     await prisma.menteeInterest.createMany({
-      data: m.interests.map((slug) => ({ menteeProfileId: profile.id, domainId: domainIds.get(slug)! })),
+      data: m.interests.map((slug) => ({
+        menteeProfileId: profile.id,
+        domainId: domainIds.get(slug)!,
+      })),
     });
   }
 
@@ -428,7 +541,12 @@ async function main() {
         progress: 33,
         milestones: {
           create: [
-            { title: 'Étude de marché synthétique', isDone: true, doneAt: new Date(), sortOrder: 0 },
+            {
+              title: 'Étude de marché synthétique',
+              isDone: true,
+              doneAt: new Date(),
+              sortOrder: 0,
+            },
             { title: 'Modèle économique et prix', isDone: false, sortOrder: 1 },
             { title: 'Prévisionnel financier sur 3 ans', isDone: false, sortOrder: 2 },
           ],
@@ -436,13 +554,60 @@ async function main() {
       },
     });
   }
+  // Une séance passée et terminée (sans créneau), évaluée par le mentoré : historique réaliste.
+  const pastStart = new Date();
+  pastStart.setUTCDate(pastStart.getUTCDate() - 3);
+  pastStart.setUTCHours(15, 0, 0, 0);
+  const pastSessionId = 'seed_session_mohamed_thierno_1';
+  await prisma.mentoringSession.upsert({
+    where: { id: pastSessionId },
+    create: {
+      id: pastSessionId,
+      mentorshipId: mentorship.id,
+      mentorId: thiernoId,
+      menteeId: mohamedId,
+      startsAt: pastStart,
+      endsAt: new Date(pastStart.getTime() + 60 * 60_000),
+      status: 'COMPLETED',
+      topic: 'Clarifier la cible et la proposition de valeur',
+      modality: 'IN_PERSON',
+      location: 'Conakry (lieu fictif)',
+      confirmedAt: new Date(pastStart.getTime() - 86_400_000),
+    },
+    update: {},
+  });
+  await prisma.sessionFeedback.upsert({
+    where: { sessionId_authorId: { sessionId: pastSessionId, authorId: mohamedId } },
+    create: {
+      sessionId: pastSessionId,
+      authorId: mohamedId,
+      rating: 5,
+      comment: 'Séance très concrète : je sais maintenant comment présenter mon projet.',
+    },
+    update: {},
+  });
+
   const messageCount = await prisma.message.count({ where: { mentorshipId: mentorship.id } });
   if (messageCount === 0) {
     const base = Date.now() - 2 * 86_400_000;
     await prisma.message.createMany({
       data: [
-        { mentorshipId: mentorship.id, senderId: thiernoId, content: 'Bienvenue Mohamed ! Pour commencer, pouvez-vous m’envoyer une description de vos clients cibles ?', createdAt: new Date(base), readAt: new Date(base + 3_600_000) },
-        { mentorshipId: mentorship.id, senderId: mohamedId, content: 'Merci ! Je cible les restaurants et les familles des quartiers de Kaloum et Ratoma. Je prépare une synthèse.', createdAt: new Date(base + 7_200_000), readAt: new Date(base + 8_000_000) },
+        {
+          mentorshipId: mentorship.id,
+          senderId: thiernoId,
+          content:
+            'Bienvenue Mohamed ! Pour commencer, pouvez-vous m’envoyer une description de vos clients cibles ?',
+          createdAt: new Date(base),
+          readAt: new Date(base + 3_600_000),
+        },
+        {
+          mentorshipId: mentorship.id,
+          senderId: mohamedId,
+          content:
+            'Merci ! Je cible les restaurants et les familles des quartiers de Kaloum et Ratoma. Je prépare une synthèse.',
+          createdAt: new Date(base + 7_200_000),
+          readAt: new Date(base + 8_000_000),
+        },
       ],
     });
   }
@@ -455,7 +620,9 @@ async function main() {
   };
   console.log('Seed terminée :', counts);
   console.log(`Comptes de démonstration (dev uniquement) — mot de passe commun : ${DEMO_PASSWORD}`);
-  console.log(`  Mentorée : ${email('aminata')}   Mentore : ${email('fatoumata')}   Admin : ${email('admin')}`);
+  console.log(
+    `  Mentorée : ${email('aminata')}   Mentore : ${email('fatoumata')}   Admin : ${email('admin')}`,
+  );
 }
 
 main()

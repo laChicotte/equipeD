@@ -13,7 +13,7 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
-    "lint": "oxlint src/ test/",
+    "lint": "oxlint src/ test/ prisma/",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",
@@ -67,7 +67,6 @@
     "supertest": "^7.0.0",
     "tsx": "^4.23.15",
     "typescript": "^6.0.2",
-    "vite-tsconfig-paths": "^5.1.4",
     "vitest": "^4.1.2"
   }
 }

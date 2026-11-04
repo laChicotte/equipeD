@@ -14,45 +14,54 @@ export class DashboardService {
     const asMentor = user.role === 'MENTOR';
     const participant = asMentor ? { mentorId: user.id } : { menteeId: user.id };
 
-    const [pendingRequests, activeMentorships, upcomingSessions, awaitingConfirmation, goals, unreadMessages] =
-      await Promise.all([
-        this.prisma.mentorshipRequest.count({ where: { ...participant, status: 'PENDING' } }),
-        this.prisma.mentorship.count({ where: { ...participant, status: 'ACTIVE' } }),
-        this.prisma.mentoringSession.findMany({
-          where: { ...participant, status: { in: ['REQUESTED', 'CONFIRMED'] }, endsAt: { gt: now } },
-          orderBy: { startsAt: 'asc' },
-          take: 3,
-          select: {
-            id: true,
-            startsAt: true,
-            endsAt: true,
-            status: true,
-            topic: true,
-            mentorshipId: true,
-            meetingUrl: true,
-            mentor: { select: { id: true, firstName: true, lastName: true } },
-            mentee: { select: { id: true, firstName: true, lastName: true } },
-          },
-        }),
-        this.prisma.mentoringSession.count({
-          where: { ...participant, status: 'REQUESTED', endsAt: { gt: now } },
-        }),
-        this.prisma.goal.findMany({
-          where: { mentorship: { ...participant, status: 'ACTIVE' } },
-          select: { progress: true, status: true },
-        }),
-        this.prisma.message.count({
-          where: {
-            readAt: null,
-            senderId: { not: user.id },
-            mentorship: { OR: [{ mentorId: user.id }, { menteeId: user.id }] },
-          },
-        }),
-      ]);
+    const [
+      pendingRequests,
+      activeMentorships,
+      upcomingSessions,
+      awaitingConfirmation,
+      goals,
+      unreadMessages,
+    ] = await Promise.all([
+      this.prisma.mentorshipRequest.count({ where: { ...participant, status: 'PENDING' } }),
+      this.prisma.mentorship.count({ where: { ...participant, status: 'ACTIVE' } }),
+      this.prisma.mentoringSession.findMany({
+        where: { ...participant, status: { in: ['REQUESTED', 'CONFIRMED'] }, endsAt: { gt: now } },
+        orderBy: { startsAt: 'asc' },
+        take: 3,
+        select: {
+          id: true,
+          startsAt: true,
+          endsAt: true,
+          status: true,
+          topic: true,
+          mentorshipId: true,
+          meetingUrl: true,
+          mentor: { select: { id: true, firstName: true, lastName: true } },
+          mentee: { select: { id: true, firstName: true, lastName: true } },
+        },
+      }),
+      this.prisma.mentoringSession.count({
+        where: { ...participant, status: 'REQUESTED', endsAt: { gt: now } },
+      }),
+      this.prisma.goal.findMany({
+        where: { mentorship: { ...participant, status: 'ACTIVE' } },
+        select: { progress: true, status: true },
+      }),
+      this.prisma.message.count({
+        where: {
+          readAt: null,
+          senderId: { not: user.id },
+          mentorship: { OR: [{ mentorId: user.id }, { menteeId: user.id }] },
+        },
+      }),
+    ]);
 
     const mentorExtras = asMentor
       ? await Promise.all([
-          this.prisma.mentorProfile.findUnique({ where: { userId: user.id }, select: { maxMentees: true } }),
+          this.prisma.mentorProfile.findUnique({
+            where: { userId: user.id },
+            select: { maxMentees: true },
+          }),
           this.prisma.availabilitySlot.count({
             where: {
               mentorId: user.id,

@@ -1,5 +1,12 @@
 import { Transform } from 'class-transformer';
-import { IsBooleanString, IsEnum, IsISO8601, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsBooleanString,
+  IsEnum,
+  IsISO8601,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 import { Modality } from '../../generated/prisma/enums.js';
 import { PaginationQuery } from '../../common/pagination.js';
 

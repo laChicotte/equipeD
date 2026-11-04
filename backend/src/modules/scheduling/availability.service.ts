@@ -1,6 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service.js';
-import { conflict, forbidden, isConstraintViolation, notFound, unprocessable } from '../../common/errors.js';
+import {
+  conflict,
+  forbidden,
+  isConstraintViolation,
+  notFound,
+  unprocessable,
+} from '../../common/errors.js';
 import type { AuthUser } from '../../common/auth/auth-user.js';
 import type { CreateSlotDto } from './scheduling.dto.js';
 
@@ -41,7 +47,8 @@ export class AvailabilityService {
     const now = new Date();
     const durationMin = (endsAt.getTime() - startsAt.getTime()) / 60_000;
 
-    if (startsAt <= now) throw unprocessable('SLOT_IN_PAST', 'Le créneau doit commencer dans le futur.');
+    if (startsAt <= now)
+      throw unprocessable('SLOT_IN_PAST', 'Le créneau doit commencer dans le futur.');
     if (durationMin < MIN_DURATION_MIN || durationMin > MAX_DURATION_MIN) {
       throw unprocessable(
         'SLOT_INVALID_DURATION',
@@ -49,7 +56,10 @@ export class AvailabilityService {
       );
     }
     if (startsAt.getTime() - now.getTime() > MAX_HORIZON_DAYS * 86_400_000) {
-      throw unprocessable('SLOT_TOO_FAR', `Les créneaux sont limités aux ${MAX_HORIZON_DAYS} prochains jours.`);
+      throw unprocessable(
+        'SLOT_TOO_FAR',
+        `Les créneaux sont limités aux ${MAX_HORIZON_DAYS} prochains jours.`,
+      );
     }
 
     try {
@@ -77,9 +87,13 @@ export class AvailabilityService {
       },
     });
     if (!slot || !slot.isActive) throw notFound('SLOT_NOT_FOUND', 'Créneau introuvable.');
-    if (slot.mentorId !== user.id) throw forbidden('NOT_SLOT_OWNER', 'Ce créneau ne vous appartient pas.');
+    if (slot.mentorId !== user.id)
+      throw forbidden('NOT_SLOT_OWNER', 'Ce créneau ne vous appartient pas.');
     if (slot._count.sessions > 0) {
-      throw conflict('SLOT_BOOKED', 'Ce créneau est réservé : annulez d’abord la séance correspondante.');
+      throw conflict(
+        'SLOT_BOOKED',
+        'Ce créneau est réservé : annulez d’abord la séance correspondante.',
+      );
     }
     await this.prisma.availabilitySlot.update({ where: { id }, data: { isActive: false } });
     return { ok: true };

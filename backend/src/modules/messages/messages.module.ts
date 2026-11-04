@@ -1,4 +1,14 @@
-import { Body, Controller, Get, HttpCode, Injectable, Module, Param, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Injectable,
+  Module,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { Transform, Type } from 'class-transformer';
@@ -80,14 +90,22 @@ export class MessagesController {
   constructor(private readonly messages: MessagesService) {}
 
   @Get()
-  list(@CurrentUser() user: AuthUser, @Param('mentorshipId') id: string, @Query() q: ListMessagesQuery) {
+  list(
+    @CurrentUser() user: AuthUser,
+    @Param('mentorshipId') id: string,
+    @Query() q: ListMessagesQuery,
+  ) {
     return this.messages.list(user, id, q);
   }
 
   /** Envoi d'un message (limité à 30 par minute). */
   @Throttle({ default: { limit: 30, ttl: 60_000 } })
   @Post()
-  send(@CurrentUser() user: AuthUser, @Param('mentorshipId') id: string, @Body() dto: SendMessageDto) {
+  send(
+    @CurrentUser() user: AuthUser,
+    @Param('mentorshipId') id: string,
+    @Body() dto: SendMessageDto,
+  ) {
     return this.messages.send(user, id, dto);
   }
 

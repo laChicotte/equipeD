@@ -25,7 +25,11 @@ import { AdminModule } from './modules/admin/admin.module.js';
     AppConfigModule,
     PrismaModule,
     // Limite globale par IP ; des limites plus strictes s'appliquent à l'auth et aux messages.
-    ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 300 }]),
+    // Désactivée en NODE_ENV=test pour que la suite e2e (nombreuses connexions) reste déterministe.
+    ThrottlerModule.forRoot({
+      throttlers: [{ name: 'default', ttl: 60_000, limit: 300 }],
+      skipIf: () => process.env.NODE_ENV === 'test',
+    }),
     HealthModule,
     AuthModule,
     DomainsModule,

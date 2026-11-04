@@ -35,7 +35,14 @@ export class SessionAuthGuard implements CanActivate {
         where: { tokenHash: hashSessionToken(token, this.config.get('SESSION_SECRET')) },
         include: {
           user: {
-            select: { id: true, email: true, role: true, firstName: true, lastName: true, status: true },
+            select: {
+              id: true,
+              email: true,
+              role: true,
+              firstName: true,
+              lastName: true,
+              status: true,
+            },
           },
         },
       });
@@ -59,7 +66,10 @@ export class SessionAuthGuard implements CanActivate {
 
     if (isPublic) return true;
     if (!req.user) {
-      throw new UnauthorizedException({ code: 'UNAUTHENTICATED', message: 'Authentification requise.' });
+      throw new UnauthorizedException({
+        code: 'UNAUTHENTICATED',
+        message: 'Authentification requise.',
+      });
     }
     return true;
   }

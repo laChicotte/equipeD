@@ -44,8 +44,9 @@ Tout ce qui suit a été **réellement exécuté** contre PostgreSQL, à l'aide 
 | Tableau de bord par rôle ; 401 sans session ; Swagger sur `/api/docs` | ✅ |
 | Admin minimal (vue d'ensemble, utilisateurs, suspension, vérification et publication des mentors) | ✅ (API seulement) |
 
-Tests unitaires : 5/5 (score de correspondance). Typecheck et lint : OK.
-**Pas encore fait côté backend :** tests e2e automatisés Vitest (le test de fumée était un script curl), évaluation de séance (SessionFeedback), ressources partagées, notifications.
+Tests : **8 unitaires et 70 e2e** (Vitest et supertest sur un vrai PostgreSQL de test), typecheck, lint et build OK. CI GitHub Actions dans `.github/workflows/ci.yml`.
+Évaluation des séances (note 1 à 5 et commentaire) disponible, avec la note moyenne affichée sur les fiches mentor.
+**Pas encore fait côté backend :** ressources partagées, notifications, emails.
 → **Ne crée pas de faux écrans pour ces fonctions.** Si l'une d'elles devient nécessaire, demande d'abord qu'on ajoute l'endpoint.
 
 ---
@@ -177,6 +178,7 @@ interface MentorCard {
   domains: { id: string; slug: string; name: string }[];
   activeMentees: number; maxMentees: number; acceptingMentees: boolean;
   nextAvailableAt: string | null;         // prochain créneau libre (ISO)
+  rating: { average: number | null; count: number }; // notes laissées par les mentorés (afficher « Nouveau » si count = 0)
 }
 ```
 
@@ -232,10 +234,12 @@ type Person = { id; firstName; lastName; mentorProfile: { headline } | null; men
 | `POST /sessions/:id/confirm` | 🔒 M | `{ meetingUrl? (https), location? }` → `CONFIRMED` |
 | `POST /sessions/:id/cancel` | 🔒 participant | → `CANCELLED` (le créneau redevient libre) |
 | `POST /sessions/:id/complete` | 🔒 M | Uniquement une séance CONFIRMED déjà commencée → `COMPLETED` |
+| `POST /sessions/:id/feedback` | 🔒 participant | `{ rating: 1–5, comment? (≤1000) }` → `Session` (201). Possible si COMPLETED, ou CONFIRMED et terminée ; **une seule fois par participant** |
 
-`Session = { id, mentorshipId, mentorId, menteeId, slotId, startsAt, endsAt, status, topic, modality, meetingUrl, location, confirmedAt, cancelledAt, cancelledBy, createdAt, updatedAt, mentor: {id,firstName,lastName}, mentee: {…} }`
+`Session = { id, mentorshipId, mentorId, menteeId, slotId, startsAt, endsAt, status, topic, modality, meetingUrl, location, confirmedAt, cancelledAt, cancelledBy, createdAt, updatedAt, mentor: {id,firstName,lastName}, mentee: {…}, feedbacks: [{ id, authorId, rating, comment, createdAt }] }`
+→ Proposez « Évaluer la séance » si la séance est terminée et que `feedbacks` ne contient pas encore `authorId === me.id`.
 
-Erreurs : 422 `SLOT_IN_PAST`, `SLOT_INVALID_DURATION`, `SLOT_TOO_FAR` · 409 `SLOT_OVERLAP`, `SLOT_BOOKED`, `SLOT_ALREADY_BOOKED`, `MENTEE_TIME_CONFLICT`, `SESSION_NOT_STARTED`, `INVALID_TRANSITION` · 403 `NO_ACTIVE_MENTORSHIP`, `NOT_SESSION_MENTOR` · 404 `SLOT_NOT_FOUND`, `SESSION_NOT_FOUND`.
+Erreurs : 422 `SLOT_IN_PAST`, `SLOT_INVALID_DURATION`, `SLOT_TOO_FAR` · 409 `SLOT_OVERLAP`, `SLOT_BOOKED`, `SLOT_ALREADY_BOOKED`, `MENTEE_TIME_CONFLICT`, `SESSION_NOT_STARTED`, `SESSION_NOT_ENDED`, `FEEDBACK_ALREADY_GIVEN`, `INVALID_TRANSITION` · 403 `NO_ACTIVE_MENTORSHIP`, `NOT_SESSION_MENTOR`, `NOT_PARTICIPANT` · 404 `SLOT_NOT_FOUND`, `SESSION_NOT_FOUND`.
 **Sur 409 `SLOT_ALREADY_BOOKED` :** recharge la liste des créneaux et invite à en choisir un autre (le cas se produit réellement en concurrence).
 
 ### Messagerie (conversation = mentorat)
@@ -296,7 +300,7 @@ Chaque étape doit être **reliée à l'API réelle** avant de passer à la suiv
 9. Réservation par le mentoré depuis l'espace de mentorat ou la fiche mentor (choix d'un créneau et sujet) ; `/seances` : à venir et passées, confirmer (avec lien externe) ou annuler.
 
 **F3 — P1**
-10. `/mentorats/[id]` : en-tête de la relation et onglets **Conversation** (polling, envoi, accusés de lecture), **Objectifs** (création avec jalons, cases à cocher, barre de progression, retour du mentor) et **Séances**.
+10. `/mentorats/[id]` : en-tête de la relation et onglets **Conversation** (polling, envoi, accusés de lecture), **Objectifs** (création avec jalons, cases à cocher, barre de progression, retour du mentor) et **Séances** (dont « Évaluer la séance », de 1 à 5 étoiles, et commentaire).
 11. `/admin` minimal : vue d'ensemble, liste des comptes, vérifier ou publier un mentor, suspendre un compte.
 12. Landing `/` concise : proposition de valeur, fonctionnement en 3 étapes, les 7 domaines (`GET /domains`, avec le nombre réel de mentors), CTA « Trouver un mentor » et « Devenir mentor ». **Aucun faux témoignage ni aucune statistique inventée.**
 

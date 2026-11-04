@@ -4,10 +4,10 @@
 // Contraintes avancées (index partiels, exclusion anti-chevauchement) : voir les migrations SQL.
 
 generator client {
-  provider               = "prisma-client"
-  output                 = "../src/generated/prisma"
-  moduleFormat           = "esm"
-  importFileExtension    = "js"
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "js"
 }
 
 datasource db {
@@ -105,8 +105,9 @@ model User {
   sessionsAsMentor  MentoringSession[] @relation("SessionMentor")
   sessionsAsMentee  MentoringSession[] @relation("SessionMentee")
 
-  messages     Message[]
-  goalsCreated Goal[]
+  messages         Message[]
+  goalsCreated     Goal[]
+  sessionFeedbacks SessionFeedback[]
 
   @@index([role, status])
   @@map("users")
@@ -143,9 +144,9 @@ model ExpertiseDomain {
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  mentors   MentorDomain[]
-  mentees   MenteeInterest[]
-  requests  MentorshipRequest[]
+  mentors  MentorDomain[]
+  mentees  MenteeInterest[]
+  requests MentorshipRequest[]
 
   @@map("expertise_domains")
 }
@@ -318,6 +319,7 @@ model MentoringSession {
   mentor     User              @relation("SessionMentor", fields: [mentorId], references: [id], onDelete: Cascade)
   mentee     User              @relation("SessionMentee", fields: [menteeId], references: [id], onDelete: Cascade)
   slot       AvailabilitySlot? @relation(fields: [slotId], references: [id], onDelete: SetNull)
+  feedbacks  SessionFeedback[]
 
   @@index([mentorId, startsAt])
   @@index([menteeId, startsAt])
@@ -325,7 +327,24 @@ model MentoringSession {
   @@map("mentoring_sessions")
 }
 
-// ─── Échanges ────────────────────────────────────────────────────────────────
+/// Évaluation d'une séance terminée : une seule par participant (note 1–5, contrainte CHECK en SQL).
+model SessionFeedback {
+  id        String   @id @default(cuid())
+  sessionId String   @map("session_id")
+  authorId  String   @map("author_id")
+  rating    Int
+  comment   String?  @db.VarChar(1000)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  session MentoringSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  author  User             @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, authorId])
+  @@index([authorId])
+  @@map("session_feedbacks")
+}
+
+// ─── Échanges────────────────────────────────────────────────────────────────
 
 /// La conversation est portée par le mentorat : seuls ses deux participants y accèdent.
 model Message {

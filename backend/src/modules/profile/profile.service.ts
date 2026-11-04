@@ -12,12 +12,22 @@ export class ProfileService {
   async getMine(user: AuthUser) {
     const base = await this.prisma.user.findUniqueOrThrow({
       where: { id: user.id },
-      select: { id: true, email: true, firstName: true, lastName: true, role: true, timezone: true, onboardedAt: true },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        timezone: true,
+        onboardedAt: true,
+      },
     });
     if (user.role === 'MENTOR') {
       const profile = await this.prisma.mentorProfile.findUnique({
         where: { userId: user.id },
-        include: { domains: { include: { domain: { select: { id: true, slug: true, name: true } } } } },
+        include: {
+          domains: { include: { domain: { select: { id: true, slug: true, name: true } } } },
+        },
       });
       return {
         user: base,
@@ -33,7 +43,9 @@ export class ProfileService {
     if (user.role === 'MENTEE') {
       const profile = await this.prisma.menteeProfile.findUnique({
         where: { userId: user.id },
-        include: { interests: { include: { domain: { select: { id: true, slug: true, name: true } } } } },
+        include: {
+          interests: { include: { domain: { select: { id: true, slug: true, name: true } } } },
+        },
       });
       return {
         user: base,
@@ -47,7 +59,8 @@ export class ProfileService {
   }
 
   async upsertMentor(user: AuthUser, dto: UpsertMentorProfileDto) {
-    if (user.role !== 'MENTOR') throw forbidden('ROLE_FORBIDDEN', 'Seul un mentor peut renseigner un profil mentor.');
+    if (user.role !== 'MENTOR')
+      throw forbidden('ROLE_FORBIDDEN', 'Seul un mentor peut renseigner un profil mentor.');
     const domainIds = await this.assertDomains(dto.domainIds);
     const expertise = cleanTags(dto.expertise);
     const languages = cleanTags(dto.languages);
@@ -105,7 +118,8 @@ export class ProfileService {
   }
 
   async upsertMentee(user: AuthUser, dto: UpsertMenteeProfileDto) {
-    if (user.role !== 'MENTEE') throw forbidden('ROLE_FORBIDDEN', 'Seul un mentoré peut renseigner un profil mentoré.');
+    if (user.role !== 'MENTEE')
+      throw forbidden('ROLE_FORBIDDEN', 'Seul un mentoré peut renseigner un profil mentoré.');
     const domainIds = await this.assertDomains(dto.interestDomainIds);
     const data = {
       situation: dto.situation,
@@ -135,9 +149,14 @@ export class ProfileService {
 
   private async assertDomains(ids: string[]): Promise<string[]> {
     const unique = [...new Set(ids)];
-    const count = await this.prisma.expertiseDomain.count({ where: { id: { in: unique }, isActive: true } });
+    const count = await this.prisma.expertiseDomain.count({
+      where: { id: { in: unique }, isActive: true },
+    });
     if (count !== unique.length) {
-      throw unprocessable('INVALID_DOMAIN', 'Un ou plusieurs domaines sélectionnés sont invalides.');
+      throw unprocessable(
+        'INVALID_DOMAIN',
+        'Un ou plusieurs domaines sélectionnés sont invalides.',
+      );
     }
     return unique;
   }

@@ -3,7 +3,11 @@ import { ApiTags } from '@nestjs/swagger';
 import { CurrentUser, Roles } from '../../common/auth/decorators.js';
 import type { AuthUser } from '../../common/auth/auth-user.js';
 import { MentorshipRequestsService } from './mentorship-requests.service.js';
-import { CreateMentorshipRequestDto, DecisionDto, ListRequestsQuery } from './mentorship-requests.dto.js';
+import {
+  CreateMentorshipRequestDto,
+  DecisionDto,
+  ListRequestsQuery,
+} from './mentorship-requests.dto.js';
 
 @ApiTags('mentorship-requests')
 @Controller('mentorship-requests')
