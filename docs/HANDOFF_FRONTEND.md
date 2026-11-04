@@ -44,9 +44,12 @@ Tout ce qui suit a été **réellement exécuté** contre PostgreSQL, à l'aide 
 | Tableau de bord par rôle ; 401 sans session ; Swagger sur `/api/docs` | ✅ |
 | Admin minimal (vue d'ensemble, utilisateurs, suspension, vérification et publication des mentors) | ✅ (API seulement) |
 
-Tests : **8 unitaires et 70 e2e** (Vitest et supertest sur un vrai PostgreSQL de test), typecheck, lint et build OK. CI GitHub Actions dans `.github/workflows/ci.yml`.
-Évaluation des séances (note 1 à 5 et commentaire) disponible, avec la note moyenne affichée sur les fiches mentor.
-**Pas encore fait côté backend :** ressources partagées, notifications, emails.
+| Évaluation des séances (1 à 5 et commentaire), note moyenne sur la fiche mentor | ✅ |
+| Bibliothèque publique de ressources et ressources privées d'un mentorat | ✅ |
+| Notifications in-app (demande, décision, séance, retour sur objectif, ressource partagée) | ✅ |
+
+Tests : **8 unitaires et 81 e2e** (Vitest et supertest sur un vrai PostgreSQL de test), typecheck, lint et build OK. CI GitHub Actions dans `.github/workflows/ci.yml`.
+**Pas encore fait côté backend :** emails transactionnels, réinitialisation de mot de passe, opportunités, WebSocket.
 → **Ne crée pas de faux écrans pour ces fonctions.** Si l'une d'elles devient nécessaire, demande d'abord qu'on ajoute l'endpoint.
 
 ---
@@ -267,6 +270,32 @@ Pas de WebSocket pour l'instant : utilise un polling maîtrisé (4 à 5 s sur la
 `Goal = { id, mentorshipId, createdById, title, description, status, progress, dueDate, mentorFeedback, completedAt, createdAt, updatedAt, milestones: [{ id, title, isDone, doneAt, sortOrder }], createdBy: { id, firstName, lastName } }`
 Avec des jalons, la progression vaut la part des jalons cochés. Sans jalon, elle se règle manuellement (curseur).
 
+### Ressources (bibliothèque et partage)
+
+| Route | Accès | Détail |
+|---|---|---|
+| `GET /resources?q=&domain=<slug>&kind=&page=&pageSize=` | 🔓 | Bibliothèque publique → `{ items: Resource[], page, pageSize, total, totalPages }` |
+| `POST /resources` | 🔒 M ou A | Publication dans la bibliothèque |
+| `DELETE /resources/:id` | 🔒 auteur (ou admin pour la bibliothèque) | 403 `NOT_RESOURCE_AUTHOR` |
+| `GET /mentorships/:id/resources` | 🔒 participant | Ressources privées du mentorat |
+| `POST /mentorships/:id/resources` | 🔒 participant (mentorat actif) | Partage privé ; l'autre participant est notifié |
+
+Corps de création : `{ title (3–160), description? (≤2000), url? (https uniquement), kind?: 'ARTICLE'|'VIDEO'|'TEMPLATE'|'TOOL'|'ADVICE'|'OTHER', domainId? }`. **Il faut un `url` ou une `description`** (sinon 422 `RESOURCE_EMPTY`). Il n'y a pas de dépôt de fichiers : ce sont des liens et des conseils rédigés.
+`Resource = { id, mentorshipId | null, kind, title, description, url, createdAt, author: { id, firstName, lastName, role, mentorProfile: { headline } | null }, domain: { id, slug, name } | null }`
+Libellés `kind` : Article · Vidéo · Modèle · Outil · Conseil · Autre. Ouvrez les liens externes avec `target="_blank" rel="noopener noreferrer"`.
+
+### Notifications in-app
+
+| Route | Détail |
+|---|---|
+| `GET /notifications?unread=true&limit=30` | `[{ id, type, title, body, link, readAt, createdAt }]`, de la plus récente à la plus ancienne |
+| `GET /notifications/unread-count` | `{ count }` : badge de la cloche dans le header (rafraîchir toutes les 30 s) |
+| `POST /notifications/:id/read` | Marque comme lue (404 si elle n'appartient pas à l'utilisateur) |
+| `POST /notifications/read-all` | `{ updated }` |
+
+Types : `REQUEST_RECEIVED`, `REQUEST_ACCEPTED`, `REQUEST_DECLINED`, `SESSION_REQUESTED`, `SESSION_CONFIRMED`, `SESSION_CANCELLED`, `GOAL_FEEDBACK`, `RESOURCE_SHARED`.
+`title` et `body` sont prêts à afficher en français. `link` est un **chemin frontend relatif** (`/demandes`, `/seances`, `/mentors`, `/mentorats/<id>`) : un clic marque la notification comme lue puis navigue vers ce chemin. **Ces routes doivent donc exister côté frontend.**
+
 ### Tableau de bord et admin
 
 - `GET /dashboard/me` 🔒 → `{ role, pendingRequests, activeMentorships, upcomingSessions: Session[≤3] (avec mentorshipId et meetingUrl), sessionsAwaitingConfirmation, unreadMessages, goals: { total, completed, averageProgress | null }, mentor: { maxMentees, freeUpcomingSlots } | null }`
@@ -301,12 +330,14 @@ Chaque étape doit être **reliée à l'API réelle** avant de passer à la suiv
 
 **F3 — P1**
 10. `/mentorats/[id]` : en-tête de la relation et onglets **Conversation** (polling, envoi, accusés de lecture), **Objectifs** (création avec jalons, cases à cocher, barre de progression, retour du mentor) et **Séances** (dont « Évaluer la séance », de 1 à 5 étoiles, et commentaire).
-11. `/admin` minimal : vue d'ensemble, liste des comptes, vérifier ou publier un mentor, suspendre un compte.
-12. Landing `/` concise : proposition de valeur, fonctionnement en 3 étapes, les 7 domaines (`GET /domains`, avec le nombre réel de mentors), CTA « Trouver un mentor » et « Devenir mentor ». **Aucun faux témoignage ni aucune statistique inventée.**
+11. Onglet **Ressources** dans `/mentorats/[id]` (partage de liens et de conseils) et page publique `/ressources` (bibliothèque filtrable ; bouton « Publier » pour les mentors).
+12. **Cloche de notifications** dans le header : badge `unread-count`, panneau déroulant avec la liste, « Tout marquer comme lu », navigation via `link`.
+13. `/admin` minimal : vue d'ensemble, liste des comptes, vérifier ou publier un mentor, suspendre un compte, retirer une ressource de la bibliothèque.
+14. Landing `/` concise : proposition de valeur, fonctionnement en 3 étapes, les 7 domaines (`GET /domains`, avec le nombre réel de mentors), CTA « Trouver un mentor » et « Devenir mentor ». **Aucun faux témoignage ni aucune statistique inventée.**
 
 **F4 — Finition**
-13. Responsive 360 px → 1440 px, accessibilité (clavier, focus, contraste, `aria-live` pour les toasts et la conversation), `prefers-reduced-motion`.
-14. Playwright E2E du scénario de démo si le temps le permet.
+15. Responsive 360 px → 1440 px, accessibilité (clavier, focus, contraste, `aria-live` pour les toasts et la conversation), `prefers-reduced-motion`.
+16. Playwright E2E du scénario de démo si le temps le permet.
 
 **Critère de réussite de la démo** (à vérifier sur mobile et desktop) : Aminata recherche « Développement web », trouve Fatoumata, envoie une demande. Fatoumata accepte. Aminata réserve un créneau, Fatoumata le confirme avec un lien externe, ils échangent un message, puis créent et font avancer un objectif.
 
@@ -360,8 +391,8 @@ Mappe-les sur les variables shadcn (`--primary`, `--accent`, `--muted`, `--destr
 - **Stepper** de l'onboarding (étape x/3, retour possible, sauvegarde finale unique).
 - **États** : skeleton pour chaque liste ; état vide avec icône, phrase utile et action (« Aucune demande pour l'instant — Explorer les mentors ») ; erreur avec message de l'API et bouton « Réessayer » ; écran « Accès refusé » sur 403 ; toasts de succès après chaque mutation.
 - **Navigation** :
-  - mentoré : Tableau de bord · Trouver un mentor · Mes demandes · Mes mentorats · Séances ;
-  - mentor : Tableau de bord · Demandes reçues · Mes mentorés · Disponibilités · Séances ;
+  - mentoré : Tableau de bord · Trouver un mentor · Mes demandes · Mes mentorats · Séances · Ressources ;
+  - mentor : Tableau de bord · Demandes reçues · Mes mentorés · Disponibilités · Séances · Ressources ;
   - admin : Vue d'ensemble · Comptes · Mentors.
   En mobile, barre d'onglets en bas (4 ou 5 icônes) ; en desktop, sidebar de 240 px et header avec le menu du compte.
 - **Conversation** : bulles alignées (moi à droite sur fond ink-900 avec texte blanc ; l'autre à gauche sur blanc avec bordure), horodatage discret, zone de saisie collée en bas, Entrée pour envoyer et Maj+Entrée pour un saut de ligne.

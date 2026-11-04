@@ -5,6 +5,7 @@ import type { AuthUser } from '../../common/auth/auth-user.js';
 import type { Prisma } from '../../generated/prisma/client.js';
 import type { GoalStatus } from '../../generated/prisma/enums.js';
 import { MentorshipAccessService } from '../mentorships/mentorship-access.service.js';
+import { NotificationsService } from '../notifications/notifications.module.js';
 import type {
   CreateGoalDto,
   CreateMilestoneDto,
@@ -35,6 +36,7 @@ export class GoalsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly access: MentorshipAccessService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async list(user: AuthUser, mentorshipId: string) {
@@ -80,7 +82,7 @@ export class GoalsService {
     if (status === 'NOT_STARTED' && progress === undefined) progress = 0;
     if (progress !== undefined && status === undefined) status = statusFromProgress(progress);
 
-    return this.prisma.goal.update({
+    const updated = await this.prisma.goal.update({
       where: { id: goalId },
       data: {
         title: dto.title,
@@ -93,6 +95,16 @@ export class GoalsService {
       },
       include: goalInclude,
     });
+    if (dto.mentorFeedback) {
+      await this.notifications.notify({
+        userId: goal.counterpartId,
+        type: 'GOAL_FEEDBACK',
+        title: `${user.firstName} ${user.lastName} a commenté votre objectif`,
+        body: `« ${updated.title} »`,
+        link: `/mentorats/${goal.mentorshipId}`,
+      });
+    }
+    return updated;
   }
 
   async remove(user: AuthUser, goalId: string) {
@@ -173,6 +185,6 @@ export class GoalsService {
     });
     if (!goal) throw notFound('GOAL_NOT_FOUND', 'Objectif introuvable.');
     const access = await this.access.assertActiveParticipant(user, goal.mentorshipId);
-    return { ...goal, isMentor: access.isMentor };
+    return { ...goal, isMentor: access.isMentor, counterpartId: access.counterpartId };
   }
 }

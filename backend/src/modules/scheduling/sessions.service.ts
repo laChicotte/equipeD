@@ -10,6 +10,7 @@ import type {
   ListSessionsQuery,
   SessionFeedbackDto,
 } from './scheduling.dto.js';
+import { NotificationsService } from '../notifications/notifications.module.js';
 
 const sessionInclude = {
   mentor: { select: { id: true, firstName: true, lastName: true } },
@@ -20,6 +21,15 @@ const sessionInclude = {
   },
 } satisfies Prisma.MentoringSessionInclude;
 
+/** Date lisible pour les notifications (fuseau de référence du programme). */
+function formatWhen(date: Date): string {
+  return new Intl.DateTimeFormat('fr-FR', {
+    dateStyle: 'full',
+    timeStyle: 'short',
+    timeZone: 'Africa/Conakry',
+  }).format(date);
+}
+
 const STATUS_LABELS: Record<SessionStatus, string> = {
   REQUESTED: 'en attente de confirmation',
   CONFIRMED: 'confirmée',
@@ -29,7 +39,10 @@ const STATUS_LABELS: Record<SessionStatus, string> = {
 
 @Injectable()
 export class SessionsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   /**
    * Réservation d'un créneau par le mentoré.
@@ -57,8 +70,9 @@ export class SessionsService {
       );
     }
 
+    let created;
     try {
-      return await this.prisma.mentoringSession.create({
+      created = await this.prisma.mentoringSession.create({
         data: {
           mentorshipId: mentorship.id,
           mentorId: slot.mentorId,
@@ -92,6 +106,14 @@ export class SessionsService {
       }
       throw error;
     }
+    await this.notifications.notify({
+      userId: slot.mentorId,
+      type: 'SESSION_REQUESTED',
+      title: `${user.firstName} ${user.lastName} a réservé un créneau`,
+      body: `${formatWhen(slot.startsAt)} — ${dto.topic}. À confirmer.`,
+      link: '/seances',
+    });
+    return created;
   }
 
   listMine(user: AuthUser, query: ListSessionsQuery) {
@@ -132,6 +154,13 @@ export class SessionsService {
     });
     if (updated.count === 0)
       throw conflict('INVALID_TRANSITION', 'Cette séance a déjà été traitée.');
+    await this.notifications.notify({
+      userId: session.menteeId,
+      type: 'SESSION_CONFIRMED',
+      title: `${user.firstName} ${user.lastName} a confirmé votre séance`,
+      body: formatWhen(session.startsAt),
+      link: `/mentorats/${session.mentorshipId}`,
+    });
     return this.get(id);
   }
 
@@ -145,10 +174,19 @@ export class SessionsService {
     if (session.status === 'COMPLETED') {
       throw conflict('INVALID_TRANSITION', 'Une séance terminée ne peut pas être annulée.');
     }
-    await this.prisma.mentoringSession.updateMany({
+    const updated = await this.prisma.mentoringSession.updateMany({
       where: { id, status: { in: ['REQUESTED', 'CONFIRMED'] } },
       data: { status: 'CANCELLED', cancelledAt: new Date(), cancelledBy: user.id },
     });
+    if (updated.count > 0) {
+      await this.notifications.notify({
+        userId: session.mentorId === user.id ? session.menteeId : session.mentorId,
+        type: 'SESSION_CANCELLED',
+        title: `${user.firstName} ${user.lastName} a annulé une séance`,
+        body: formatWhen(session.startsAt),
+        link: `/mentorats/${session.mentorshipId}`,
+      });
+    }
     return this.get(id);
   }
 
@@ -207,6 +245,7 @@ export class SessionsService {
       where: { id },
       select: {
         id: true,
+        mentorshipId: true,
         mentorId: true,
         menteeId: true,
         status: true,

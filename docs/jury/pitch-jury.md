@@ -15,7 +15,7 @@
 > Recherche « développement web » → fiche → demande → acceptation → réservation → confirmation → message → objectif. (voir `scenario-demo.md`)
 
 **5. Différence et confiance (20 s)**
-> « Ce n'est pas une maquette : tout est enregistré dans une vraie base de données et couvert par 70 tests automatisés. Nos recommandations sont transparentes, les mentors sont vérifiés par des humains, et les données personnelles ne sont pas exposées. Pour Campus France, nous sommes clairs : c'est du conseil, sans promesse d'admission ni de visa. »
+> « Ce n'est pas une maquette : tout est enregistré dans une vraie base de données et couvert par plus de 80 tests automatisés. Nos recommandations sont transparentes, les mentors sont vérifiés par des humains, et les données personnelles ne sont pas exposées. Pour Campus France, nous sommes clairs : c'est du conseil, sans promesse d'admission ni de visa. »
 
 **6. Pérennité et demande (15 s)**
 > « Nous visons un pilote de trois mois avec les mentors du Salon et vos partenaires, puis l'ouverture aux écoles et aux incubateurs. Nous avons besoin de mentors volontaires, de partenaires et de l'accompagnement d'Efficience Globale pour en faire un réseau durable. Merci. »

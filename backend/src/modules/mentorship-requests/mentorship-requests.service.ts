@@ -11,6 +11,7 @@ import type { AuthUser } from '../../common/auth/auth-user.js';
 import type { Prisma } from '../../generated/prisma/client.js';
 import type { MentorshipRequestStatus } from '../../generated/prisma/enums.js';
 import type { CreateMentorshipRequestDto, DecisionDto } from './mentorship-requests.dto.js';
+import { NotificationsService } from '../notifications/notifications.module.js';
 
 const personSelect = { id: true, firstName: true, lastName: true } as const;
 
@@ -38,7 +39,10 @@ const requestInclude = {
 
 @Injectable()
 export class MentorshipRequestsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   async create(user: AuthUser, dto: CreateMentorshipRequestDto) {
     if (dto.mentorId === user.id) {
@@ -81,7 +85,7 @@ export class MentorshipRequestsService {
 
     try {
       // L'index partiel mentorship_requests_one_pending garantit l'unicité même en cas de requêtes concurrentes.
-      return await this.prisma.mentorshipRequest.create({
+      const created = await this.prisma.mentorshipRequest.create({
         data: {
           menteeId: user.id,
           mentorId: mentor.id,
@@ -91,6 +95,14 @@ export class MentorshipRequestsService {
         },
         include: requestInclude,
       });
+      await this.notifications.notify({
+        userId: mentor.id,
+        type: 'REQUEST_RECEIVED',
+        title: `Nouvelle demande de ${user.firstName} ${user.lastName}`,
+        body: dto.goal,
+        link: '/demandes',
+      });
+      return created;
     } catch (error) {
       if (isConstraintViolation(error, 'mentorship_requests_one_pending')) {
         throw conflict(
@@ -180,7 +192,15 @@ export class MentorshipRequestsService {
       }
       throw error;
     }
-    return this.getOne(user, id);
+    const accepted = await this.getOne(user, id);
+    await this.notifications.notify({
+      userId: request.menteeId,
+      type: 'REQUEST_ACCEPTED',
+      title: `${user.firstName} ${user.lastName} a accepté votre demande`,
+      body: dto.note ?? 'Votre espace de mentorat est ouvert : planifiez votre première séance.',
+      link: accepted.mentorship ? `/mentorats/${accepted.mentorship.id}` : '/demandes',
+    });
+    return accepted;
   }
 
   async decline(user: AuthUser, id: string, dto: DecisionDto) {
@@ -194,6 +214,13 @@ export class MentorshipRequestsService {
     });
     if (updated.count === 0)
       throw conflict('INVALID_TRANSITION', 'Cette demande a déjà été traitée.');
+    await this.notifications.notify({
+      userId: request.menteeId,
+      type: 'REQUEST_DECLINED',
+      title: `${user.firstName} ${user.lastName} n’a pas pu accepter votre demande`,
+      body: dto.note ?? 'Explorez d’autres mentors correspondant à votre objectif.',
+      link: '/mentors',
+    });
     return this.getOne(user, id);
   }
 

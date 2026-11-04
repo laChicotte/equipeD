@@ -32,8 +32,8 @@
 - [x] Objectifs, jalons, progression calculée, retour du mentor
 - [x] Évaluation des séances (1–5 et commentaire), note moyenne sur la fiche mentor
 - [x] Administration : vue d'ensemble, comptes, suspension (révoque les sessions), vérification et publication des mentors
-- [ ] Ressources partagées
-- [ ] Notifications in-app
+- [x] Ressources : bibliothèque publique (mentors et admins) et partage privé dans un mentorat (liens https ou conseils rédigés)
+- [x] Notifications in-app (demande reçue, acceptée ou refusée ; séance demandée, confirmée ou annulée ; retour sur objectif ; ressource partagée)
 
 ### P2
 - [x] Suggestions par score déterministe et explicable (pas d'IA)
@@ -57,7 +57,7 @@
 | Lint (oxlint) | ✅ 0 avertissement | `pnpm --filter backend lint` |
 | Format (Prettier) | ✅ | `npx prettier --check "backend/{src,test,prisma}/**/*.ts"` |
 | Tests unitaires | ✅ 8/8 | `pnpm --filter backend test` |
-| Tests e2e sur un vrai PostgreSQL | ✅ **70/70** (6 fichiers, environ 25 s) | `pnpm --filter backend test:e2e` |
+| Tests e2e sur un vrai PostgreSQL | ✅ **81/81** (7 fichiers, environ 30 s) | `pnpm --filter backend test:e2e` |
 | Build | ✅ | `pnpm --filter backend build` |
 | CI GitHub Actions | ⏳ configurée (`.github/workflows/ci.yml`), à confirmer au premier push | |
 
