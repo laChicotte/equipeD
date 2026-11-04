@@ -48,7 +48,10 @@ Tout ce qui suit a été **réellement exécuté** contre PostgreSQL, à l'aide 
 | Bibliothèque publique de ressources et ressources privées d'un mentorat | ✅ |
 | Notifications in-app (demande, décision, séance, retour sur objectif, ressource partagée) | ✅ |
 
-Tests : **8 unitaires et 81 e2e** (Vitest et supertest sur un vrai PostgreSQL de test), typecheck, lint et build OK. CI GitHub Actions dans `.github/workflows/ci.yml`.
+Compte (nom, fuseau, mot de passe, déconnexion de tous les appareils), clôture de mentorat et gestion des domaines par l’admin : ✅.
+Swagger documente désormais les schémas de toutes les requêtes (plugin @nestjs/swagger).
+
+Tests : **8 unitaires et 89 e2e** (Vitest et supertest sur un vrai PostgreSQL de test), typecheck, lint et build OK. CI GitHub Actions dans `.github/workflows/ci.yml`.
 **Pas encore fait côté backend :** emails transactionnels, réinitialisation de mot de passe, opportunités, WebSocket.
 → **Ne crée pas de faux écrans pour ces fonctions.** Si l'une d'elles devient nécessaire, demande d'abord qu'on ajoute l'endpoint.
 
@@ -150,6 +153,8 @@ Préfixe : `/api/v1`. Swagger : `http://localhost:4000/api/docs`. 🔓 = public,
 | `POST /auth/login` | 🔓 10/min | `{ email, password }` → 200 `{ ok: true }` et cookie | 401 `INVALID_CREDENTIALS`, 401 `ACCOUNT_SUSPENDED`, 429 |
 | `POST /auth/logout` | 🔒 | → `{ ok: true }` (session révoquée côté serveur) | |
 | `GET /auth/me` | 🔒 | → `{ id, email, firstName, lastName, role, timezone, onboardedAt, createdAt, hasProfile, mentorProfileId }` | 401 |
+| `POST /auth/password` | 🔒 5/min | `{ currentPassword, newPassword }` → `{ revokedSessions }` (les **autres** sessions sont révoquées, la courante reste ouverte) | 422 `INVALID_CURRENT_PASSWORD`, `PASSWORD_UNCHANGED` (avec `details` sur le champ) |
+| `POST /auth/logout-all` | 🔒 | Déconnecte tous les appareils, y compris celui-ci → `{ ok, revokedSessions }` | |
 
 **Après l'inscription ou la connexion :** si `hasProfile === false`, redirige vers l'onboarding correspondant au rôle (`PUT /profile/mentor` ou `PUT /profile/mentee`).
 
@@ -160,6 +165,7 @@ Préfixe : `/api/v1`. Swagger : `http://localhost:4000/api/docs`. 🔓 = public,
 | `GET /domains` | 🔓 | `[{ id, slug, name, description, icon, topics: string[], mentorCount }]`. `icon` = nom d'icône Lucide (`rocket`, `code`, `compass`, `book-open`, `landmark`, `sparkles`, `graduation-cap`) |
 | `GET /profile/me` | 🔒 | `{ user, mentorProfile \| null (avec domains[]), menteeProfile \| null (avec interests[]) }` |
 | `PUT /profile/mentor` | 🔒 M | `{ headline (10–140), bio (80–2000), currentPosition?, organization?, yearsExperience (1–60), expertise: string[] (1–15), languages: string[] (1–6), modalities: Modality[] (1–3), city?, domainIds: string[] (1–4), sessionDurationMin: 30\|45\|60\|90, maxMentees (1–20) }` |
+| `PATCH /profile/me` | 🔒 | `{ firstName?, lastName?, timezone? (IANA, ex. Africa/Conakry) }` → même forme que `GET /profile/me` |
 | `PUT /profile/mentee` | 🔒 E | `{ situation, goalsSummary (20–1000), desiredSkills: string[] (0–15), preferredModality, city?, interestDomainIds: string[] (1–5) }` |
 
 Les deux `PUT` font un upsert, renseignent `onboardedAt` au premier appel et renvoient la même forme que `GET /profile/me`. 422 `INVALID_DOMAIN` si un domaine est inconnu.
@@ -209,11 +215,14 @@ Erreurs : 422 `PROFILE_REQUIRED` (mentoré sans profil), `SELF_REQUEST`, `INVALI
 
 ### Mentorats
 
+`POST /mentorships/:id/complete` 🔒 participant : `{ note? (≤1000) }` → `MentorshipSummary` avec `status: COMPLETED`. Les séances futures sont annulées, la capacité du mentor est libérée et l'autre participant est notifié. Le mentorat devient **lecture seule** : écrire renvoie 409 `MENTORSHIP_NOT_ACTIVE`. Prévoyez un bouton « Clôturer le mentorat » avec confirmation et un champ bilan.
+
 `GET /mentorships/me` 🔒 et `GET /mentorships/:id` 🔒 participant →
 
 ```ts
 interface MentorshipSummary {
   id: string; status: MentorshipStatus; startedAt: string; endedAt: string | null;
+  endedById: string | null; endNote: string | null;   // renseignés à la clôture
   myRole: 'MENTOR' | 'MENTEE';
   mentor: Person; mentee: Person; counterpart: Person;   // counterpart = l'autre participant
   initialGoal: string; domain: { id; name; slug } | null;
@@ -293,13 +302,14 @@ Libellés `kind` : Article · Vidéo · Modèle · Outil · Conseil · Autre. Ou
 | `POST /notifications/:id/read` | Marque comme lue (404 si elle n'appartient pas à l'utilisateur) |
 | `POST /notifications/read-all` | `{ updated }` |
 
-Types : `REQUEST_RECEIVED`, `REQUEST_ACCEPTED`, `REQUEST_DECLINED`, `SESSION_REQUESTED`, `SESSION_CONFIRMED`, `SESSION_CANCELLED`, `GOAL_FEEDBACK`, `RESOURCE_SHARED`.
+Types : `REQUEST_RECEIVED`, `REQUEST_ACCEPTED`, `REQUEST_DECLINED`, `SESSION_REQUESTED`, `SESSION_CONFIRMED`, `SESSION_CANCELLED`, `GOAL_FEEDBACK`, `RESOURCE_SHARED`, `MENTORSHIP_COMPLETED`.
 `title` et `body` sont prêts à afficher en français. `link` est un **chemin frontend relatif** (`/demandes`, `/seances`, `/mentors`, `/mentorats/<id>`) : un clic marque la notification comme lue puis navigue vers ce chemin. **Ces routes doivent donc exister côté frontend.**
 
 ### Tableau de bord et admin
 
 - `GET /dashboard/me` 🔒 → `{ role, pendingRequests, activeMentorships, upcomingSessions: Session[≤3] (avec mentorshipId et meetingUrl), sessionsAwaitingConfirmation, unreadMessages, goals: { total, completed, averageProgress | null }, mentor: { maxMentees, freeUpcomingSlots } | null }`
 - `GET /admin/overview`, `GET /admin/users?role=`, `PATCH /admin/users/:id/status { status }`, `PATCH /admin/mentors/:id { verificationStatus?, isPublished? }` (🔒 A)
+- Domaines (🔒 A) : `GET /admin/domains` (tous, y compris inactifs, avec `_count: { mentors, mentees, resources }`), `POST /admin/domains { slug (kebab-case), name, description, icon (nom Lucide), topics[] }` (409 `DOMAIN_SLUG_TAKEN`), `PATCH /admin/domains/:id { name?, description?, icon?, topics?, isActive?, sortOrder? }`. Un domaine désactivé disparaît de `GET /domains`.
 - `GET /health` 🔓 → `{ status, database, time }`
 
 ---
@@ -332,7 +342,8 @@ Chaque étape doit être **reliée à l'API réelle** avant de passer à la suiv
 10. `/mentorats/[id]` : en-tête de la relation et onglets **Conversation** (polling, envoi, accusés de lecture), **Objectifs** (création avec jalons, cases à cocher, barre de progression, retour du mentor) et **Séances** (dont « Évaluer la séance », de 1 à 5 étoiles, et commentaire).
 11. Onglet **Ressources** dans `/mentorats/[id]` (partage de liens et de conseils) et page publique `/ressources` (bibliothèque filtrable ; bouton « Publier » pour les mentors).
 12. **Cloche de notifications** dans le header : badge `unread-count`, panneau déroulant avec la liste, « Tout marquer comme lu », navigation via `link`.
-13. `/admin` minimal : vue d'ensemble, liste des comptes, vérifier ou publier un mentor, suspendre un compte, retirer une ressource de la bibliothèque.
+13. `/admin` minimal : vue d'ensemble, liste des comptes, vérifier ou publier un mentor, suspendre un compte, retirer une ressource de la bibliothèque, **gérer les domaines** (créer, renommer, activer ou désactiver).
+13 bis. `/compte` : modifier son nom et son fuseau horaire, changer son mot de passe, « Se déconnecter de tous les appareils ».
 14. Landing `/` concise : proposition de valeur, fonctionnement en 3 étapes, les 7 domaines (`GET /domains`, avec le nombre réel de mentors), CTA « Trouver un mentor » et « Devenir mentor ». **Aucun faux témoignage ni aucune statistique inventée.**
 
 **F4 — Finition**

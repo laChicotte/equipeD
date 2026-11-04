@@ -1,10 +1,11 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service.js';
 import { AppConfigService } from '../../config/app-config.service.js';
-import { conflict, isConstraintViolation } from '../../common/errors.js';
+import { conflict, isConstraintViolation, unprocessable } from '../../common/errors.js';
 import { generateSessionToken, hashSessionToken } from '../../common/auth/session-token.js';
+import type { AuthUser } from '../../common/auth/auth-user.js';
 import { getDummyHash, hashPassword, verifyPassword } from './password.js';
-import type { LoginDto, RegisterDto } from './auth.dto.js';
+import type { ChangePasswordDto, LoginDto, RegisterDto } from './auth.dto.js';
 
 export interface IssuedSession {
   token: string;
@@ -65,6 +66,48 @@ export class AuthService {
       });
     }
     return this.issueSession(user.id, userAgent);
+  }
+
+  /**
+   * Changement de mot de passe : vérifie l'actuel, puis révoque toutes les AUTRES sessions
+   * (un éventuel appareil compromis est déconnecté ; la session courante reste ouverte).
+   */
+  async changePassword(
+    user: AuthUser,
+    dto: ChangePasswordDto,
+  ): Promise<{ revokedSessions: number }> {
+    const current = await this.prisma.user.findUniqueOrThrow({
+      where: { id: user.id },
+      select: { passwordHash: true },
+    });
+    if (!(await verifyPassword(current.passwordHash, dto.currentPassword))) {
+      throw unprocessable('INVALID_CURRENT_PASSWORD', 'Le mot de passe actuel est incorrect.', [
+        { field: 'currentPassword', messages: ['Le mot de passe actuel est incorrect.'] },
+      ]);
+    }
+    if (dto.currentPassword === dto.newPassword) {
+      throw unprocessable('PASSWORD_UNCHANGED', 'Le nouveau mot de passe doit être différent.', [
+        { field: 'newPassword', messages: ['Choisissez un mot de passe différent de l’actuel.'] },
+      ]);
+    }
+    const passwordHash = await hashPassword(dto.newPassword);
+    const [, revoked] = await this.prisma.$transaction([
+      this.prisma.user.update({ where: { id: user.id }, data: { passwordHash } }),
+      this.prisma.authSession.updateMany({
+        where: { userId: user.id, revokedAt: null, id: { not: user.sessionId } },
+        data: { revokedAt: new Date() },
+      }),
+    ]);
+    return { revokedSessions: revoked.count };
+  }
+
+  /** Déconnexion de tous les appareils, y compris la session courante. */
+  async logoutAll(userId: string): Promise<number> {
+    const result = await this.prisma.authSession.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+    return result.count;
   }
 
   async logout(sessionId: string): Promise<void> {

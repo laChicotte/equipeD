@@ -33,7 +33,7 @@ Il repose sur des technologies ouvertes et répandues (Next.js, NestJS, PostgreS
 
 - **Architecture :** un monolithe modulaire (une API, une interface web, une base PostgreSQL), simple à exploiter par une petite équipe.
 - **Hébergement :** un serveur virtuel ou un hébergeur proche des utilisateurs, avec sauvegardes quotidiennes de la base et HTTPS. Une montée en charge se fait d'abord verticalement.
-- **Qualité :** intégration continue (typecheck, lint, 8 tests unitaires et 81 tests de bout en bout sur une vraie base) à chaque modification.
+- **Qualité :** intégration continue (typecheck, lint, 8 tests unitaires et 89 tests de bout en bout sur une vraie base) à chaque modification.
 - **Coûts à estimer** avec les partenaires : hébergement et nom de domaine, envoi d'emails, solution de visio, temps d'animation de la communauté et de modération (le poste le plus important), maintenance évolutive.
 
 ## 6. Besoins d'accompagnement

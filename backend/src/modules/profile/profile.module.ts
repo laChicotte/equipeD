@@ -1,9 +1,9 @@
-import { Body, Controller, Get, Module, Put } from '@nestjs/common';
+import { Body, Controller, Get, Module, Patch, Put } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { CurrentUser, Roles } from '../../common/auth/decorators.js';
 import type { AuthUser } from '../../common/auth/auth-user.js';
 import { ProfileService } from './profile.service.js';
-import { UpsertMenteeProfileDto, UpsertMentorProfileDto } from './profile.dto.js';
+import { UpdateAccountDto, UpsertMenteeProfileDto, UpsertMentorProfileDto } from './profile.dto.js';
 
 @ApiTags('profile')
 @Controller('profile')
@@ -14,6 +14,12 @@ export class ProfileController {
   @Get('me')
   getMine(@CurrentUser() user: AuthUser) {
     return this.profile.getMine(user);
+  }
+
+  /** Informations de compte : prénom, nom, fuseau horaire. */
+  @Patch('me')
+  updateAccount(@CurrentUser() user: AuthUser, @Body() dto: UpdateAccountDto) {
+    return this.profile.updateAccount(user, dto);
   }
 
   /** Création ou mise à jour du profil mentor (onboarding inclus). */

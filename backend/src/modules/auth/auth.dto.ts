@@ -45,3 +45,17 @@ export class LoginDto {
   @Length(1, 128, { message: 'Le mot de passe est obligatoire.' })
   password!: string;
 }
+
+export class ChangePasswordDto {
+  @IsString()
+  @Length(1, 128, { message: 'Le mot de passe actuel est obligatoire.' })
+  currentPassword!: string;
+
+  /** Au moins 10 caractères, dont une lettre et un chiffre. */
+  @IsString()
+  @Length(10, 128, { message: 'Le mot de passe doit contenir entre 10 et 128 caractères.' })
+  @Matches(/(?=.*[A-Za-z])(?=.*\d)/, {
+    message: 'Le mot de passe doit contenir au moins une lettre et un chiffre.',
+  })
+  newPassword!: string;
+}

@@ -6,7 +6,7 @@ import { AppConfigService } from '../../config/app-config.service.js';
 import { CurrentUser, Public } from '../../common/auth/decorators.js';
 import type { AuthUser } from '../../common/auth/auth-user.js';
 import { AuthService, type IssuedSession } from './auth.service.js';
-import { LoginDto, RegisterDto } from './auth.dto.js';
+import { ChangePasswordDto, LoginDto, RegisterDto } from './auth.dto.js';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -52,6 +52,23 @@ export class AuthController {
     await this.auth.logout(user.sessionId);
     res.clearCookie(this.config.get('SESSION_COOKIE_NAME'), this.cookieBase());
     return { ok: true };
+  }
+
+  /** Déconnecte tous les appareils (sessions révoquées côté serveur), y compris celui-ci. */
+  @HttpCode(200)
+  @Post('logout-all')
+  async logoutAll(@CurrentUser() user: AuthUser, @Res({ passthrough: true }) res: Response) {
+    const revoked = await this.auth.logoutAll(user.id);
+    res.clearCookie(this.config.get('SESSION_COOKIE_NAME'), this.cookieBase());
+    return { ok: true, revokedSessions: revoked };
+  }
+
+  /** Changement de mot de passe : les autres sessions sont révoquées. 5 tentatives par minute. */
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @HttpCode(200)
+  @Post('password')
+  changePassword(@CurrentUser() user: AuthUser, @Body() dto: ChangePasswordDto) {
+    return this.auth.changePassword(user, dto);
   }
 
   @Get('me')
