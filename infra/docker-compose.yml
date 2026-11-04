@@ -1,0 +1,25 @@
+name: talents-connectes
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: tc-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-talents}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-talents_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-talents_connectes}
+      TZ: UTC
+      PGTZ: UTC
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5450}:5432"
+    volumes:
+      - tc_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  tc_pgdata:

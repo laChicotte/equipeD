@@ -1,0 +1,383 @@
+// Talents Connectés — modèle de données PostgreSQL
+// Conventions : modèles/champs en camelCase côté Prisma, tables/colonnes en snake_case côté SQL.
+// Toutes les dates sont stockées en UTC (timestamptz).
+// Contraintes avancées (index partiels, exclusion anti-chevauchement) : voir les migrations SQL.
+
+generator client {
+  provider               = "prisma-client"
+  output                 = "../src/generated/prisma"
+  moduleFormat           = "esm"
+  importFileExtension    = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Énumérations ────────────────────────────────────────────────────────────
+
+enum Role {
+  MENTEE
+  MENTOR
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum Modality {
+  REMOTE
+  IN_PERSON
+  HYBRID
+}
+
+enum VerificationStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum MenteeSituation {
+  STUDENT
+  GRADUATE
+  ENTREPRENEUR
+  PROJECT_HOLDER
+  CAREER_CHANGE
+  PROFESSIONAL
+  OTHER
+}
+
+enum MentorshipRequestStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  CANCELLED
+}
+
+enum MentorshipStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum SessionStatus {
+  REQUESTED
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+enum GoalStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+}
+
+// ─── Identité & authentification ─────────────────────────────────────────────
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  passwordHash String     @map("password_hash")
+  firstName    String     @map("first_name") @db.VarChar(80)
+  lastName     String     @map("last_name") @db.VarChar(80)
+  role         Role
+  status       UserStatus @default(ACTIVE)
+  timezone     String     @default("Africa/Conakry") @db.VarChar(64)
+  onboardedAt  DateTime?  @map("onboarded_at") @db.Timestamptz(3)
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  sessions      AuthSession[]
+  mentorProfile MentorProfile?
+  menteeProfile MenteeProfile?
+
+  sentRequests     MentorshipRequest[] @relation("RequestMentee")
+  receivedRequests MentorshipRequest[] @relation("RequestMentor")
+
+  mentorshipsAsMentor Mentorship[] @relation("MentorshipMentor")
+  mentorshipsAsMentee Mentorship[] @relation("MentorshipMentee")
+
+  availabilitySlots AvailabilitySlot[]
+  sessionsAsMentor  MentoringSession[] @relation("SessionMentor")
+  sessionsAsMentee  MentoringSession[] @relation("SessionMentee")
+
+  messages     Message[]
+  goalsCreated Goal[]
+
+  @@index([role, status])
+  @@map("users")
+}
+
+/// Session d'authentification opaque : seul le hash SHA-256 du jeton est stocké.
+model AuthSession {
+  id         String    @id @default(cuid())
+  userId     String    @map("user_id")
+  tokenHash  String    @unique @map("token_hash") @db.Char(64)
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz(3)
+  revokedAt  DateTime? @map("revoked_at") @db.Timestamptz(3)
+  lastUsedAt DateTime  @default(now()) @map("last_used_at") @db.Timestamptz(3)
+  userAgent  String?   @map("user_agent") @db.VarChar(255)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("auth_sessions")
+}
+
+// ─── Catalogue des domaines (issus des TDR, section 5) ───────────────────────
+
+model ExpertiseDomain {
+  id          String   @id @default(cuid())
+  slug        String   @unique @db.VarChar(80)
+  name        String   @db.VarChar(120)
+  description String
+  icon        String   @db.VarChar(40)
+  topics      String[]
+  sortOrder   Int      @default(0) @map("sort_order")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  mentors   MentorDomain[]
+  mentees   MenteeInterest[]
+  requests  MentorshipRequest[]
+
+  @@map("expertise_domains")
+}
+
+// ─── Profils ─────────────────────────────────────────────────────────────────
+
+model MentorProfile {
+  id                 String             @id @default(cuid())
+  userId             String             @unique @map("user_id")
+  headline           String             @db.VarChar(140)
+  bio                String
+  currentPosition    String?            @map("current_position") @db.VarChar(120)
+  organization       String?            @db.VarChar(120)
+  yearsExperience    Int                @map("years_experience")
+  expertise          String[]
+  languages          String[]
+  modalities         Modality[]
+  city               String?            @db.VarChar(80)
+  sessionDurationMin Int                @default(60) @map("session_duration_min")
+  maxMentees         Int                @default(5) @map("max_mentees")
+  verificationStatus VerificationStatus @default(UNVERIFIED) @map("verification_status")
+  isPublished        Boolean            @default(true) @map("is_published")
+  /// Texte de recherche normalisé (minuscules, sans accents) : titre, expertises, domaines, nom.
+  searchText         String             @default("") @map("search_text")
+  createdAt          DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  domains MentorDomain[]
+
+  @@index([isPublished, verificationStatus])
+  @@index([searchText(ops: raw("gin_trgm_ops"))], type: Gin, map: "mentor_profiles_search_text_trgm")
+  @@map("mentor_profiles")
+}
+
+model MentorDomain {
+  mentorProfileId String @map("mentor_profile_id")
+  domainId        String @map("domain_id")
+
+  mentorProfile MentorProfile   @relation(fields: [mentorProfileId], references: [id], onDelete: Cascade)
+  domain        ExpertiseDomain @relation(fields: [domainId], references: [id], onDelete: Restrict)
+
+  @@id([mentorProfileId, domainId])
+  @@index([domainId])
+  @@map("mentor_domains")
+}
+
+model MenteeProfile {
+  id                String          @id @default(cuid())
+  userId            String          @unique @map("user_id")
+  situation         MenteeSituation
+  goalsSummary      String          @map("goals_summary")
+  desiredSkills     String[]        @map("desired_skills")
+  preferredModality Modality        @map("preferred_modality")
+  city              String?         @db.VarChar(80)
+  createdAt         DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  interests MenteeInterest[]
+
+  @@map("mentee_profiles")
+}
+
+model MenteeInterest {
+  menteeProfileId String @map("mentee_profile_id")
+  domainId        String @map("domain_id")
+
+  menteeProfile MenteeProfile   @relation(fields: [menteeProfileId], references: [id], onDelete: Cascade)
+  domain        ExpertiseDomain @relation(fields: [domainId], references: [id], onDelete: Restrict)
+
+  @@id([menteeProfileId, domainId])
+  @@index([domainId])
+  @@map("mentee_interests")
+}
+
+// ─── Mise en relation ────────────────────────────────────────────────────────
+
+/// Invariant (index partiel SQL) : une seule demande PENDING par couple mentoré/mentor.
+model MentorshipRequest {
+  id           String                  @id @default(cuid())
+  menteeId     String                  @map("mentee_id")
+  mentorId     String                  @map("mentor_id")
+  domainId     String?                 @map("domain_id")
+  goal         String                  @db.VarChar(200)
+  message      String
+  status       MentorshipRequestStatus @default(PENDING)
+  decisionNote String?                 @map("decision_note") @db.VarChar(500)
+  respondedAt  DateTime?               @map("responded_at") @db.Timestamptz(3)
+  createdAt    DateTime                @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime                @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  mentee     User             @relation("RequestMentee", fields: [menteeId], references: [id], onDelete: Cascade)
+  mentor     User             @relation("RequestMentor", fields: [mentorId], references: [id], onDelete: Cascade)
+  domain     ExpertiseDomain? @relation(fields: [domainId], references: [id], onDelete: SetNull)
+  mentorship Mentorship?
+
+  @@index([mentorId, status, createdAt])
+  @@index([menteeId, status, createdAt])
+  @@map("mentorship_requests")
+}
+
+/// Créé de façon idempotente à l'acceptation (requestId unique).
+/// Invariant (index partiel SQL) : un seul mentorat ACTIVE par couple.
+model Mentorship {
+  id        String           @id @default(cuid())
+  requestId String           @unique @map("request_id")
+  mentorId  String           @map("mentor_id")
+  menteeId  String           @map("mentee_id")
+  status    MentorshipStatus @default(ACTIVE)
+  startedAt DateTime         @default(now()) @map("started_at") @db.Timestamptz(3)
+  endedAt   DateTime?        @map("ended_at") @db.Timestamptz(3)
+  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  request  MentorshipRequest  @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  mentor   User               @relation("MentorshipMentor", fields: [mentorId], references: [id], onDelete: Cascade)
+  mentee   User               @relation("MentorshipMentee", fields: [menteeId], references: [id], onDelete: Cascade)
+  sessions MentoringSession[]
+  messages Message[]
+  goals    Goal[]
+
+  @@index([mentorId, status])
+  @@index([menteeId, status])
+  @@map("mentorships")
+}
+
+// ─── Disponibilités & séances ────────────────────────────────────────────────
+
+/// Invariant (contrainte d'exclusion SQL) : pas de chevauchement de créneaux actifs pour un mentor.
+model AvailabilitySlot {
+  id        String   @id @default(cuid())
+  mentorId  String   @map("mentor_id")
+  startsAt  DateTime @map("starts_at") @db.Timestamptz(3)
+  endsAt    DateTime @map("ends_at") @db.Timestamptz(3)
+  timezone  String   @default("Africa/Conakry") @db.VarChar(64)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  mentor   User               @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+  sessions MentoringSession[]
+
+  @@index([mentorId, startsAt])
+  @@map("availability_slots")
+}
+
+/// Invariants (SQL) : un créneau ne porte qu'une séance REQUESTED/CONFIRMED,
+/// et un mentor n'a jamais deux séances actives qui se chevauchent.
+model MentoringSession {
+  id           String        @id @default(cuid())
+  mentorshipId String        @map("mentorship_id")
+  mentorId     String        @map("mentor_id")
+  menteeId     String        @map("mentee_id")
+  slotId       String?       @map("slot_id")
+  startsAt     DateTime      @map("starts_at") @db.Timestamptz(3)
+  endsAt       DateTime      @map("ends_at") @db.Timestamptz(3)
+  status       SessionStatus @default(REQUESTED)
+  topic        String        @db.VarChar(200)
+  modality     Modality      @default(REMOTE)
+  meetingUrl   String?       @map("meeting_url") @db.VarChar(500)
+  location     String?       @db.VarChar(200)
+  confirmedAt  DateTime?     @map("confirmed_at") @db.Timestamptz(3)
+  cancelledAt  DateTime?     @map("cancelled_at") @db.Timestamptz(3)
+  cancelledBy  String?       @map("cancelled_by")
+  createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  mentorship Mentorship        @relation(fields: [mentorshipId], references: [id], onDelete: Cascade)
+  mentor     User              @relation("SessionMentor", fields: [mentorId], references: [id], onDelete: Cascade)
+  mentee     User              @relation("SessionMentee", fields: [menteeId], references: [id], onDelete: Cascade)
+  slot       AvailabilitySlot? @relation(fields: [slotId], references: [id], onDelete: SetNull)
+
+  @@index([mentorId, startsAt])
+  @@index([menteeId, startsAt])
+  @@index([mentorshipId])
+  @@map("mentoring_sessions")
+}
+
+// ─── Échanges ────────────────────────────────────────────────────────────────
+
+/// La conversation est portée par le mentorat : seuls ses deux participants y accèdent.
+model Message {
+  id           String    @id @default(cuid())
+  mentorshipId String    @map("mentorship_id")
+  senderId     String    @map("sender_id")
+  content      String
+  readAt       DateTime? @map("read_at") @db.Timestamptz(3)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  mentorship Mentorship @relation(fields: [mentorshipId], references: [id], onDelete: Cascade)
+  sender     User       @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([mentorshipId, createdAt])
+  @@map("messages")
+}
+
+// ─── Objectifs & progression ────────────────────────────────────────────────
+
+model Goal {
+  id             String     @id @default(cuid())
+  mentorshipId   String     @map("mentorship_id")
+  createdById    String     @map("created_by_id")
+  title          String     @db.VarChar(160)
+  description    String?
+  status         GoalStatus @default(NOT_STARTED)
+  progress       Int        @default(0)
+  dueDate        DateTime?  @map("due_date") @db.Timestamptz(3)
+  mentorFeedback String?    @map("mentor_feedback")
+  completedAt    DateTime?  @map("completed_at") @db.Timestamptz(3)
+  createdAt      DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  mentorship Mentorship  @relation(fields: [mentorshipId], references: [id], onDelete: Cascade)
+  createdBy  User        @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  milestones Milestone[]
+
+  @@index([mentorshipId])
+  @@map("goals")
+}
+
+model Milestone {
+  id        String    @id @default(cuid())
+  goalId    String    @map("goal_id")
+  title     String    @db.VarChar(160)
+  isDone    Boolean   @default(false) @map("is_done")
+  doneAt    DateTime? @map("done_at") @db.Timestamptz(3)
+  sortOrder Int       @default(0) @map("sort_order")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  goal Goal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+
+  @@index([goalId, sortOrder])
+  @@map("milestones")
+}

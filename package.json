@@ -1,0 +1,31 @@
+{
+  "name": "talents-connectes",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Plateforme de mentorat professionnel — Hackathon « Talents connectés », Conakry 2026",
+  "packageManager": "pnpm@10.22.0",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "db:up": "docker compose -f infra/docker-compose.yml up -d",
+    "db:down": "docker compose -f infra/docker-compose.yml down",
+    "db:migrate": "pnpm --filter backend prisma:migrate",
+    "db:deploy": "pnpm --filter backend prisma:deploy",
+    "db:seed": "pnpm --filter backend prisma:seed",
+    "db:reset": "pnpm --filter backend prisma:reset",
+    "dev": "pnpm --parallel --filter backend --filter frontend dev",
+    "dev:backend": "pnpm --filter backend dev",
+    "dev:frontend": "pnpm --filter frontend dev",
+    "build": "pnpm --filter backend build && pnpm --filter frontend build",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "test": "pnpm --filter backend test",
+    "test:e2e": "pnpm --filter backend test:e2e",
+    "format": "prettier --write \"{backend,frontend}/**/*.{ts,tsx,css,json,md}\" --ignore-path .prettierignore",
+    "db:demo-reset": "pnpm --filter backend prisma:demo-reset"
+  },
+  "devDependencies": {
+    "prettier": "^3.6.2"
+  }
+}
