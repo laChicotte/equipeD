@@ -8,8 +8,8 @@
     "node": ">=22.12"
   },
   "scripts": {
-    "db:up": "docker compose -f infra/docker-compose.yml up -d",
-    "db:down": "docker compose -f infra/docker-compose.yml down",
+    "db:up": "docker compose -f backend/docker-compose.yml up -d",
+    "db:down": "docker compose -f backend/docker-compose.yml down",
     "db:migrate": "pnpm --filter backend prisma:migrate",
     "db:deploy": "pnpm --filter backend prisma:deploy",
     "db:seed": "pnpm --filter backend prisma:seed",

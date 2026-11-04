@@ -16,8 +16,8 @@ Nom provisoire et remplaçable : « Talents Connectés » (ce n'est ni une marqu
 ```text
 mentorat/  (dépôt GitHub laChicotte/equipeD)
 ├── backend/    NestJS 12 + Prisma 7 + PostgreSQL 17   ← TERMINÉ (P0 + l'essentiel du P1, testé)
+│               (+ docker-compose.yml : PostgreSQL, port 127.0.0.1:5450)
 ├── frontend/   Next.js 16.4.5 (scaffold create-next-app) ← À CONSTRUIRE (ta mission)
-├── infra/      docker-compose.yml (PostgreSQL, port 127.0.0.1:5450)
 ├── docs/       documentation (ce fichier)
 ├── CLAUDE.md   conventions et état du projet
 └── package.json / pnpm-workspace.yaml
@@ -65,7 +65,7 @@ pnpm dev:backend                            # API sur http://localhost:4000/api/
 pnpm dev:frontend                           # Next.js sur http://localhost:3000
 ```
 
-Si le port 5450 est occupé, change `POSTGRES_PORT` (variable de docker compose) **et** `DATABASE_URL`.
+Si le port 5450 est occupé, change `POSTGRES_PORT` **et** `DATABASE_URL` dans `backend/.env`.
 Pour remettre le parcours de démo à zéro (supprime les relations d'Aminata et les comptes `@example.test`) : `pnpm db:demo-reset`.
 
 ### Comptes de démonstration (développement uniquement, données fictives)

@@ -39,6 +39,6 @@ Comptes fictifs (développement uniquement), mot de passe `Mentorat2026!` :
 
 ## Dépannage
 
-- **Port 5450 occupé** : définir `POSTGRES_PORT` pour docker compose et adapter `DATABASE_URL` dans `backend/.env`.
+- **Port 5450 occupé** : modifier `POSTGRES_PORT` et `DATABASE_URL` dans `backend/.env`.
 - **`403 ORIGIN_NOT_ALLOWED`** : ajouter l'URL du frontend dans `WEB_ORIGINS` (`backend/.env`).
 - **Client Prisma absent** : `pnpm --filter backend prisma:generate`.

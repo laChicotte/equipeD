@@ -13,7 +13,7 @@ Hackathon « Talents connectés », Conakry, 4–7 novembre 2026. Monolithe modu
   - `src/common` : gardes (session globale, rôles), middleware CSRF par Origin, filtre d'erreurs, ValidationPipe (422).
   - `prisma/migrations/*_integrity_constraints` : index partiels et contraintes d'exclusion (anti double réservation). **Ne pas les supprimer.**
 - `frontend/` : Next.js 16.4.5, App Router, React 19.3, Tailwind 4. Lire `frontend/AGENTS.md` (breaking changes de Next 16).
-- `infra/docker-compose.yml` : PostgreSQL sur `127.0.0.1:5450`.
+- `backend/docker-compose.yml` : PostgreSQL sur `127.0.0.1:5450` (variables `POSTGRES_*` lues dans `backend/.env`).
 
 ## Commandes (depuis la racine)
 ```bash
