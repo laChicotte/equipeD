@@ -2,7 +2,7 @@
 export function normalizeSearch(input: string): string {
   return input
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(/\p{Diacritic}/gu, '') // retire les accents décomposés par NFD
     .toLowerCase()
     .replace(/\s+/g, ' ')
     .trim();

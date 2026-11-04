@@ -47,7 +47,10 @@ describe('computeMatch', () => {
   });
 
   it('considère le format hybride comme compatible', () => {
-    const result = computeMatch({ ...mentee, preferredModality: 'IN_PERSON' }, { ...mentor, modalities: ['HYBRID'] });
+    const result = computeMatch(
+      { ...mentee, preferredModality: 'IN_PERSON' },
+      { ...mentor, modalities: ['HYBRID'] },
+    );
     expect(result.reasons.some((r) => r.includes('présentiel'))).toBe(true);
   });
 });

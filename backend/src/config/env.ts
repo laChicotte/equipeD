@@ -35,7 +35,8 @@ export function validateEnv(raw: Record<string, unknown>): AppEnv {
   if (!Number.isFinite(ttl) || ttl <= 0) errors.push('SESSION_TTL_HOURS doit être positif');
 
   const secret = str('SESSION_SECRET');
-  if (secret && secret.length < 32) errors.push('SESSION_SECRET doit contenir au moins 32 caractères');
+  if (secret && secret.length < 32)
+    errors.push('SESSION_SECRET doit contenir au moins 32 caractères');
   if (nodeEnv === 'production' && secret.startsWith('change-me')) {
     errors.push('SESSION_SECRET doit être remplacé en production');
   }

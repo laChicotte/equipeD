@@ -3,7 +3,12 @@ import { ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/auth/decorators.js';
 import type { AuthUser } from '../../common/auth/auth-user.js';
 import { GoalsService } from './goals.service.js';
-import { CreateGoalDto, CreateMilestoneDto, UpdateGoalDto, UpdateMilestoneDto } from './goals.dto.js';
+import {
+  CreateGoalDto,
+  CreateMilestoneDto,
+  UpdateGoalDto,
+  UpdateMilestoneDto,
+} from './goals.dto.js';
 
 @ApiTags('goals')
 @Controller()
@@ -16,7 +21,11 @@ export class GoalsController {
   }
 
   @Post('mentorships/:mentorshipId/goals')
-  create(@CurrentUser() user: AuthUser, @Param('mentorshipId') id: string, @Body() dto: CreateGoalDto) {
+  create(
+    @CurrentUser() user: AuthUser,
+    @Param('mentorshipId') id: string,
+    @Body() dto: CreateGoalDto,
+  ) {
     return this.goals.create(user, id, dto);
   }
 
@@ -31,12 +40,20 @@ export class GoalsController {
   }
 
   @Post('goals/:id/milestones')
-  addMilestone(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: CreateMilestoneDto) {
+  addMilestone(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: CreateMilestoneDto,
+  ) {
     return this.goals.addMilestone(user, id, dto);
   }
 
   @Patch('milestones/:id')
-  updateMilestone(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: UpdateMilestoneDto) {
+  updateMilestone(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: UpdateMilestoneDto,
+  ) {
     return this.goals.updateMilestone(user, id, dto);
   }
 

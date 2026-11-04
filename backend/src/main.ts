@@ -11,6 +11,9 @@ async function bootstrap() {
   setupApp(app);
   const port = app.get(AppConfigService).get('PORT');
   await app.listen(port);
-  Logger.log(`API prête sur http://localhost:${port}/api/v1 — documentation : /api/docs`, 'Bootstrap');
+  Logger.log(
+    `API prête sur http://localhost:${port}/api/v1 — documentation : /api/docs`,
+    'Bootstrap',
+  );
 }
 await bootstrap();

@@ -76,7 +76,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
     } else {
       // Jamais de stack ni de contenu métier dans la réponse ; uniquement dans les logs serveur.
       const err = exception as Error;
-      this.logger.error(`${req.method} ${req.path} → ${err?.name ?? 'Error'}: ${err?.message}`, err?.stack);
+      this.logger.error(
+        `${req.method} ${req.path} → ${err?.name ?? 'Error'}: ${err?.message}`,
+        err?.stack,
+      );
     }
 
     const payload: ApiErrorBody = {

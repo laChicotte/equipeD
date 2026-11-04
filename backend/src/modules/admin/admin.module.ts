@@ -37,15 +37,18 @@ export class AdminService {
   constructor(private readonly prisma: PrismaService) {}
 
   async overview() {
-    const [users, mentors, mentees, pendingVerification, requests, activeMentorships, sessions] = await Promise.all([
-      this.prisma.user.count(),
-      this.prisma.user.count({ where: { role: 'MENTOR' } }),
-      this.prisma.user.count({ where: { role: 'MENTEE' } }),
-      this.prisma.mentorProfile.count({ where: { verificationStatus: { in: ['UNVERIFIED', 'PENDING'] } } }),
-      this.prisma.mentorshipRequest.groupBy({ by: ['status'], _count: { _all: true } }),
-      this.prisma.mentorship.count({ where: { status: 'ACTIVE' } }),
-      this.prisma.mentoringSession.groupBy({ by: ['status'], _count: { _all: true } }),
-    ]);
+    const [users, mentors, mentees, pendingVerification, requests, activeMentorships, sessions] =
+      await Promise.all([
+        this.prisma.user.count(),
+        this.prisma.user.count({ where: { role: 'MENTOR' } }),
+        this.prisma.user.count({ where: { role: 'MENTEE' } }),
+        this.prisma.mentorProfile.count({
+          where: { verificationStatus: { in: ['UNVERIFIED', 'PENDING'] } },
+        }),
+        this.prisma.mentorshipRequest.groupBy({ by: ['status'], _count: { _all: true } }),
+        this.prisma.mentorship.count({ where: { status: 'ACTIVE' } }),
+        this.prisma.mentoringSession.groupBy({ by: ['status'], _count: { _all: true } }),
+      ]);
     return {
       users,
       mentors,
@@ -79,7 +82,8 @@ export class AdminService {
   }
 
   async updateStatus(admin: AuthUser, userId: string, dto: UpdateUserStatusDto) {
-    if (userId === admin.id) throw forbidden('SELF_MODERATION', 'Vous ne pouvez pas modifier votre propre statut.');
+    if (userId === admin.id)
+      throw forbidden('SELF_MODERATION', 'Vous ne pouvez pas modifier votre propre statut.');
     const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
     if (!user) throw notFound('USER_NOT_FOUND', 'Utilisateur introuvable.');
     const updated = await this.prisma.$transaction(async (tx) => {
@@ -90,7 +94,10 @@ export class AdminService {
       });
       // La suspension révoque immédiatement toutes les sessions actives.
       if (dto.status === 'SUSPENDED') {
-        await tx.authSession.updateMany({ where: { userId, revokedAt: null }, data: { revokedAt: new Date() } });
+        await tx.authSession.updateMany({
+          where: { userId, revokedAt: null },
+          data: { revokedAt: new Date() },
+        });
       }
       return u;
     });
@@ -98,7 +105,10 @@ export class AdminService {
   }
 
   async moderateMentor(userId: string, dto: UpdateMentorModerationDto) {
-    const profile = await this.prisma.mentorProfile.findUnique({ where: { userId }, select: { id: true } });
+    const profile = await this.prisma.mentorProfile.findUnique({
+      where: { userId },
+      select: { id: true },
+    });
     if (!profile) throw notFound('MENTOR_NOT_FOUND', 'Profil mentor introuvable.');
     return this.prisma.mentorProfile.update({
       where: { userId },
@@ -125,7 +135,11 @@ export class AdminController {
   }
 
   @Patch('users/:id/status')
-  updateStatus(@CurrentUser() admin: AuthUser, @Param('id') id: string, @Body() dto: UpdateUserStatusDto) {
+  updateStatus(
+    @CurrentUser() admin: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: UpdateUserStatusDto,
+  ) {
     return this.admin.updateStatus(admin, id, dto);
   }
 

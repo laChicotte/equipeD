@@ -5,7 +5,12 @@ import type { AuthUser } from '../../common/auth/auth-user.js';
 import type { Prisma } from '../../generated/prisma/client.js';
 import type { GoalStatus } from '../../generated/prisma/enums.js';
 import { MentorshipAccessService } from '../mentorships/mentorship-access.service.js';
-import type { CreateGoalDto, CreateMilestoneDto, UpdateGoalDto, UpdateMilestoneDto } from './goals.dto.js';
+import type {
+  CreateGoalDto,
+  CreateMilestoneDto,
+  UpdateGoalDto,
+  UpdateMilestoneDto,
+} from './goals.dto.js';
 
 const goalInclude = {
   milestones: { orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }] },
@@ -51,7 +56,12 @@ export class GoalsService {
         description: dto.description || null,
         dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
         milestones: dto.milestones?.length
-          ? { create: dto.milestones.map((title, sortOrder) => ({ title: title.trim(), sortOrder })) }
+          ? {
+              create: dto.milestones.map((title, sortOrder) => ({
+                title: title.trim(),
+                sortOrder,
+              })),
+            }
           : undefined,
       },
       include: goalInclude,
@@ -138,11 +148,16 @@ export class GoalsService {
 
   /** Avec des jalons, la progression est calculée : part des jalons atteints. */
   private async recompute(goalId: string) {
-    const milestones = await this.prisma.milestone.findMany({ where: { goalId }, select: { isDone: true } });
+    const milestones = await this.prisma.milestone.findMany({
+      where: { goalId },
+      select: { isDone: true },
+    });
     if (milestones.length === 0) {
       return this.prisma.goal.findUniqueOrThrow({ where: { id: goalId }, include: goalInclude });
     }
-    const progress = Math.round((milestones.filter((m) => m.isDone).length / milestones.length) * 100);
+    const progress = Math.round(
+      (milestones.filter((m) => m.isDone).length / milestones.length) * 100,
+    );
     const status = statusFromProgress(progress);
     return this.prisma.goal.update({
       where: { id: goalId },

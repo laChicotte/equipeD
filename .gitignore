@@ -17,6 +17,7 @@ backend/src/generated/
 .env
 .env.*
 !.env.example
+!.env.test.example
 
 # Tests / couverture
 coverage/

@@ -21,7 +21,9 @@ export class DomainsService {
         topics: true,
         _count: {
           select: {
-            mentors: { where: { mentorProfile: { isPublished: true, user: { status: 'ACTIVE' } } } },
+            mentors: {
+              where: { mentorProfile: { isPublished: true, user: { status: 'ACTIVE' } } },
+            },
           },
         },
       },

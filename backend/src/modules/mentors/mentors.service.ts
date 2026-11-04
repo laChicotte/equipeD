@@ -60,10 +60,14 @@ export class MentorsService {
     const profileFilters: Prisma.MentorProfileWhereInput[] = [{ isPublished: true }];
 
     if (query.q) {
-      const terms = normalizeSearch(query.q).split(' ').filter((t) => t.length > 1).slice(0, 6);
+      const terms = normalizeSearch(query.q)
+        .split(' ')
+        .filter((t) => t.length > 1)
+        .slice(0, 6);
       for (const term of terms) profileFilters.push({ searchText: { contains: term } });
     }
-    if (query.domain) profileFilters.push({ domains: { some: { domain: { slug: query.domain } } } });
+    if (query.domain)
+      profileFilters.push({ domains: { some: { domain: { slug: query.domain } } } });
     if (query.modality) {
       profileFilters.push(
         query.modality === 'HYBRID'
@@ -80,11 +84,13 @@ export class MentorsService {
       ...this.baseWhere(),
       mentorProfile: { AND: profileFilters },
       ...(query.available === 'true'
-        ? { availabilitySlots: { some: freeSlotWhere(now, addDays(now, AVAILABILITY_WINDOW_DAYS)) } }
+        ? {
+            availabilitySlots: { some: freeSlotWhere(now, addDays(now, AVAILABILITY_WINDOW_DAYS)) },
+          }
         : {}),
     };
 
-    const [total, rows] = await this.prisma.$transaction([
+    const [total, rows] = await Promise.all([
       this.prisma.user.count({ where }),
       this.prisma.user.findMany({
         where,
@@ -95,9 +101,12 @@ export class MentorsService {
       }),
     ]);
 
-    const nextSlots = await this.nextSlots(rows.map((r) => r.id), now);
+    const extras = await this.extras(
+      rows.map((r) => r.id),
+      now,
+    );
     return paginate(
-      rows.map((r) => this.toCard(r, nextSlots.get(r.id) ?? null)),
+      rows.map((r) => this.toCard(r, extras.get(r.id))),
       total,
       query,
     );
@@ -107,7 +116,11 @@ export class MentorsService {
   async suggestions(user: AuthUser) {
     const mentee = await this.prisma.menteeProfile.findUnique({
       where: { userId: user.id },
-      select: { desiredSkills: true, preferredModality: true, interests: { select: { domainId: true } } },
+      select: {
+        desiredSkills: true,
+        preferredModality: true,
+        interests: { select: { domainId: true } },
+      },
     });
     if (!mentee) return { profileRequired: true, items: [] };
 
@@ -120,12 +133,15 @@ export class MentorsService {
       select: mentorCardSelect,
       take: 100,
     });
-    const nextSlots = await this.nextSlots(rows.map((r) => r.id), now);
+    const extras = await this.extras(
+      rows.map((r) => r.id),
+      now,
+    );
     const horizon = addDays(now, AVAILABILITY_WINDOW_DAYS);
 
     const items = rows
       .map((row) => {
-        const card = this.toCard(row, nextSlots.get(row.id) ?? null);
+        const card = this.toCard(row, extras.get(row.id));
         const match = computeMatch(
           {
             interestDomainIds: mentee.interests.map((i) => i.domainId),
@@ -136,7 +152,9 @@ export class MentorsService {
             domains: card.domains,
             expertise: card.expertise,
             modalities: card.modalities,
-            hasUpcomingAvailability: Boolean(card.nextAvailableAt && card.nextAvailableAt <= horizon),
+            hasUpcomingAvailability: Boolean(
+              card.nextAvailableAt && card.nextAvailableAt <= horizon,
+            ),
             isVerified: card.verificationStatus === 'VERIFIED',
             hasCapacity: card.acceptingMentees,
           },
@@ -155,11 +173,15 @@ export class MentorsService {
       where: { id, ...this.baseWhere() },
       select: mentorCardSelect,
     });
-    if (!row) throw notFound('MENTOR_NOT_FOUND', 'Ce mentor est introuvable ou son profil n’est pas publié.');
+    if (!row)
+      throw notFound(
+        'MENTOR_NOT_FOUND',
+        'Ce mentor est introuvable ou son profil n’est pas publié.',
+      );
 
     const now = new Date();
-    const nextSlots = await this.nextSlots([row.id], now);
-    const card = this.toCard(row, nextSlots.get(row.id) ?? null, false);
+    const extras = await this.extras([row.id], now);
+    const card = this.toCard(row, extras.get(row.id), false);
 
     // Relation entre le visiteur connecté et ce mentor (pour adapter les actions proposées).
     let relation: {
@@ -208,21 +230,40 @@ export class MentorsService {
     return slots;
   }
 
-  private async nextSlots(mentorIds: string[], now: Date): Promise<Map<string, Date>> {
-    if (mentorIds.length === 0) return new Map();
-    const groups = await this.prisma.availabilitySlot.groupBy({
-      by: ['mentorId'],
-      where: { mentorId: { in: mentorIds }, ...freeSlotWhere(now) },
-      _min: { startsAt: true },
-    });
-    return new Map(
-      groups.filter((g) => g._min.startsAt).map((g) => [g.mentorId, g._min.startsAt as Date]),
-    );
+  /**
+   * Données calculées par mentor : prochain créneau libre et note moyenne
+   * (uniquement les évaluations laissées par des mentorés après une séance).
+   */
+  private async extras(mentorIds: string[], now: Date): Promise<Map<string, MentorExtras>> {
+    const result = new Map<string, MentorExtras>();
+    if (mentorIds.length === 0) return result;
+    const [slots, feedbacks] = await Promise.all([
+      this.prisma.availabilitySlot.groupBy({
+        by: ['mentorId'],
+        where: { mentorId: { in: mentorIds }, ...freeSlotWhere(now) },
+        _min: { startsAt: true },
+      }),
+      this.prisma.sessionFeedback.findMany({
+        where: { session: { mentorId: { in: mentorIds } }, author: { role: 'MENTEE' } },
+        select: { rating: true, session: { select: { mentorId: true } } },
+      }),
+    ]);
+    for (const id of mentorIds)
+      result.set(id, { nextAvailableAt: null, ratingSum: 0, ratingCount: 0 });
+    for (const g of slots) result.get(g.mentorId)!.nextAvailableAt = g._min.startsAt ?? null;
+    for (const f of feedbacks) {
+      const e = result.get(f.session.mentorId)!;
+      e.ratingSum += f.rating;
+      e.ratingCount += 1;
+    }
+    return result;
   }
 
-  private toCard(row: MentorRow, nextAvailableAt: Date | null, excerpt = true) {
+  private toCard(row: MentorRow, extra: MentorExtras | undefined, excerpt = true) {
     const p = row.mentorProfile!;
     const activeMentees = row._count.mentorshipsAsMentor;
+    const nextAvailableAt = extra?.nextAvailableAt ?? null;
+    const ratingCount = extra?.ratingCount ?? 0;
     return {
       id: row.id,
       firstName: row.firstName,
@@ -243,8 +284,18 @@ export class MentorsService {
       maxMentees: p.maxMentees,
       acceptingMentees: activeMentees < p.maxMentees,
       nextAvailableAt,
+      rating: {
+        average: ratingCount ? Math.round((extra!.ratingSum / ratingCount) * 10) / 10 : null,
+        count: ratingCount,
+      },
     };
   }
+}
+
+interface MentorExtras {
+  nextAvailableAt: Date | null;
+  ratingSum: number;
+  ratingCount: number;
 }
 
 function addDays(date: Date, days: number): Date {

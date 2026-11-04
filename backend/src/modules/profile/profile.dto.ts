@@ -56,7 +56,10 @@ export class UpsertMentorProfileDto {
   @ArrayMinSize(1, { message: 'Ajoutez au moins une compétence.' })
   @ArrayMaxSize(15)
   @IsString({ each: true })
-  @Length(2, 50, { each: true, message: 'Chaque compétence doit contenir entre 2 et 50 caractères.' })
+  @Length(2, 50, {
+    each: true,
+    message: 'Chaque compétence doit contenir entre 2 et 50 caractères.',
+  })
   expertise!: string[];
 
   @IsArray()

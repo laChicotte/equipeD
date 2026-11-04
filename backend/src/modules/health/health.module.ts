@@ -17,7 +17,10 @@ export class HealthController {
     try {
       await this.prisma.$queryRaw`SELECT 1`;
     } catch {
-      throw new ServiceUnavailableException({ code: 'DATABASE_UNAVAILABLE', message: 'Base de données injoignable.' });
+      throw new ServiceUnavailableException({
+        code: 'DATABASE_UNAVAILABLE',
+        message: 'Base de données injoignable.',
+      });
     }
     return { status: 'ok', database: 'up', time: new Date().toISOString() };
   }

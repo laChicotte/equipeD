@@ -1,10 +1,26 @@
-import { Body, Controller, Delete, Get, HttpCode, Module, Param, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Module,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { CurrentUser, Roles } from '../../common/auth/decorators.js';
 import type { AuthUser } from '../../common/auth/auth-user.js';
 import { AvailabilityService } from './availability.service.js';
 import { SessionsService } from './sessions.service.js';
-import { BookSessionDto, ConfirmSessionDto, CreateSlotDto, ListSessionsQuery } from './scheduling.dto.js';
+import {
+  BookSessionDto,
+  ConfirmSessionDto,
+  CreateSlotDto,
+  ListSessionsQuery,
+  SessionFeedbackDto,
+} from './scheduling.dto.js';
 
 @ApiTags('availability')
 @Controller('availability')
@@ -66,6 +82,16 @@ export class SessionsController {
   @Post(':id/complete')
   complete(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.sessions.complete(user, id);
+  }
+
+  /** Évaluation (note 1–5 et commentaire) d'une séance terminée, une fois par participant. */
+  @Post(':id/feedback')
+  addFeedback(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: SessionFeedbackDto,
+  ) {
+    return this.sessions.addFeedback(user, id, dto);
   }
 }
 

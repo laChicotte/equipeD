@@ -4,11 +4,20 @@ import { conflict, forbidden, isConstraintViolation, notFound } from '../../comm
 import type { AuthUser } from '../../common/auth/auth-user.js';
 import type { Prisma } from '../../generated/prisma/client.js';
 import type { SessionStatus } from '../../generated/prisma/enums.js';
-import type { BookSessionDto, ConfirmSessionDto, ListSessionsQuery } from './scheduling.dto.js';
+import type {
+  BookSessionDto,
+  ConfirmSessionDto,
+  ListSessionsQuery,
+  SessionFeedbackDto,
+} from './scheduling.dto.js';
 
 const sessionInclude = {
   mentor: { select: { id: true, firstName: true, lastName: true } },
   mentee: { select: { id: true, firstName: true, lastName: true } },
+  feedbacks: {
+    select: { id: true, authorId: true, rating: true, comment: true, createdAt: true },
+    orderBy: { createdAt: 'asc' },
+  },
 } satisfies Prisma.MentoringSessionInclude;
 
 const STATUS_LABELS: Record<SessionStatus, string> = {
@@ -33,7 +42,8 @@ export class SessionsService {
       where: { id: dto.slotId },
       select: { id: true, mentorId: true, startsAt: true, endsAt: true, isActive: true },
     });
-    if (!slot || !slot.isActive) throw notFound('SLOT_NOT_FOUND', 'Ce créneau n’est plus disponible.');
+    if (!slot || !slot.isActive)
+      throw notFound('SLOT_NOT_FOUND', 'Ce créneau n’est plus disponible.');
     if (slot.startsAt <= new Date()) throw conflict('SLOT_IN_PAST', 'Ce créneau est déjà passé.');
 
     const mentorship = await this.prisma.mentorship.findFirst({
@@ -63,13 +73,22 @@ export class SessionsService {
       });
     } catch (error) {
       if (isConstraintViolation(error, 'mentoring_sessions_one_active_per_slot')) {
-        throw conflict('SLOT_ALREADY_BOOKED', 'Ce créneau vient d’être réservé. Choisissez-en un autre.');
+        throw conflict(
+          'SLOT_ALREADY_BOOKED',
+          'Ce créneau vient d’être réservé. Choisissez-en un autre.',
+        );
       }
       if (isConstraintViolation(error, 'mentoring_sessions_mentor_no_overlap')) {
-        throw conflict('SLOT_ALREADY_BOOKED', 'Le mentor a déjà une séance sur cette plage horaire.');
+        throw conflict(
+          'SLOT_ALREADY_BOOKED',
+          'Le mentor a déjà une séance sur cette plage horaire.',
+        );
       }
       if (isConstraintViolation(error, 'mentoring_sessions_mentee_no_overlap')) {
-        throw conflict('MENTEE_TIME_CONFLICT', 'Vous avez déjà une séance qui chevauche ce créneau.');
+        throw conflict(
+          'MENTEE_TIME_CONFLICT',
+          'Vous avez déjà une séance qui chevauche ce créneau.',
+        );
       }
       throw error;
     }
@@ -111,7 +130,8 @@ export class SessionsService {
         location: dto.location ?? null,
       },
     });
-    if (updated.count === 0) throw conflict('INVALID_TRANSITION', 'Cette séance a déjà été traitée.');
+    if (updated.count === 0)
+      throw conflict('INVALID_TRANSITION', 'Cette séance a déjà été traitée.');
     return this.get(id);
   }
 
@@ -149,16 +169,59 @@ export class SessionsService {
     return this.get(id);
   }
 
+  /**
+   * Évaluation d'une séance par l'un de ses participants, une seule fois.
+   * Possible pour une séance terminée, ou confirmée dont l'horaire de fin est passé.
+   */
+  async addFeedback(user: AuthUser, id: string, dto: SessionFeedbackDto) {
+    const session = await this.load(id);
+    if (session.mentorId !== user.id && session.menteeId !== user.id) {
+      throw forbidden('NOT_PARTICIPANT', 'Cette séance ne vous concerne pas.');
+    }
+    const ended =
+      session.status === 'COMPLETED' ||
+      (session.status === 'CONFIRMED' && session.endsAt <= new Date());
+    if (!ended) {
+      throw conflict('SESSION_NOT_ENDED', 'Une séance ne peut être évaluée qu’une fois terminée.');
+    }
+    try {
+      await this.prisma.sessionFeedback.create({
+        data: {
+          sessionId: id,
+          authorId: user.id,
+          rating: dto.rating,
+          comment: dto.comment || null,
+        },
+      });
+    } catch (error) {
+      if (isConstraintViolation(error)) {
+        throw conflict('FEEDBACK_ALREADY_GIVEN', 'Vous avez déjà évalué cette séance.');
+      }
+      throw error;
+    }
+    return this.get(id);
+  }
+
   private async load(id: string) {
     const session = await this.prisma.mentoringSession.findUnique({
       where: { id },
-      select: { id: true, mentorId: true, menteeId: true, status: true, startsAt: true },
+      select: {
+        id: true,
+        mentorId: true,
+        menteeId: true,
+        status: true,
+        startsAt: true,
+        endsAt: true,
+      },
     });
     if (!session) throw notFound('SESSION_NOT_FOUND', 'Séance introuvable.');
     return session;
   }
 
   private get(id: string) {
-    return this.prisma.mentoringSession.findUniqueOrThrow({ where: { id }, include: sessionInclude });
+    return this.prisma.mentoringSession.findUniqueOrThrow({
+      where: { id },
+      include: sessionInclude,
+    });
   }
 }
