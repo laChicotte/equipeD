@@ -151,7 +151,7 @@ export function AvailabilityView() {
                         <li
                           key={s.id}
                           className={cn(
-                            'flex items-center gap-4 rounded-lg border bg-surface px-4 py-3 shadow-card',
+                            'flex items-center gap-4 rounded-lg border bg-surface px-4 py-3',
                             booking ? 'border-teal-200 bg-teal-50/40' : 'border-border',
                           )}
                         >

@@ -46,29 +46,20 @@ function StatTile({
   const body = (
     <>
       <div className="flex items-center justify-between gap-3">
-        <span className={cn('text-[13px] leading-snug font-medium sm:text-sm', emphasis ? 'text-ink-100' : 'text-muted-foreground')}>{label}</span>
-        <span
-          className={cn(
-            'hidden size-8 shrink-0 items-center justify-center rounded-md sm:inline-flex',
-            emphasis ? 'bg-white/10 text-teal-200' : 'bg-teal-50 text-teal-700',
-          )}
-        >
-          <Icon className="size-4" aria-hidden />
-        </span>
+        <span className={cn('text-[13px] leading-snug font-medium sm:text-sm', 'text-muted-foreground')}>{label}</span>
+        <Icon className="hidden size-4 shrink-0 text-muted-foreground sm:block" aria-hidden />
       </div>
-      <p className={cn('mt-2 text-2xl font-semibold tracking-tight sm:mt-3 sm:text-3xl', emphasis ? 'text-white' : 'text-foreground')}>
+      <p className={cn('mt-2 text-3xl font-semibold tracking-tight tabular-nums sm:mt-3 sm:text-4xl', emphasis ? 'text-teal-700' : 'text-foreground')}>
         {value}
       </p>
       {hint && (
-        <p className={cn('mt-1 text-xs', emphasis ? 'text-ink-100/80' : 'text-muted-foreground')}>{hint}</p>
+        <p className={cn('mt-1 text-xs', 'text-muted-foreground')}>{hint}</p>
       )}
     </>
   );
   const cls = cn(
-    'block rounded-lg border p-4 shadow-card transition-[box-shadow,border-color] duration-150 sm:p-5',
-    emphasis ? 'border-ink-900 bg-ink-900' : 'border-border bg-surface',
-    href && 'hover:shadow-raised',
-    href && !emphasis && 'hover:border-teal-200',
+    'block rounded-lg border border-border bg-surface p-4 transition-colors duration-150 sm:p-5',
+    href && 'hover:border-ink-900',
   );
   return href ? (
     <Link href={href} className={cls}>
@@ -84,7 +75,7 @@ function SessionRow({ session, me }: { session: Session & { mentorshipId: string
   return (
     <li className="flex min-w-0 items-center gap-4 py-3.5 first:pt-0 last:pb-0">
       <div className="flex w-14 shrink-0 flex-col items-center rounded-md border border-border bg-surface-muted py-1.5 text-center">
-        <span className="text-[11px] font-semibold text-muted-foreground uppercase">
+        <span className="text-xs font-semibold text-muted-foreground first-letter:uppercase">
           {formatShortDate(session.startsAt, me.timezone).split(' ')[0]}
         </span>
         <span className="text-lg leading-tight font-semibold">
@@ -213,10 +204,10 @@ function Tiles({ data, me }: { data: DashboardData; me: Me }) {
         icon={MessageSquare}
         href="/mentorats"
       />
-      <div className="rounded-lg border border-border bg-surface p-4 shadow-card sm:p-5">
+      <div className="rounded-lg border border-border bg-surface p-4 sm:p-5">
         <div className="flex items-center justify-between gap-3">
           <span className="text-[13px] leading-snug font-medium text-muted-foreground sm:text-sm">Progression des objectifs</span>
-          <span className="hidden sm:inline-flex size-8 items-center justify-center rounded-md bg-teal-50 text-teal-700">
+          <span className="hidden sm:inline-flex items-center justify-center text-muted-foreground">
             <Target className="size-4" aria-hidden />
           </span>
         </div>
@@ -253,7 +244,7 @@ export function Dashboard() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-sm font-medium text-muted-foreground first-letter:uppercase">{today}</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-[28px]">Bonjour {me.firstName}</h1>
+          <h1 className="mt-1 text-3xl font-extrabold tracking-[-0.03em] text-ink-900 sm:text-4xl">Bonjour {me.firstName}</h1>
           <p className="mt-1 text-[15px] text-muted-foreground">
             {me.role === 'MENTOR'
               ? 'Voici l’essentiel de votre activité de mentor.'

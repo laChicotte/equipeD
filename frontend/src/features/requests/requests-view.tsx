@@ -103,7 +103,7 @@ function RequestItem({ request, box }: { request: MentorshipRequest; box: 'inbox
   const profile = request.mentee.menteeProfile;
 
   return (
-    <Card className="p-5 transition-shadow hover:shadow-raised sm:p-6">
+    <Card className="p-5 transition-colors hover:border-ink-900 sm:p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
         <Avatar person={person} size="lg" />
         <div className="min-w-0 flex-1">

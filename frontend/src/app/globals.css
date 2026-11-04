@@ -1,18 +1,21 @@
 @import 'tailwindcss';
 
 /*
- * Système de design — Talents Connectés (docs/HANDOFF_FRONTEND.md §6)
- * Contrastes texte WCAG AA vérifiés. Les composants n'utilisent que les tokens sémantiques.
+ * Système de design — Talents Connectés
+ * Direction « Le rapport imprimé » : un catalogue éditorial (le programme est né au Salon du livre
+ * de jeunesse de Conakry). Une famille (Schibsted Grotesk), encre bleue, papier, aplats turquoise.
+ * Règles : pas de dégradés, pas d'ombres au repos, pas de verre, formes nettes (rayon 2–4 px),
+ * séparation des surfaces par un pas de ton plutôt que par des filets.
  */
 
 @theme {
-  /* Palette primitive */
-  --color-ink-950: #0f1d33;
+  /* Palette primitive (marque conservée, contrastes WCAG AA vérifiés pour le texte) */
+  --color-ink-950: #0e1b30;
   --color-ink-900: #172a46;
   --color-ink-800: #1f3557;
   --color-ink-700: #2a4166;
-  --color-ink-100: #e6ebf3;
-  --color-ink-50: #f1f4f9;
+  --color-ink-100: #e3e9f2;
+  --color-ink-50: #eef2f8;
 
   --color-teal-800: #08605a;
   --color-teal-700: #0b7a73;
@@ -35,13 +38,13 @@
   --color-danger-50: #fdeeee;
 
   /* Tokens sémantiques */
-  --color-background: #f7f9fc;
+  --color-background: #f4f6f9; /* papier */
   --color-surface: #ffffff;
-  --color-surface-muted: #f1f4f9;
-  --color-border: #e2e8f0;
-  --color-border-strong: #cbd5e1;
-  --color-foreground: #18243a;
-  --color-muted-foreground: #5b6b82;
+  --color-surface-muted: #e9edf3; /* un pas de ton sous le papier */
+  --color-border: #dfe5ee;
+  --color-border-strong: #c6d0dd;
+  --color-foreground: #14223a; /* encre */
+  --color-muted-foreground: #4f5f77;
   --color-primary: var(--color-ink-900);
   --color-primary-hover: var(--color-ink-700);
   --color-primary-foreground: #ffffff;
@@ -50,26 +53,31 @@
   --color-accent-foreground: #ffffff;
   --color-accent-soft: var(--color-teal-50);
   --color-highlight: var(--color-amber-400);
-  --color-highlight-foreground: #18243a;
+  --color-highlight-foreground: #14223a;
   --color-ring: var(--color-teal-700);
   --color-destructive: var(--color-danger-700);
 
-  /* Typographie */
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  /* Typographie : une seule famille */
+  --font-sans: var(--font-schibsted), ui-sans-serif, system-ui, sans-serif;
 
-  /* Rayons */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 20px;
+  /* Rayons : formes nettes, une seule logique sur tout le produit */
+  --radius-xs: 2px;
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 4px;
+  --radius-xl: 4px;
+  --radius-2xl: 4px;
 
-  /* Ombres */
-  --shadow-card: 0 1px 2px rgb(23 42 70 / 0.06);
-  --shadow-raised: 0 8px 24px rgb(23 42 70 / 0.08);
-  --shadow-focus: 0 0 0 3px rgb(11 122 115 / 0.18);
+  /* Ombres : seulement ce qui flotte réellement (menus, dialogues) */
+  --shadow-card: 0 0 #0000;
+  --shadow-raised: 0 12px 32px rgb(14 27 48 / 0.14);
+  --shadow-focus: 0 0 0 3px rgb(11 122 115 / 0.2);
 
   /* Mouvement */
   --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out-quart: cubic-bezier(0.76, 0, 0.24, 1);
+  --ease-photo: cubic-bezier(0.33, 1, 0.68, 1);
 
   --animate-fade-in: fade-in 180ms var(--ease-out-soft);
   --animate-scale-in: scale-in 180ms var(--ease-out-soft);
@@ -105,6 +113,21 @@
   }
 }
 
+:root {
+  /* Échelle typographique éditoriale (cinq pas) */
+  --step-small: clamp(0.8125rem, 0.79rem + 0.1vw, 0.875rem);
+  --step-body: clamp(1.0625rem, 1rem + 0.25vw, 1.1875rem);
+  --step-lead: clamp(1.25rem, 1.1rem + 0.7vw, 1.625rem);
+  --step-head: clamp(2.25rem, 1.3rem + 3.4vw, 4.25rem);
+  --step-display: clamp(3.5rem, 1rem + 8.4vw, 9rem);
+  /* Marges de page et axe éditorial à 42 % */
+  --page-x: clamp(1.25rem, 4vw, 3rem);
+  --axis: 42%;
+  --t-press: 140ms;
+  --t-hover: 180ms;
+  --t-ui: 240ms;
+}
+
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
@@ -114,7 +137,7 @@
     background: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
-    font-feature-settings: 'cv11', 'ss01';
+    letter-spacing: -0.01em;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
@@ -123,17 +146,17 @@
   h3,
   h4 {
     text-wrap: balance;
+    letter-spacing: -0.03em;
   }
   p {
     text-wrap: pretty;
   }
-  /* Les enfants de grille peuvent rétrécir : évite les débordements causés par le texte tronqué. */
   :where(.grid) > * {
     min-width: 0;
   }
   ::selection {
-    background: var(--color-teal-100);
-    color: var(--color-ink-900);
+    background: var(--color-teal-200);
+    color: var(--color-ink-950);
   }
   :focus-visible {
     outline: 2px solid var(--color-ring);
@@ -148,13 +171,112 @@
   }
 }
 
-@layer utilities {
-  .bg-grid {
-    background-image:
-      linear-gradient(to right, rgb(23 42 70 / 0.05) 1px, transparent 1px),
-      linear-gradient(to bottom, rgb(23 42 70 / 0.05) 1px, transparent 1px);
-    background-size: 32px 32px;
+@layer components {
+  /* Cadre de page : une paire de marges identique partout */
+  .page-frame {
+    padding-inline: var(--page-x);
   }
+
+  /* Traitement photo unique : noir et blanc contrasté, comme un catalogue imprimé */
+  .photo {
+    filter: grayscale(1) contrast(1.08) brightness(1.02);
+  }
+
+  /* Titre à lignes masquées (signature) */
+  .lines .line {
+    display: block;
+    overflow: hidden;
+    padding-bottom: 0.1em;
+    margin-bottom: -0.1em;
+  }
+  .lines [data-line] {
+    display: block;
+  }
+
+  /* Lien éditorial : soulignement qui apparaît au survol */
+  .ed-link {
+    text-decoration: underline;
+    text-decoration-color: transparent;
+    text-underline-offset: 0.22em;
+    text-decoration-thickness: 0.08em;
+    transition: text-decoration-color var(--t-hover) ease;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .ed-link:hover {
+      text-decoration-color: currentColor;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .js .lines [data-line] {
+    transform: translateY(108%);
+    animation: line-up 900ms var(--ease-expo) forwards;
+    animation-delay: calc(var(--i, 0) * 110ms + 120ms);
+  }
+  .js [data-after-lines] {
+    opacity: 0;
+    transform: translateY(14px);
+    animation: rise-in 700ms var(--ease-expo) 520ms forwards;
+  }
+
+  /* Entrée des éléments d'une section, une fois, en cascade */
+  .js [data-reveal] {
+    opacity: 0;
+    transform: translateY(24px);
+    transition:
+      opacity 700ms var(--ease-expo),
+      transform 900ms var(--ease-expo);
+    transition-delay: calc(var(--d, 0) * 80ms);
+  }
+  .js [data-reveal].is-in {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* Ouverture d'une image (volet) */
+  .js .shutter {
+    clip-path: inset(0 0 100% 0);
+    transition: clip-path 1100ms var(--ease-in-out-quart);
+  }
+  .js .shutter img {
+    transform: scale(1.12);
+    transition: transform 1600ms var(--ease-photo);
+  }
+  .js .shutter.is-in {
+    clip-path: inset(0);
+  }
+  .js .shutter.is-in img {
+    transform: none;
+  }
+
+  /* Image qui dérive lentement (photo vivante) */
+  .drift {
+    animation: drift 22s var(--ease-photo) infinite alternate;
+  }
+}
+
+@keyframes line-up {
+  to {
+    transform: none;
+  }
+}
+@keyframes rise-in {
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes drift {
+  from {
+    transform: scale(1.04) translate3d(0, 0, 0);
+  }
+  to {
+    transform: scale(1.12) translate3d(-1.5%, -1%, 0);
+  }
+}
+
+@layer utilities {
   .scrollbar-thin {
     scrollbar-width: thin;
     scrollbar-color: var(--color-border-strong) transparent;

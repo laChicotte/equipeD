@@ -136,7 +136,7 @@ export function Directory() {
 
       {isMentee && !filters.q && activeCount === 0 && filters.page === 1 && <Suggestions />}
 
-      <div className="mb-6 rounded-lg border border-border bg-surface p-3 shadow-card sm:p-4">
+      <div className="mb-6 rounded-lg border border-border bg-surface p-3 sm:p-4">
         <div className="flex gap-2">
           <div className="relative flex-1">
             <Search

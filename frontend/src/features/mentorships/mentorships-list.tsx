@@ -59,7 +59,7 @@ export function MentorshipsList() {
             <li key={m.id}>
               <Link
                 href={`/mentorats/${m.id}`}
-                className="group flex h-full flex-col rounded-lg border border-border bg-surface p-5 shadow-card transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-raised"
+                className="group flex h-full flex-col rounded-lg border border-border bg-surface p-5 transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-teal-200 hover:border-ink-900"
               >
                 <div className="flex items-start gap-3.5">
                   <Avatar person={m.counterpart} size="lg" />

@@ -6,13 +6,15 @@ export default function PublicLayout({ children }: LayoutProps<'/'>) {
   return (
     <div className="flex min-h-dvh flex-col">
       <DemoBanner />
-      <Suspense fallback={<div className="h-16 border-b border-border bg-surface" />}>
+      <Suspense fallback={<div className="h-16 bg-background" />}>
         <PublicHeader />
       </Suspense>
       <main id="contenu" className="flex-1">
         {children}
       </main>
-      <PublicFooter />
+      <Suspense fallback={<div className="min-h-[70svh] bg-ink-950" />}>
+        <PublicFooter />
+      </Suspense>
     </div>
   );
 }

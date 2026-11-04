@@ -18,7 +18,7 @@ export function DialogContent({
 }: ComponentProps<typeof DialogPrimitive.Content> & { title: string; description?: ReactNode }) {
   return (
     <DialogPrimitive.Portal>
-      <DialogPrimitive.Overlay className="fixed inset-0 z-[60] bg-ink-950/45 backdrop-blur-[2px] data-[state=open]:animate-fade-in" />
+      <DialogPrimitive.Overlay className="fixed inset-0 z-[60] bg-ink-950/55 data-[state=open]:animate-fade-in" />
       <DialogPrimitive.Content
         className={cn(
           'fixed inset-x-0 bottom-0 z-[60] flex max-h-[92dvh] flex-col overflow-hidden rounded-t-xl border border-border bg-surface shadow-raised focus:outline-none data-[state=open]:animate-slide-up sm:inset-auto sm:top-1/2 sm:left-1/2 sm:w-full sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl sm:data-[state=open]:animate-scale-in',

@@ -273,7 +273,7 @@ function GoalCard({ goal, me, mentorshipId, readOnly }: { goal: Goal; me: Me; me
       )}
 
       <div className="mt-5 rounded-md border border-border bg-surface-muted/60 p-4">
-        <p className="flex items-center gap-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+        <p className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
           <MessageSquareQuote className="size-4 text-teal-700" aria-hidden />
           Retour du mentor
         </p>

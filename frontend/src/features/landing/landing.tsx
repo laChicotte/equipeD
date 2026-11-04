@@ -1,311 +1,474 @@
 'use client';
 
-import {
-  ArrowRight,
-  BadgeCheck,
-  CalendarCheck2,
-  CircleCheck,
-  Hourglass,
-  Lock,
-  MessagesSquare,
-  Search,
-  Send,
-  ShieldCheck,
-  Target,
-} from 'lucide-react';
+import { ArrowRight, ArrowUpRight, LoaderCircle, Search } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
-import { DomainIcon } from '@/components/domain-icon';
+import { useDeferredValue, useId, useState } from 'react';
 import { ErrorState } from '@/components/feedback/states';
 import { Button } from '@/components/ui/button';
-import { Progress, Skeleton } from '@/components/ui/misc';
-import { useDomains } from '@/features/catalog/api';
-import { CAMPUS_FRANCE_NOTICE, isCampusFrance } from '@/lib/labels';
+import { Skeleton } from '@/components/ui/misc';
+import { useDomains, useMentors } from '@/features/catalog/api';
+import { useReveal } from '@/hooks/use-reveal';
+import { formatShortDate, fullName, plural } from '@/lib/format';
+import { isCampusFrance } from '@/lib/labels';
+import { photos, type Photo } from '@/lib/photos';
+import { cn } from '@/lib/utils';
 
-const steps = [
-  {
-    icon: Search,
-    title: 'Trouvez le bon mentor',
-    text: 'Filtrez par domaine, compétence, langue ou disponibilité. Des suggestions expliquent pourquoi un profil vous correspond.',
-  },
-  {
-    icon: Send,
-    title: 'Envoyez une demande motivée',
-    text: 'Formulez votre objectif. Le mentor accepte ou décline : la relation démarre sur des attentes claires.',
-  },
-  {
-    icon: CalendarCheck2,
-    title: 'Avancez ensemble',
-    text: 'Réservez des séances, échangez en privé et suivez vos objectifs jalon après jalon.',
-  },
-];
+/* ── Image éditoriale (un seul traitement pour toute la page) ─────────────── */
 
-function HeroVisual() {
+function EdPhoto({
+  photo,
+  className,
+  sizes,
+  priority = false,
+  drift = false,
+}: {
+  photo: Photo;
+  className?: string;
+  sizes: string;
+  priority?: boolean;
+  drift?: boolean;
+}) {
   return (
-    <div className="relative mx-auto w-full max-w-md lg:max-w-none" aria-hidden>
-      <div className="pointer-events-none absolute -top-10 -right-6 size-64 rounded-full bg-teal-200/50 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-10 -left-8 size-56 rounded-full bg-amber-100/80 blur-3xl" />
-      <div className="relative rounded-xl border border-border bg-surface/90 p-5 shadow-raised backdrop-blur">
-        <div className="mb-4 flex items-center justify-between">
-          <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-            Exemple de parcours
-          </p>
-          <span className="rounded-sm bg-ink-50 px-2 py-0.5 text-[11px] font-semibold text-ink-700">Illustration</span>
-        </div>
-        <ol className="grid gap-3">
-          <li className="flex items-center gap-3 rounded-lg border border-border bg-surface p-3">
-            <span className="inline-flex size-9 items-center justify-center rounded-md bg-warning-50 text-warning-700">
-              <Hourglass className="size-4" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold">Demande envoyée</p>
-              <p className="truncate text-xs text-muted-foreground">« Construire mon premier portfolio web »</p>
-            </div>
-          </li>
-          <li className="flex items-center gap-3 rounded-lg border border-border bg-surface p-3">
-            <span className="inline-flex size-9 items-center justify-center rounded-md bg-success-50 text-success-700">
-              <CircleCheck className="size-4" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold">Demande acceptée</p>
-              <p className="text-xs text-muted-foreground">La conversation privée est ouverte</p>
-            </div>
-            <MessagesSquare className="size-4 text-teal-700" />
-          </li>
-          <li className="flex items-center gap-3 rounded-lg border border-border bg-surface p-3">
-            <span className="inline-flex size-9 items-center justify-center rounded-md bg-teal-50 text-teal-700">
-              <CalendarCheck2 className="size-4" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold">Séance confirmée</p>
-              <p className="text-xs text-muted-foreground">Créneau réservé, lien de réunion externe</p>
-            </div>
-          </li>
-          <li className="rounded-lg border border-border bg-surface p-3">
-            <div className="flex items-center gap-3">
-              <span className="inline-flex size-9 items-center justify-center rounded-md bg-ink-50 text-ink-900">
-                <Target className="size-4" />
-              </span>
-              <p className="flex-1 text-sm font-semibold">Objectif en cours</p>
-              <span className="text-xs font-semibold text-teal-700 tabular-nums">2/3 jalons</span>
-            </div>
-            <Progress value={66} className="mt-3" label="Exemple de progression" />
-          </li>
-        </ol>
-      </div>
+    <div className={cn('relative overflow-hidden bg-ink-900', className)}>
+      <Image
+        src={photo.src}
+        alt={photo.alt}
+        fill
+        sizes={sizes}
+        priority={priority}
+        className={cn('photo object-cover', drift && 'drift')}
+      />
     </div>
   );
 }
 
-function Domains() {
-  const { data, isPending, isError, error, refetch } = useDomains();
-  if (isError) return <ErrorState error={error} onRetry={() => void refetch()} />;
+/* ── Recherche vivante : les vrais mentors, pendant la frappe ─────────────── */
+
+const QUICK_PICKS = ['Développement web', 'Business plan', 'Campus France', 'Prise de parole'];
+
+function HeroSearch() {
+  const inputId = useId();
+  const [q, setQ] = useState('');
+  const deferred = useDeferredValue(q.trim());
+  const active = deferred.length >= 2;
+  const { data, isFetching } = useMentors({ q: active ? deferred : undefined });
+  const results = active ? (data?.items ?? []).slice(0, 3) : [];
+  const href = active ? `/mentors?q=${encodeURIComponent(deferred)}` : '/mentors';
+
   return (
-    <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {isPending
-        ? Array.from({ length: 6 }).map((_, i) => (
-            <li key={i}>
-              <Skeleton className="h-44" />
-            </li>
-          ))
-        : data.map((d) => (
-            <li key={d.id}>
-              <Link
-                href={`/mentors?domain=${d.slug}`}
-                className="group flex h-full flex-col rounded-lg border border-border bg-surface p-5 shadow-card transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-raised"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <span className="inline-flex size-11 items-center justify-center rounded-md bg-teal-50 text-teal-700 transition-colors group-hover:bg-teal-700 group-hover:text-white">
-                    <DomainIcon name={d.icon} className="size-5" />
-                  </span>
-                  <span className="text-xs font-semibold text-muted-foreground tabular-nums">
-                    {d.mentorCount === 0
-                      ? 'Bientôt des mentors'
-                      : `${d.mentorCount} mentor${d.mentorCount > 1 ? 's' : ''}`}
-                  </span>
-                </div>
-                <h3 className="mt-4 font-semibold tracking-tight">{d.name}</h3>
-                <p className="mt-1.5 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
-                  {d.description}
-                </p>
-                {isCampusFrance(d.slug) && (
-                  <p className="mt-3 rounded-md bg-amber-50 px-2.5 py-1.5 text-xs font-medium text-[#7a4a0f]">
-                    {CAMPUS_FRANCE_NOTICE}
-                  </p>
-                )}
-                <span className="mt-auto inline-flex items-center gap-1 pt-4 text-sm font-semibold text-accent">
-                  Voir les mentors
-                  <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" aria-hidden />
-                </span>
-              </Link>
-            </li>
+    <div data-after-lines className="mt-10 max-w-[38rem]">
+      <form
+        role="search"
+        action="/mentors"
+        className="flex items-stretch bg-surface"
+        onSubmit={(e) => {
+          if (!active) return;
+          e.preventDefault();
+          window.location.assign(href);
+        }}
+      >
+        <label htmlFor={inputId} className="sr-only">
+          Que voulez-vous apprendre ?
+        </label>
+        <span className="flex items-center pl-4 text-muted-foreground" aria-hidden>
+          {isFetching && active ? <LoaderCircle className="size-5 animate-spin" /> : <Search className="size-5" />}
+        </span>
+        <input
+          id={inputId}
+          name="q"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Que voulez-vous apprendre ?"
+          autoComplete="off"
+          className="h-14 min-w-0 flex-1 bg-transparent px-3 text-[17px] text-foreground outline-none placeholder:text-muted-foreground"
+        />
+        <Button type="submit" size="lg" className="h-14 rounded-none px-5 sm:px-6">
+          <span className="sm:hidden">Chercher</span>
+          <span className="hidden sm:inline">Trouver un mentor</span>
+        </Button>
+      </form>
+
+      {!active ? (
+        <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-[17px]">
+          <span className="text-muted-foreground">Par exemple :</span>
+          {QUICK_PICKS.map((pick) => (
+            <button
+              key={pick}
+              type="button"
+              onClick={() => setQ(pick)}
+              className="ed-link font-semibold text-ink-900 transition-colors hover:text-teal-700"
+            >
+              {pick}
+            </button>
           ))}
-    </ul>
+        </div>
+      ) : (
+        <div className="mt-1 bg-surface" aria-live="polite">
+          {results.length === 0 && !isFetching ? (
+            <p className="px-4 py-4 text-[17px] text-muted-foreground">
+              Aucun mentor ne correspond encore à « {deferred} ». Essayez un autre mot, ou{' '}
+              <Link href="/mentors" className="ed-link font-semibold text-ink-900">
+                parcourez l’annuaire
+              </Link>
+              .
+            </p>
+          ) : (
+            <ul>
+              {results.map((m) => (
+                <li key={m.id}>
+                  <Link
+                    href={`/mentors/${m.id}`}
+                    className="group grid grid-cols-[1fr_auto] items-baseline gap-x-4 px-4 py-3 transition-colors hover:bg-ink-50"
+                  >
+                    <span className="min-w-0">
+                      <span className="block font-semibold text-ink-900">{fullName(m)}</span>
+                      <span className="block truncate text-[17px] text-muted-foreground">{m.headline}</span>
+                    </span>
+                    <span className="text-sm font-semibold whitespace-nowrap text-teal-700">
+                      {m.nextAvailableAt ? `Libre le ${formatShortDate(m.nextAvailableAt)}` : 'Voir le profil'}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+          {data && data.total > 0 && (
+            <Link
+              href={href}
+              className="flex items-center justify-between bg-ink-900 px-4 py-3 text-[17px] font-semibold text-white transition-colors hover:bg-ink-800"
+            >
+              {data.total > results.length
+                ? `Voir les ${data.total} mentors pour « ${deferred} »`
+                : `Ouvrir l’annuaire filtré sur « ${deferred} »`}
+              <ArrowRight className="size-4" aria-hidden />
+            </Link>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Première page : mosaïque, titre sur l'axe, recherche ─────────────────── */
+
+function Masthead() {
+  return (
+    <section aria-labelledby="titre-accueil" className="bg-background">
+      {/* Mosaïque sans gouttière : photographies et aplats butés */}
+      <div className="grid h-[34svh] min-h-56 grid-cols-4 grid-rows-2 sm:h-[36svh] sm:grid-cols-6 sm:grid-rows-1">
+        <EdPhoto
+          photo={photos.conakry}
+          priority
+          drift
+          sizes="(min-width: 640px) 50vw, 100vw"
+          className="col-span-4 sm:col-span-3 [&_img]:object-[50%_78%]"
+        />
+        <div className="hidden flex-col justify-end bg-teal-700 p-5 text-white sm:flex">
+          <p className="text-[17px] leading-snug font-semibold">
+            Né au Salon international du livre de jeunesse de Conakry
+          </p>
+        </div>
+        <EdPhoto photo={photos.portrait} priority sizes="(min-width: 640px) 17vw, 50vw" className="col-span-2 sm:col-span-1 [&_img]:object-[50%_15%]" />
+        <EdPhoto photo={photos.autrices} priority sizes="(min-width: 640px) 17vw, 50vw" className="col-span-2 sm:col-span-1" />
+      </div>
+
+      <div className="page-frame grid gap-8 pt-10 pb-20 sm:pt-12 lg:grid-cols-[var(--axis)_1fr] lg:gap-0 lg:pb-28">
+        <p
+          data-after-lines
+          className="order-2 max-w-[32ch] self-end text-[17px] leading-relaxed text-foreground lg:order-1 lg:pr-10 lg:pb-3"
+        >
+          La plateforme de mentorat qui relie étudiants, jeunes diplômés et porteurs de projets à des
+          professionnels de Guinée prêts à transmettre ce qu’ils ont appris.
+        </p>
+        <div className="order-1 lg:order-2">
+          <h1
+            id="titre-accueil"
+            className="lines text-[clamp(3.25rem,1rem+6.2vw,6.75rem)] leading-[0.9] font-extrabold tracking-[-0.05em] whitespace-nowrap text-ink-900"
+          >
+            <span className="line">
+              <span data-line style={{ ['--i' as string]: 0 }}>
+                Trouvez
+              </span>
+            </span>
+            <span className="line">
+              <span data-line style={{ ['--i' as string]: 1 }}>
+                votre mentor.
+              </span>
+            </span>
+          </h1>
+          <HeroSearch />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ── Le constat (paragraphe à droite, photo isolée) ───────────────────────── */
+
+function Intro() {
+  return (
+    <section aria-label="Pourquoi le mentorat" className="page-frame py-24 lg:py-40">
+      <div className="grid gap-10 lg:grid-cols-12 lg:gap-x-6">
+        <p
+          data-reveal
+          className="text-[clamp(1.375rem,1rem+1.2vw,2rem)] leading-[1.25] font-medium text-ink-900 lg:col-span-6 lg:col-start-7 lg:indent-[3em]"
+        >
+          Beaucoup de jeunes ont l’ambition, pas encore le réseau. Des professionnels sont prêts à
+          transmettre. Talents Connectés organise la rencontre, puis la suit jusqu’à l’objectif.
+        </p>
+        <div className="grid grid-cols-[1fr_62%] items-end gap-4 lg:col-span-12 lg:grid-cols-12 lg:gap-x-6">
+          <p data-reveal style={{ ['--d' as string]: 2 }} className="text-sm leading-relaxed text-muted-foreground lg:order-2 lg:col-span-2 lg:col-start-1 lg:mt-24 lg:self-start">
+            {photos.classe.caption}.
+          </p>
+          <div data-reveal className="lg:order-1 lg:col-span-3 lg:col-start-1 lg:row-start-1">
+            <EdPhoto photo={photos.classe} sizes="(min-width: 1024px) 22vw, 60vw" className="aspect-[4/5] lg:aspect-square" />
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ── Les domaines, comme une table des matières ───────────────────────────── */
+
+function DomainsTable() {
+  const { data, isPending, isError, error, refetch } = useDomains();
+  useReveal([data]);
+
+  return (
+    <section id="domaines" aria-labelledby="titre-domaines" className="scroll-mt-20 bg-surface py-24 lg:py-40">
+      <div className="page-frame">
+        <h2
+          id="titre-domaines"
+          data-reveal
+          className="max-w-[18ch] text-[length:var(--step-head)] leading-[0.98] font-extrabold tracking-[-0.04em] text-ink-900 lg:indent-[3vw]"
+        >
+          Sept domaines pour avancer
+        </h2>
+
+        <div className="mt-16 grid gap-12 lg:mt-24 lg:grid-cols-12 lg:gap-x-6">
+          <div className="hidden lg:col-span-4 lg:block lg:self-end">
+            <div data-reveal>
+              <EdPhoto photo={photos.portrait} sizes="22vw" className="aspect-[4/5] [&_img]:object-[50%_12%]" />
+            </div>
+            <p className="mt-3 text-sm text-muted-foreground">{photos.portrait.caption}.</p>
+          </div>
+
+          <div className="lg:col-span-7 lg:col-start-6">
+            {isError ? (
+              <ErrorState error={error} onRetry={() => void refetch()} />
+            ) : (
+              <ul className="grid">
+                {isPending
+                  ? Array.from({ length: 7 }).map((_, i) => (
+                      <li key={i} className="py-4">
+                        <Skeleton className="h-6" />
+                      </li>
+                    ))
+                  : data.map((d, i) => (
+                      <li key={d.id} data-reveal style={{ ['--d' as string]: i % 4 }} className={cn(i > 0 && i % 4 === 0 && 'mt-8')}>
+                        <Link
+                          href={`/mentors?domain=${d.slug}`}
+                          className="group grid grid-cols-[1fr_auto] items-baseline gap-x-6 py-4 transition-colors sm:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_auto]"
+                        >
+                          <span className="text-[17px] font-semibold text-ink-900 transition-colors group-hover:text-teal-700">
+                            {d.name}
+                          </span>
+                          <span className="hidden truncate text-[17px] text-muted-foreground sm:block">
+                            {d.topics.slice(0, 2).join(' · ')}
+                          </span>
+                          <span className="flex items-center gap-1.5 text-[17px] font-semibold whitespace-nowrap text-teal-700 tabular-nums">
+                            {d.mentorCount === 0 ? 'Bientôt' : plural(d.mentorCount, 'mentor')}
+                            <ArrowRight
+                              className="size-4 transition-transform duration-200 group-hover:translate-x-1"
+                              aria-hidden
+                            />
+                          </span>
+                          {isCampusFrance(d.slug) && (
+                            <span className="col-span-full mt-1 text-[17px] text-[#7a4a0f]">
+                              Conseil et orientation, sans garantie d’admission ni de visa.
+                            </span>
+                          )}
+                        </Link>
+                      </li>
+                    ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ── Le fonctionnement, en escalier ───────────────────────────────────────── */
+
+const STAGES = [
+  {
+    line: 'Vous dites ce que vous visez.',
+    text: 'Votre situation, vos domaines, ce que vous voulez apprendre. Deux minutes suffisent.',
+    start: 'lg:col-start-1',
+  },
+  {
+    line: 'Vous choisissez un mentor.',
+    text: 'L’annuaire et les suggestions expliquent pourquoi chaque profil vous correspond.',
+    start: 'lg:col-start-3',
+  },
+  {
+    line: 'Il accepte votre demande.',
+    text: 'Votre message motivé arrive au bon mentor, qui décide. La conversation privée s’ouvre.',
+    start: 'lg:col-start-5',
+  },
+  {
+    line: 'Vous avancez à deux.',
+    text: 'Séances réservées sans conflit, salle de visio, objectifs découpés en jalons et suivis.',
+    start: 'lg:col-start-7',
+  },
+];
+
+function HowItWorks() {
+  return (
+    <section id="fonctionnement" aria-label="Comment ça marche" className="page-frame scroll-mt-20 py-24 lg:py-40">
+      <ol className="grid gap-10 sm:gap-14 lg:grid-cols-12 lg:gap-x-6">
+        {STAGES.map((s, i) => (
+          <li
+            key={s.line}
+            data-reveal
+            className={cn('pl-[calc(var(--i)*6vw)] lg:col-span-6 lg:pl-0', s.start)}
+            style={{ ['--i' as string]: i }}
+          >
+            {i === 0 ? (
+              <h2 className="text-[clamp(2.1rem,1rem+3.6vw,4.4rem)] leading-none font-extrabold tracking-[-0.045em] text-ink-900">
+                {s.line}
+              </h2>
+            ) : (
+              <p
+                className={cn(
+                  'text-[clamp(2.1rem,1rem+3.6vw,4.4rem)] leading-none font-extrabold tracking-[-0.045em]',
+                  i === STAGES.length - 1 ? 'text-teal-700' : 'text-ink-900',
+                )}
+              >
+                {s.line}
+              </p>
+            )}
+            <p className="mt-3 max-w-[34ch] text-[17px] leading-relaxed text-foreground">{s.text}</p>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+/* ── Le cadre de confiance, en tableau ────────────────────────────────────── */
+
+const GUARANTEES = [
+  ['Mentors', 'Vérification humaine', 'Profils examinés par l’équipe, jamais de validation automatique de diplômes'],
+  ['Échanges', 'Conversation privée', 'Ouverte après acceptation, visible des deux seuls participants'],
+  ['Séances', 'Aucune double réservation', 'Un créneau ne peut être pris qu’une fois, même en cas de clics simultanés'],
+  ['Visio', 'Salle privée générée', 'Lien Jitsi Meet unique à chaque séance confirmée, service externe'],
+  ['Suivi', 'Objectifs et jalons', 'Progression calculée, retours écrits du mentor, évaluation des séances'],
+  ['Données', 'Contrôle par la personne', 'Coordonnées jamais publiques, export et suppression du compte'],
+  ['Campus France', 'Conseil honnête', 'Orientation et partage d’expérience, sans garantie d’admission ni de visa'],
+];
+
+function Guarantees() {
+  return (
+    <section aria-labelledby="titre-confiance" className="bg-surface py-24 lg:py-40">
+      <div className="page-frame">
+        <h2
+          id="titre-confiance"
+          data-reveal
+          className="text-[length:var(--step-head)] leading-[0.98] font-extrabold tracking-[-0.04em] text-ink-900"
+        >
+          Un cadre
+          <br />
+          <span className="lg:ml-[16.66%]">de confiance</span>
+        </h2>
+        <div data-reveal className="mt-14 lg:mt-20">
+          <table className="block w-full border-collapse text-left text-[17px] sm:table">
+            <caption className="sr-only">Les garanties de la plateforme</caption>
+            <thead className="sr-only">
+              <tr>
+                <th scope="col">Domaine</th>
+                <th scope="col">Garantie</th>
+                <th scope="col">Ce que cela veut dire</th>
+              </tr>
+            </thead>
+            <tbody className="block sm:table-row-group">
+              {GUARANTEES.map(([area, title, detail], i) => (
+                <tr key={area} className={cn('grid gap-1 px-4 py-4 sm:table-row sm:p-0', i % 2 === 1 && 'bg-background')}>
+                  <th scope="row" className="text-sm font-semibold text-muted-foreground sm:w-[18%] sm:px-4 sm:py-4 sm:align-top sm:text-[17px]">
+                    {area}
+                  </th>
+                  <td className="font-semibold text-ink-900 sm:w-[30%] sm:px-4 sm:py-4 sm:align-top">{title}</td>
+                  <td className="text-foreground sm:px-4 sm:py-4 sm:align-top">{detail}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ── L'appel : trois photographies, puis un aplat ─────────────────────────── */
+
+function Closing() {
+  return (
+    <section aria-labelledby="titre-mentor">
+      <div className="grid grid-cols-2 sm:grid-cols-3">
+        <EdPhoto photo={photos.jeunes} sizes="(min-width: 640px) 33vw, 100vw" className="col-span-2 aspect-[4/3] sm:col-span-1 sm:aspect-auto sm:h-[40svh]" />
+        <EdPhoto photo={photos.formation} sizes="(min-width: 640px) 33vw, 50vw" className="aspect-[4/3] sm:aspect-auto sm:h-[40svh]" />
+        <EdPhoto photo={photos.autrices} sizes="(min-width: 640px) 33vw, 50vw" className="aspect-[4/3] sm:aspect-auto sm:h-[40svh]" />
+      </div>
+      <div className="bg-teal-700 py-20 text-white lg:min-h-[44svh] lg:py-24">
+        <div className="page-frame grid gap-10 lg:grid-cols-12 lg:gap-x-6">
+          <div data-reveal className="lg:col-span-7">
+            <h2 id="titre-mentor" className="sr-only">Devenir mentor</h2>
+            <p className="text-[clamp(1.375rem,1rem+1.2vw,2rem)] leading-[1.25] font-semibold tracking-[-0.02em]">
+              Votre expérience peut changer un parcours.{' '}
+              <Link
+                href="/inscription?role=MENTOR"
+                className="underline decoration-amber-400 decoration-4 underline-offset-[6px] transition-colors hover:text-amber-100"
+              >
+                Devenez mentor
+              </Link>
+              , à votre rythme.
+            </p>
+            <p className="mt-8 max-w-[52ch] text-[17px] leading-relaxed text-teal-50">
+              Vous fixez vos créneaux et le nombre de personnes que vous accompagnez. Chaque demande
+              arrive avec un objectif clair : vous acceptez celles où vous serez utile.
+            </p>
+          </div>
+          <div data-reveal style={{ ['--d' as string]: 1 }} className="flex flex-col items-start gap-3 lg:col-span-4 lg:col-start-9 lg:items-end lg:self-end">
+            <Button asChild size="lg" className="bg-white text-ink-900 hover:bg-teal-50">
+              <Link href="/inscription">
+                Créer un compte
+                <ArrowUpRight aria-hidden />
+              </Link>
+            </Button>
+            <Link href="/mentors" className="ed-link text-[17px] font-semibold text-white">
+              Ou parcourir l’annuaire
+            </Link>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 
 export function Landing() {
+  useReveal();
   return (
     <>
-      {/* Hero */}
-      <section className="relative overflow-hidden border-b border-border bg-surface">
-        <div className="bg-grid pointer-events-none absolute inset-0 [mask-image:radial-gradient(ellipse_at_top,black_30%,transparent_75%)]" />
-        <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 py-16 sm:px-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:py-24">
-          <div className="animate-slide-up">
-            <p className="inline-flex items-center gap-2 rounded-full border border-teal-100 bg-teal-50 px-3 py-1 text-xs font-semibold text-teal-800">
-              <span className="size-1.5 rounded-full bg-teal-600" />
-              Le mentorat à l’ère du numérique
-            </p>
-            <h1 className="mt-5 text-4xl leading-[1.08] font-bold tracking-tight text-ink-900 sm:text-5xl">
-              Avancez plus vite, <span className="text-teal-700">accompagné·e</span> par ceux qui sont
-              passés par là.
-            </h1>
-            <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted-foreground">
-              Talents Connectés met en relation jeunes talents et professionnels expérimentés :
-              orientation, insertion, entrepreneuriat, numérique, Campus France… Un accompagnement
-              structuré, de la première demande au suivi des objectifs.
-            </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Button asChild size="lg">
-                <Link href="/mentors">
-                  Trouver un mentor
-                  <ArrowRight aria-hidden />
-                </Link>
-              </Button>
-              <Button asChild size="lg" variant="secondary">
-                <Link href="/inscription?role=MENTOR">Devenir mentor</Link>
-              </Button>
-            </div>
-            <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
-              <li className="flex items-center gap-2">
-                <BadgeCheck className="size-4 text-amber-500" aria-hidden />
-                Profils vérifiés par l’équipe
-              </li>
-              <li className="flex items-center gap-2">
-                <Lock className="size-4 text-teal-700" aria-hidden />
-                Conversations privées
-              </li>
-              <li className="flex items-center gap-2">
-                <CalendarCheck2 className="size-4 text-teal-700" aria-hidden />
-                Séances sans double réservation
-              </li>
-            </ul>
-          </div>
-          <HeroVisual />
-        </div>
-      </section>
-
-      {/* Fonctionnement */}
-      <section id="fonctionnement" className="scroll-mt-20">
-        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-8 lg:py-24">
-          <div className="max-w-2xl">
-            <p className="text-sm font-semibold text-teal-700">Fonctionnement</p>
-            <h2 className="mt-2 text-3xl font-semibold tracking-tight">Trois étapes, un vrai suivi</h2>
-            <p className="mt-3 text-muted-foreground">
-              Chaque étape est enregistrée : vous savez toujours où en est votre accompagnement.
-            </p>
-          </div>
-          <ol className="mt-10 grid gap-5 md:grid-cols-3">
-            {steps.map(({ icon: Icon, title, text }, i) => (
-              <li key={title} className="relative rounded-lg border border-border bg-surface p-6 shadow-card">
-                <div className="flex items-center justify-between">
-                  <span className="inline-flex size-11 items-center justify-center rounded-md bg-ink-900 text-white">
-                    <Icon className="size-5" aria-hidden />
-                  </span>
-                  <span className="text-4xl font-semibold text-ink-100 tabular-nums" aria-hidden>
-                    0{i + 1}
-                  </span>
-                </div>
-                <h3 className="mt-5 text-lg font-semibold tracking-tight">
-                  <span className="sr-only">Étape {i + 1} : </span>
-                  {title}
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{text}</p>
-              </li>
-            ))}
-          </ol>
-        </div>
-      </section>
-
-      {/* Domaines */}
-      <section id="domaines" className="scroll-mt-20 border-y border-border bg-surface-muted/60">
-        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-8 lg:py-24">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <div className="max-w-2xl">
-              <p className="text-sm font-semibold text-teal-700">Domaines d’accompagnement</p>
-              <h2 className="mt-2 text-3xl font-semibold tracking-tight">
-                Sept domaines, de l’orientation à l’entrepreneuriat
-              </h2>
-            </div>
-            <Button asChild variant="secondary">
-              <Link href="/mentors">Explorer l’annuaire</Link>
-            </Button>
-          </div>
-          <div className="mt-10">
-            <Domains />
-          </div>
-        </div>
-      </section>
-
-      {/* Confiance */}
-      <section>
-        <div className="mx-auto grid max-w-6xl gap-10 px-4 py-16 sm:px-8 lg:grid-cols-2 lg:py-24">
-          <div>
-            <p className="text-sm font-semibold text-teal-700">Un cadre de confiance</p>
-            <h2 className="mt-2 text-3xl font-semibold tracking-tight">
-              Pensé pour protéger la relation de mentorat
-            </h2>
-            <p className="mt-3 max-w-lg text-muted-foreground">
-              Le mentor ne fait pas à la place du mentoré : il l’aide à développer son autonomie et sa
-              capacité de décision. La plateforme pose un cadre clair pour les deux.
-            </p>
-          </div>
-          <ul className="grid gap-4 sm:grid-cols-2">
-            {[
-              { icon: ShieldCheck, t: 'Vérification humaine', d: 'Les profils mentors sont vérifiés par l’équipe, sans validation automatique de diplômes.' },
-              { icon: Lock, t: 'Données protégées', d: 'Coordonnées jamais exposées publiquement ; messages visibles des seuls participants.' },
-              { icon: MessagesSquare, t: 'Échanges encadrés', d: 'La conversation s’ouvre uniquement après acceptation de la demande.' },
-              { icon: Target, t: 'Objectifs mesurables', d: 'Jalons, progression et retours du mentor pour garder le cap.' },
-            ].map(({ icon: Icon, t, d }) => (
-              <li key={t} className="rounded-lg border border-border bg-surface p-5">
-                <Icon className="size-5 text-teal-700" aria-hidden />
-                <p className="mt-3 font-semibold">{t}</p>
-                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{d}</p>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
-
-      {/* CTA final */}
-      <section className="px-4 pb-16 sm:px-8 lg:pb-24">
-        <div className="relative mx-auto max-w-6xl overflow-hidden rounded-xl bg-ink-900 px-6 py-12 text-white sm:px-12 sm:py-16">
-          <div className="pointer-events-none absolute -top-20 -right-10 size-72 rounded-full bg-teal-600/35 blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-24 left-10 size-64 rounded-full bg-amber-400/15 blur-3xl" />
-          <div className="relative flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
-            <div className="max-w-xl">
-              <h2 className="text-3xl font-semibold tracking-tight">
-                Votre expérience peut changer un parcours.
-              </h2>
-              <p className="mt-3 text-ink-100/85">
-                Rejoignez la plateforme comme mentoré·e ou comme mentor. L’inscription prend deux minutes.
-              </p>
-            </div>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <Button asChild size="lg" variant="accent">
-                <Link href="/inscription">Commencer maintenant</Link>
-              </Button>
-              <Button
-                asChild
-                size="lg"
-                variant="ghost"
-                className="text-white ring-1 ring-white/25 hover:bg-white/10"
-              >
-                <Link href="/inscription?role=MENTOR">Devenir mentor</Link>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
+      <Masthead />
+      <Intro />
+      <DomainsTable />
+      <HowItWorks />
+      <Guarantees />
+      <Closing />
     </>
   );
 }

@@ -120,7 +120,7 @@ export function SessionCard({ session, me, showMentorshipLink = true }: { sessio
   return (
     <article
       className={cn(
-        'flex flex-col gap-4 rounded-lg border bg-surface p-4 shadow-card sm:flex-row sm:items-center sm:p-5',
+        'flex flex-col gap-4 rounded-lg border bg-surface p-4 sm:flex-row sm:items-center sm:p-5',
         session.status === 'CANCELLED' ? 'border-border opacity-75' : 'border-border',
       )}
     >
@@ -131,7 +131,7 @@ export function SessionCard({ session, me, showMentorshipLink = true }: { sessio
             session.status === 'CONFIRMED' ? 'bg-ink-900 text-white' : 'bg-surface-muted text-foreground',
           )}
         >
-          <span className={cn('text-[11px] font-semibold uppercase', session.status === 'CONFIRMED' ? 'text-teal-200' : 'text-muted-foreground')}>
+          <span className={cn('text-xs font-semibold first-letter:uppercase', session.status === 'CONFIRMED' ? 'text-teal-200' : 'text-muted-foreground')}>
             {month}
           </span>
           <span className="text-2xl leading-none font-semibold">{day}</span>

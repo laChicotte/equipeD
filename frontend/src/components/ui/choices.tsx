@@ -174,7 +174,7 @@ export function TagInput({
       </div>
       <div
         className={cn(
-          'flex min-h-11 flex-wrap items-center gap-1.5 rounded-md border bg-surface p-1.5 shadow-card transition-[border-color,box-shadow] focus-within:border-accent focus-within:shadow-focus',
+          'flex min-h-11 flex-wrap items-center gap-1.5 rounded-md border bg-surface p-1.5 transition-[border-color,box-shadow] focus-within:border-accent focus-within:shadow-focus',
           error ? 'border-danger-700' : 'border-border hover:border-border-strong',
         )}
       >

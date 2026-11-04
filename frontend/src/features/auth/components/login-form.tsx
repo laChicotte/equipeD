@@ -57,7 +57,7 @@ export function LoginForm() {
 
   return (
     <div className="animate-fade-in">
-      <h1 className="text-[28px] font-semibold tracking-tight">Bon retour parmi nous</h1>
+      <h1 className="text-4xl font-extrabold tracking-[-0.035em] text-ink-900">Bon retour parmi nous</h1>
       <p className="mt-2 text-[15px] text-muted-foreground">
         Connectez-vous pour retrouver vos demandes, vos séances et vos conversations.
       </p>
@@ -100,7 +100,7 @@ export function LoginForm() {
 
       {isDemoMode && (
         <div className="mt-8 rounded-lg border border-dashed border-border-strong bg-surface p-4">
-          <p className="flex items-center gap-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+          <p className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
             <FlaskConical className="size-3.5 text-amber-500" aria-hidden />
             Comptes de démonstration (fictifs)
           </p>

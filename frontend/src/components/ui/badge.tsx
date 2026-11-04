@@ -7,8 +7,8 @@ export const badgeVariants = cva(
   {
     variants: {
       tone: {
-        neutral: 'border-border bg-surface-muted text-ink-700',
-        teal: 'border-teal-100 bg-teal-50 text-teal-800',
+        neutral: 'border-transparent bg-surface-muted text-ink-700',
+        teal: 'border-transparent bg-surface-muted text-ink-800',
         ink: 'border-ink-100 bg-ink-50 text-ink-900',
         amber: 'border-amber-100 bg-amber-50 text-[#7a4a0f]',
         verified: 'border-amber-400 bg-amber-400 text-highlight-foreground',

@@ -102,7 +102,7 @@ export function Conversation({ mentorship, me }: { mentorship: MentorshipSummary
           </div>
         ) : messages.data.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center text-center">
-            <span className="mb-3 inline-flex size-12 items-center justify-center rounded-full bg-teal-50 text-teal-700">
+            <span className="mb-3 inline-flex items-center justify-center text-muted-foreground">
               <MessagesSquare className="size-5" aria-hidden />
             </span>
             <p className="font-semibold">Démarrez la conversation</p>

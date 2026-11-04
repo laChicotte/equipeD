@@ -128,7 +128,7 @@ export function Workspace() {
             <Avatar person={other} size="lg" />
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{fullName(other)}</h1>
+                <h1 className="text-2xl font-extrabold tracking-[-0.035em] text-ink-900 sm:text-3xl">{fullName(other)}</h1>
                 <StatusBadge kind="mentorship" status={m.status} />
               </div>
               {subtitle && <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">{subtitle}</p>}

@@ -193,13 +193,9 @@ export function MentorProfile() {
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="grid gap-6">
           <Card className="overflow-hidden">
-            <div className="relative h-24 bg-ink-900 sm:h-28">
-              <div className="bg-grid absolute inset-0 opacity-30 invert" aria-hidden />
-              <div className="absolute -top-10 right-10 size-40 rounded-full bg-teal-600/40 blur-3xl" aria-hidden />
-            </div>
-            <div className="px-5 pb-6 sm:px-8">
-              <div className="relative -mt-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                <Avatar person={mentor} size="xl" className="ring-4 ring-surface" />
+            <div className="px-5 pt-6 pb-6 sm:px-8 sm:pt-8">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                <Avatar person={mentor} size="xl" />
                 <div className="flex flex-wrap gap-2">
                   {mentor.verificationStatus === 'VERIFIED' && (
                     <StatusBadge kind="verification" status="VERIFIED" />
@@ -207,8 +203,8 @@ export function MentorProfile() {
                   {!mentor.acceptingMentees && <Badge tone="warning">Complet</Badge>}
                 </div>
               </div>
-              <h1 className="mt-4 text-2xl font-semibold tracking-tight sm:text-[28px]">{fullName(mentor)}</h1>
-              <p className="mt-1 text-[15px] leading-relaxed text-muted-foreground">{mentor.headline}</p>
+              <h1 className="mt-5 text-3xl font-extrabold tracking-[-0.035em] text-ink-900 sm:text-[44px] sm:leading-none">{fullName(mentor)}</h1>
+              <p className="mt-3 max-w-[60ch] text-[17px] leading-relaxed text-foreground">{mentor.headline}</p>
               <ul className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm text-foreground/85">
                 {(mentor.currentPosition || mentor.organization) && (
                   <li className="inline-flex items-center gap-1.5">

@@ -1,21 +1,22 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter } from 'next/font/google';
+import { Schibsted_Grotesk } from 'next/font/google';
 import { Providers } from '@/components/providers';
 import './globals.css';
 
-const inter = Inter({
-  variable: '--font-inter',
+const schibsted = Schibsted_Grotesk({
+  variable: '--font-schibsted',
   subsets: ['latin'],
+  weight: ['400', '500', '600', '800'],
   display: 'swap',
 });
 
 export const metadata: Metadata = {
   title: {
-    default: 'Talents Connectés — Plateforme de mentorat professionnel',
+    default: 'Talents Connectés — Trouvez votre mentor en Guinée',
     template: '%s · Talents Connectés',
   },
   description:
-    'Trouvez un mentor selon vos objectifs, échangez en privé, planifiez vos séances et suivez votre progression.',
+    'Étudiants, jeunes diplômés, porteurs de projets : trouvez un mentor expérimenté, échangez en privé, planifiez vos séances et suivez vos objectifs.',
 };
 
 export const viewport: Viewport = {
@@ -24,10 +25,14 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
+/** Active les animations d'entrée uniquement si JavaScript s'exécute (sinon tout reste visible). */
+const enableMotion = "document.documentElement.classList.add('js')";
+
 export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
-    <html lang="fr" className={`${inter.variable} h-full`}>
+    <html lang="fr" className={`${schibsted.variable} h-full`} suppressHydrationWarning>
       <body className="min-h-full">
+        <script dangerouslySetInnerHTML={{ __html: enableMotion }} />
         <a
           href="#contenu"
           className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[80] focus:rounded-md focus:bg-ink-900 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white"

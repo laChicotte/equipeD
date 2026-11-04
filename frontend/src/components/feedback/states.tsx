@@ -23,13 +23,11 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        'flex flex-col items-center rounded-lg border border-dashed border-border-strong bg-surface px-6 py-12 text-center',
+        'flex flex-col items-center rounded-lg bg-background px-6 py-12 text-center',
         className,
       )}
     >
-      <span className="mb-4 inline-flex size-12 items-center justify-center rounded-full bg-teal-50 text-teal-700 ring-8 ring-teal-50/50">
-        <Icon className="size-5" aria-hidden />
-      </span>
+      <Icon className="mb-4 size-6 text-muted-foreground" aria-hidden />
       <h3 className="text-base font-semibold text-foreground">{title}</h3>
       {description && (
         <p className="mt-1.5 max-w-sm text-sm leading-relaxed text-muted-foreground">{description}</p>
@@ -102,7 +100,7 @@ export function PageHeader({
     <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-end sm:justify-between">
       <div className="min-w-0">
         {eyebrow && <div className="mb-2">{eyebrow}</div>}
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-[28px]">{title}</h1>
+        <h1 className="text-3xl font-extrabold tracking-[-0.035em] text-ink-900 sm:text-4xl">{title}</h1>
         {description && (
           <p className="mt-1.5 max-w-2xl text-[15px] leading-relaxed text-muted-foreground">
             {description}

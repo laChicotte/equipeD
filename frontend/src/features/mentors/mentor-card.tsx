@@ -47,7 +47,7 @@ export function Availability({ iso, className }: { iso: string | null; className
 export function MentorCard({ mentor, footer }: { mentor: MentorCardData; footer?: ReactNode }) {
   const full = !mentor.acceptingMentees;
   return (
-    <article className="group relative flex h-full flex-col rounded-lg border border-border bg-surface p-5 shadow-card transition-[border-color,box-shadow,transform] duration-200 focus-within:border-accent hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-raised">
+    <article className="group relative flex h-full flex-col rounded-lg border border-border bg-surface p-5 transition-[border-color,box-shadow,transform] duration-200 focus-within:border-accent hover:-translate-y-0.5 hover:border-teal-200 hover:border-ink-900">
       <div className="flex items-start gap-3.5">
         <Avatar person={mentor} size="lg" />
         <div className="min-w-0 flex-1">

@@ -26,10 +26,10 @@ function useAdminGuard() {
 
 function Tile({ label, value, icon: Icon }: { label: string; value: number; icon: typeof Users }) {
   return (
-    <div className="rounded-lg border border-border bg-surface p-5 shadow-card">
+    <div className="rounded-lg border border-border bg-surface p-5">
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium text-muted-foreground">{label}</span>
-        <span className="inline-flex size-8 items-center justify-center rounded-md bg-teal-50 text-teal-700">
+        <span className="inline-flex size-8 items-center justify-center text-muted-foreground">
           <Icon className="size-4" aria-hidden />
         </span>
       </div>

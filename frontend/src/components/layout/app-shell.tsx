@@ -97,7 +97,7 @@ function Sidebar({ me, items, counts }: { me: Me; items: NavItem[]; counts: Reco
         <Logo href={me.role === 'ADMIN' ? '/admin' : '/tableau-de-bord'} />
       </div>
       <nav aria-label="Navigation de l’espace" className="flex flex-1 flex-col gap-0.5 px-3 py-4">
-        <p className="px-3 pb-2 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+        <p className="px-3 pb-2 text-sm font-semibold text-foreground">
           {me.role === 'ADMIN' ? 'Administration' : me.role === 'MENTOR' ? 'Espace mentor' : 'Mon parcours'}
         </p>
         {items.map((item) => {
@@ -111,26 +111,26 @@ function Sidebar({ me, items, counts }: { me: Me; items: NavItem[]; counts: Reco
               className={cn(
                 'group relative flex h-10 items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors duration-150',
                 active
-                  ? 'bg-ink-900 text-white shadow-card'
+                  ? 'bg-surface-muted font-semibold text-ink-900'
                   : 'text-muted-foreground hover:bg-surface-muted hover:text-foreground',
               )}
             >
               <Icon
-                className={cn('size-[18px] shrink-0', active ? 'text-teal-200' : 'text-muted-foreground group-hover:text-foreground')}
+                className={cn('size-[18px] shrink-0', active ? 'text-ink-900' : 'text-muted-foreground group-hover:text-foreground')}
                 aria-hidden
               />
               <span className="flex-1 truncate">{item.label}</span>
               {item.badge && (
                 <CountBadge
                   value={counts[item.badge] ?? 0}
-                  className={active ? 'bg-white text-ink-900' : undefined}
+                  className={undefined}
                 />
               )}
             </Link>
           );
         })}
       </nav>
-      <div className="m-3 rounded-lg border border-border bg-surface-muted p-4">
+      <div className="m-3 bg-background p-4">
         <p className="text-xs font-semibold text-foreground">Besoin d’un repère ?</p>
         <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
           {me.role === 'MENTOR'
@@ -149,7 +149,7 @@ function MobileTabBar({ items, counts }: { items: NavItem[]; counts: Record<stri
   return (
     <nav
       aria-label="Navigation de l’espace"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden"
     >
       <ul className="mx-auto flex max-w-lg items-stretch justify-around">
         {items.map((item) => {
@@ -211,12 +211,12 @@ function AuthenticatedLayout({ me, children }: { me: Me; children: ReactNode }) 
       <div className="flex flex-1">
         <Sidebar me={me} items={items} counts={counts} />
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-border bg-surface/85 px-4 backdrop-blur-md sm:px-8">
+          <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-border bg-surface px-4 sm:px-8">
             <div className="lg:hidden">
               <Logo href={me.role === 'ADMIN' ? '/admin' : '/tableau-de-bord'} />
             </div>
             <p className="hidden text-sm text-muted-foreground lg:block">
-              Bonjour <span className="font-semibold text-foreground">{me.firstName}</span>
+              {me.role === 'ADMIN' ? 'Administration' : me.role === 'MENTOR' ? 'Espace mentor' : 'Espace mentoré'} · Talents Connectés
             </p>
             <UserMenu me={me} />
           </header>
