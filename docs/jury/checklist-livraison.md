@@ -39,7 +39,7 @@
 
 ### P2
 - [x] Suggestions par score déterministe et explicable (pas d'IA)
-- [ ] Visio intégrée (remplacée par un lien externe, présenté comme tel)
+- [x] Visio : salle Jitsi Meet générée automatiquement à la confirmation (service externe, présenté comme tel ; pas de WebRTC maison)
 - [x] Espace d’opportunités (stages, emplois, appels à projets, bourses, formations, événements), avec archivage et échéances
 - [x] Confidentialité : export JSON de ses données, suppression du compte par anonymisation (l’historique de l’autre participant est préservé)
 - [ ] Emails transactionnels, PWA
@@ -61,7 +61,7 @@
 | Lint (oxlint) | ✅ 0 avertissement | `pnpm --filter backend lint` |
 | Format (Prettier) | ✅ | `npx prettier --check "backend/{src,test,prisma}/**/*.ts"` |
 | Tests unitaires | ✅ 8/8 | `pnpm --filter backend test` |
-| Tests e2e sur un vrai PostgreSQL | ✅ **98/98** (9 fichiers, environ 40 s) | `pnpm --filter backend test:e2e` |
+| Tests e2e sur un vrai PostgreSQL | ✅ **100/100** (10 fichiers, environ 40 s) | `pnpm --filter backend test:e2e` |
 | Build | ✅ | `pnpm --filter backend build` |
 | CI GitHub Actions | ⏳ configurée (`.github/workflows/ci.yml`), à confirmer au premier push | |
 

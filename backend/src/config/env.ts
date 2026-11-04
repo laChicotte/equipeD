@@ -11,6 +11,8 @@ export interface AppEnv {
   SESSION_TTL_HOURS: number;
   SESSION_SECRET: string;
   SWAGGER_ENABLED: boolean;
+  /** Base des liens de visio générés à la confirmation (vide = désactivé). */
+  MEETING_BASE_URL: string;
 }
 
 export function validateEnv(raw: Record<string, unknown>): AppEnv {
@@ -46,6 +48,15 @@ export function validateEnv(raw: Record<string, unknown>): AppEnv {
     .map((o) => o.trim())
     .filter(Boolean);
 
+  const meetingBase = (
+    typeof raw.MEETING_BASE_URL === 'string' ? raw.MEETING_BASE_URL : 'https://meet.jit.si'
+  )
+    .trim()
+    .replace(/\/+$/, '');
+  if (meetingBase && !/^https:\/\/[^\s/]+/.test(meetingBase)) {
+    errors.push('MEETING_BASE_URL doit être une URL https (ou vide pour désactiver)');
+  }
+
   const env: AppEnv = {
     NODE_ENV: nodeEnv as AppEnv['NODE_ENV'],
     PORT: port,
@@ -55,6 +66,7 @@ export function validateEnv(raw: Record<string, unknown>): AppEnv {
     SESSION_TTL_HOURS: ttl,
     SESSION_SECRET: secret,
     SWAGGER_ENABLED: str('SWAGGER_ENABLED', nodeEnv === 'production' ? 'false' : 'true') === 'true',
+    MEETING_BASE_URL: meetingBase,
   };
 
   if (errors.length > 0) {

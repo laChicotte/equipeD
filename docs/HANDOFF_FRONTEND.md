@@ -53,7 +53,9 @@ Swagger documente désormais les schémas de toutes les requêtes (plugin @nestj
 
 Opportunités (stages, emplois, appels à projets…) et confidentialité (export des données, suppression du compte) : ✅.
 
-Tests : **8 unitaires et 98 e2e** (Vitest et supertest sur un vrai PostgreSQL de test), typecheck, lint et build OK. CI GitHub Actions dans `.github/workflows/ci.yml`.
+Visio : lien Jitsi Meet généré automatiquement à la confirmation (service externe). ✅
+
+Tests : **8 unitaires et 100 e2e** (Vitest et supertest sur un vrai PostgreSQL de test), typecheck, lint et build OK. CI GitHub Actions dans `.github/workflows/ci.yml`.
 **Pas encore fait côté backend :** emails transactionnels, réinitialisation de mot de passe, WebSocket.
 → **Ne crée pas de faux écrans pour ces fonctions.** Si l'une d'elles devient nécessaire, demande d'abord qu'on ajoute l'endpoint.
 
@@ -125,7 +127,7 @@ interface ApiError {
    Pour créer un créneau, envoie un ISO avec fuseau (`new Date(...).toISOString()`).
 8. **Données serveur.** TanStack Query pour les écrans connectés (invalidation après mutation ; `refetchInterval` de 4 à 5 s sur la conversation ouverte et de 30 s sur les compteurs).
    Next 16.4 active `cacheComponents: true` : les écrans authentifiés seront surtout des Client Components ; lis la documentation locale avant d'utiliser du rendu serveur avec des cookies.
-9. **Honnêteté produit.** La visioconférence n'est **pas** native : le mentor colle un lien de réunion externe (https) à la confirmation, et l'interface le présente comme tel (« Lien de réunion externe »).
+9. **Visio et honnêteté produit.** À la confirmation d'une séance à distance ou hybride, l'API **génère automatiquement** une salle Jitsi Meet au nom imprévisible (`meetingUrl`), sauf si le mentor fournit son propre lien. Affichez un bouton « Rejoindre la visio » (nouvel onglet), actif quelques minutes avant le début. Présentez-le honnêtement : « visio via Jitsi Meet (service externe, connexion Internet requise) ». Une intégration par `iframe` dans l'application est possible, mais elle est gourmande en bande passante : à garder en option.
    Le domaine Campus France affiche toujours la mention « Conseil et orientation, sans garantie d'admission ni de visa ».
 
 ---
@@ -245,7 +247,7 @@ type Person = { id; firstName; lastName; mentorProfile: { headline } | null; men
 | `DELETE /availability/:id` | 🔒 M (propriétaire) | Refusé si le créneau est réservé |
 | `POST /sessions` | 🔒 E | `{ slotId, topic (5–200), modality? }` → séance `REQUESTED` (le créneau est bloqué) |
 | `GET /sessions/me?scope=upcoming\|past\|all` | 🔒 | Séances de l'utilisateur (mentor ou mentoré) |
-| `POST /sessions/:id/confirm` | 🔒 M | `{ meetingUrl? (https), location? }` → `CONFIRMED` |
+| `POST /sessions/:id/confirm` | 🔒 M | `{ meetingUrl? (https), location? }` → `CONFIRMED`. Sans `meetingUrl`, et si la séance n'est pas en présentiel : lien Jitsi généré automatiquement |
 | `POST /sessions/:id/cancel` | 🔒 participant | → `CANCELLED` (le créneau redevient libre) |
 | `POST /sessions/:id/complete` | 🔒 M | Uniquement une séance CONFIRMED déjà commencée → `COMPLETED` |
 | `POST /sessions/:id/feedback` | 🔒 participant | `{ rating: 1–5, comment? (≤1000) }` → `Session` (201). Possible si COMPLETED, ou CONFIRMED et terminée ; **une seule fois par participant** |

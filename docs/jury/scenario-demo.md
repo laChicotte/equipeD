@@ -30,7 +30,7 @@ pnpm dev:frontend                               # interface sur :3000
 | 1:40 | **F** Demandes reçues | Se connecter en tant que Fatoumata, ouvrir la demande, lire la motivation → **Accepter** | Seule la mentore sollicitée peut décider |
 | 2:00 | **A** Mes demandes | Rafraîchir : statut **Acceptée**, mentorat ouvert | Mise en relation effective |
 | 2:15 | **A** Espace de mentorat → Séances | Réserver un créneau ; sujet « Revue de mon portfolio » | « Si deux personnes cliquent en même temps, une seule obtient le créneau. » |
-| 2:35 | **F** Séances | **Confirmer**, en collant un lien de réunion externe | Visio : lien externe assumé, pas de fausse visio intégrée |
+| 2:35 | **F** Séances | **Confirmer** : un lien de visio est généré automatiquement | « Salle de visio privée créée via Jitsi Meet, service open source externe : nous ne prétendons pas l'avoir développée. » Hors ligne : montrer le lien sans l'ouvrir. |
 | 2:55 | **A/F** Conversation | A : « Merci pour votre acceptation ! » ; F répond | Conversation privée, visible des seuls participants |
 | 3:20 | **A** Objectifs | Créer « Publier mon portfolio » avec 3 jalons | |
 | 3:35 | **F** Objectifs | Cocher un jalon (33 %) et écrire un retour | Le retour est réservé à la mentore |
@@ -49,7 +49,7 @@ pnpm dev:frontend                               # interface sur :3000
 | Incident | Repli |
 |---|---|
 | Pas d'Internet | Rien n'en dépend : tout tourne en local (PostgreSQL dans Docker, API et interface sur le PC). Le lien de réunion n'est qu'affiché. |
-| Le frontend plante | Montrer le même parcours via Swagger (`/api/docs`) avec les deux comptes, ou lancer `pnpm --filter backend test:e2e` (98 tests en environ 40 s) |
+| Le frontend plante | Montrer le même parcours via Swagger (`/api/docs`) avec les deux comptes, ou lancer `pnpm --filter backend test:e2e` (100 tests en environ 40 s) |
 | Base dans un état inattendu | `pnpm db:demo-reset` (moins de 10 s) puis reprendre à l'étape 0:20 |
 | Docker ne démarre pas | Ouvrir Docker Desktop, attendre l'état « running », puis `pnpm db:up` ; prévoir une vidéo enregistrée du parcours |
 | Ordinateur de démo défaillant | Deuxième PC préparé à l'identique (clone du dépôt, même seed) |

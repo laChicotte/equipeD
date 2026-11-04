@@ -54,7 +54,7 @@ Une plateforme web responsive (mobile, tablette, ordinateur) qui couvre **tout l
 | Recherche et mise en relation selon compétences et besoins | ✅ (avec suggestions expliquées) |
 | Catalogue des domaines d'expertise | ✅ (7 domaines des TDR) |
 | Prise de rendez-vous et planification des séances | ✅ (sans double réservation) |
-| Espace d'échange et de communication | ✅ chat privé · visio : lien externe |
+| Espace d’échange et de communication | ✅ chat privé · visio : salle Jitsi générée automatiquement (service externe) |
 | Suivi des objectifs et de la progression | ✅ (objectifs, jalons, retour du mentor) |
 | Évaluation des séances | ✅ |
 | Bibliothèque de ressources | ✅ (bibliothèque publique et partage privé dans un mentorat) |

@@ -24,7 +24,7 @@
 
 | Question | Réponse courte |
 |---|---|
-| Pourquoi pas de visio intégrée ? | Développer une visio fiable en quatre jours n'aurait pas été sérieux. Le mentor colle un lien de réunion externe ; l'intégration d'une solution éprouvée est prévue entre 3 et 6 mois. |
+| Et la visio ? | À la confirmation d'une séance à distance, la plateforme crée automatiquement une salle Jitsi Meet privée, au nom impossible à deviner. Développer notre propre visio en trois jours n'aurait pas été sérieux : nous nous appuyons sur une solution open source éprouvée, et nous le disons. Une intégration plus poussée est prévue entre 3 et 6 mois. |
 | Où est l'IA ? | Les TDR la rendent facultative. Nous avons préféré un score transparent : le mentoré voit *pourquoi* un mentor est proposé. L'IA viendra si les données montrent un gain réel. |
 | Comment garantir la qualité des mentors ? | Vérification humaine (entretien, références), badge attribué par l'équipe, évaluations après les séances, suspension possible. Pas de fausse validation automatique de diplômes. |
 | Et la confidentialité ? | Mots de passe hachés (Argon2id), sessions révocables en cookie sécurisé, aucun contact privé public, conversation réservée aux deux participants et vérifiée côté serveur à chaque requête. Une revue juridique est prévue avant la production. |
