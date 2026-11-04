@@ -425,6 +425,10 @@ async function main() {
     await prisma.mentorship.deleteMany({ where: { menteeId: { in: ids } } }); // cascade : séances, messages, objectifs
     await prisma.mentorshipRequest.deleteMany({ where: { menteeId: { in: ids } } });
     await prisma.user.deleteMany({ where: { email: { endsWith: '@example.test' } } });
+    // Les notifications des comptes de démo ne décrivent que des événements de répétition : on repart à zéro.
+    await prisma.notification.deleteMany({
+      where: { user: { email: { endsWith: `@${DEMO_DOMAIN}` } } },
+    });
     console.log('Scénario de démo réinitialisé.');
   }
 
@@ -554,6 +558,65 @@ async function main() {
       },
     });
   }
+  // Bibliothèque publique : quelques ressources publiées par les mentors fictifs.
+  // Les seuls liens externes pointent vers des sites officiels de référence.
+  const libraryResources = [
+    {
+      id: 'seed_resource_portfolio',
+      author: 'fatoumata',
+      domain: 'numerique-technologies',
+      kind: 'ADVICE' as const,
+      title: 'Construire un portfolio de développeur crédible',
+      description:
+        'Trois projets aboutis valent mieux que dix ébauches. Pour chacun : le problème résolu, votre rôle, les choix techniques, un lien de démonstration et le code source. Soignez le fichier README.',
+      url: null,
+    },
+    {
+      id: 'seed_resource_mdn',
+      author: 'fatoumata',
+      domain: 'numerique-technologies',
+      kind: 'ARTICLE' as const,
+      title: 'MDN Web Docs — apprendre le développement web',
+      description: 'Documentation de référence (en français) sur HTML, CSS et JavaScript.',
+      url: 'https://developer.mozilla.org/fr/docs/Learn',
+    },
+    {
+      id: 'seed_resource_campus_france',
+      author: 'mariama',
+      domain: 'campus-france',
+      kind: 'ARTICLE' as const,
+      title: 'Site officiel Campus France',
+      description:
+        'Source officielle sur les procédures. Rappel : l’accompagnement proposé ici relève du conseil et ne garantit ni admission ni visa.',
+      url: 'https://www.campusfrance.org/fr',
+    },
+    {
+      id: 'seed_resource_pitch',
+      author: 'thierno',
+      domain: 'entrepreneuriat',
+      kind: 'TEMPLATE' as const,
+      title: 'Trame de pitch en 7 points',
+      description:
+        '1. Problème · 2. Clients cibles · 3. Solution · 4. Modèle économique · 5. Concurrence · 6. Équipe · 7. Besoin (financement, partenaires). Une idée par diapositive, des chiffres sourcés uniquement.',
+      url: null,
+    },
+  ];
+  for (const r of libraryResources) {
+    const data = {
+      authorId: mentorIds.get(r.author)!,
+      domainId: domainIds.get(r.domain as DomainSlug)!,
+      kind: r.kind,
+      title: r.title,
+      description: r.description,
+      url: r.url,
+    };
+    await prisma.resource.upsert({
+      where: { id: r.id },
+      create: { id: r.id, ...data },
+      update: data,
+    });
+  }
+
   // Une séance passée et terminée (sans créneau), évaluée par le mentoré : historique réaliste.
   const pastStart = new Date();
   pastStart.setUTCDate(pastStart.getUTCDate() - 3);

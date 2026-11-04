@@ -57,7 +57,7 @@ Une plateforme web responsive (mobile, tablette, ordinateur) qui couvre **tout l
 | Espace d'échange et de communication | ✅ chat privé · visio : lien externe |
 | Suivi des objectifs et de la progression | ✅ (objectifs, jalons, retour du mentor) |
 | Évaluation des séances | ✅ |
-| Bibliothèque de ressources | ⏳ prévue (note de pérennisation) |
+| Bibliothèque de ressources | ✅ (bibliothèque publique et partage privé dans un mentorat) |
 | Partage d'opportunités | ⏳ prévu |
 | IA de recommandation | ⏳ envisagée après mesure ; score explicable en place |
 

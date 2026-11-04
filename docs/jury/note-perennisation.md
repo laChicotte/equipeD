@@ -4,14 +4,14 @@
 
 ## 1. Point de départ
 
-Le prototype livré couvre le parcours complet : profils, annuaire, suggestions explicables, demande et décision, créneaux et séances sans double réservation, conversation privée, objectifs et jalons, évaluation des séances, administration minimale.
+Le prototype livré couvre le parcours complet : profils, annuaire, suggestions explicables, demande et décision, créneaux et séances sans double réservation, conversation privée, objectifs et jalons, évaluation des séances, bibliothèque de ressources, notifications in-app, administration minimale.
 Il repose sur des technologies ouvertes et répandues (Next.js, NestJS, PostgreSQL), **auto-hébergeables**, sans dépendance à un service propriétaire pour la logique métier.
 
 ## 2. Feuille de route indicative
 
 | Horizon | Objectifs produit | Objectifs programme |
 |---|---|---|
-| **0–3 mois** (pilote) | Mise en production sécurisée (HTTPS, sauvegardes), emails transactionnels, notifications, charte d'utilisation et politique de confidentialité, bibliothèque de ressources | Pilote avec une première cohorte de mentors issus du réseau du Salon et des partenaires ; procédure de vérification des mentors ; collecte des premiers retours |
+| **0–3 mois** (pilote) | Mise en production sécurisée (HTTPS, sauvegardes), emails transactionnels, charte d’utilisation et politique de confidentialité, dépôt de documents dans la bibliothèque | Pilote avec une première cohorte de mentors issus du réseau du Salon et des partenaires ; procédure de vérification des mentors ; collecte des premiers retours |
 | **3–6 mois** | Visioconférence intégrée via une solution éprouvée (pas de WebRTC maison), application mobile installable (PWA), espace « opportunités » (stages, appels à projets), tableaux de bord pour les partenaires | Élargissement aux établissements d'enseignement et aux incubateurs ; ateliers thématiques en lien avec les séances |
 | **6–12 mois** | Recommandation améliorée (éventuellement assistée par IA si les données montrent un gain mesurable), parcours types par domaine, mode faible connectivité, multilingue | Réseau d'ambassadeurs, partenariats entreprises et institutions, programme de reconnaissance des mentors |
 
@@ -33,7 +33,7 @@ Il repose sur des technologies ouvertes et répandues (Next.js, NestJS, PostgreS
 
 - **Architecture :** un monolithe modulaire (une API, une interface web, une base PostgreSQL), simple à exploiter par une petite équipe.
 - **Hébergement :** un serveur virtuel ou un hébergeur proche des utilisateurs, avec sauvegardes quotidiennes de la base et HTTPS. Une montée en charge se fait d'abord verticalement.
-- **Qualité :** intégration continue (typecheck, lint, 8 tests unitaires et 70 tests de bout en bout sur une vraie base) à chaque modification.
+- **Qualité :** intégration continue (typecheck, lint, 8 tests unitaires et 81 tests de bout en bout sur une vraie base) à chaque modification.
 - **Coûts à estimer** avec les partenaires : hébergement et nom de domaine, envoi d'emails, solution de visio, temps d'animation de la communauté et de modération (le poste le plus important), maintenance évolutive.
 
 ## 6. Besoins d'accompagnement

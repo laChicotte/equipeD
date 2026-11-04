@@ -70,6 +70,26 @@ enum SessionStatus {
   COMPLETED
 }
 
+enum ResourceKind {
+  ARTICLE
+  VIDEO
+  TEMPLATE
+  TOOL
+  ADVICE
+  OTHER
+}
+
+enum NotificationType {
+  REQUEST_RECEIVED
+  REQUEST_ACCEPTED
+  REQUEST_DECLINED
+  SESSION_REQUESTED
+  SESSION_CONFIRMED
+  SESSION_CANCELLED
+  GOAL_FEEDBACK
+  RESOURCE_SHARED
+}
+
 enum GoalStatus {
   NOT_STARTED
   IN_PROGRESS
@@ -108,6 +128,8 @@ model User {
   messages         Message[]
   goalsCreated     Goal[]
   sessionFeedbacks SessionFeedback[]
+  resources        Resource[]
+  notifications    Notification[]
 
   @@index([role, status])
   @@map("users")
@@ -144,9 +166,10 @@ model ExpertiseDomain {
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  mentors  MentorDomain[]
-  mentees  MenteeInterest[]
-  requests MentorshipRequest[]
+  mentors   MentorDomain[]
+  mentees   MenteeInterest[]
+  requests  MentorshipRequest[]
+  resources Resource[]
 
   @@map("expertise_domains")
 }
@@ -262,12 +285,13 @@ model Mentorship {
   createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  request  MentorshipRequest  @relation(fields: [requestId], references: [id], onDelete: Restrict)
-  mentor   User               @relation("MentorshipMentor", fields: [mentorId], references: [id], onDelete: Cascade)
-  mentee   User               @relation("MentorshipMentee", fields: [menteeId], references: [id], onDelete: Cascade)
-  sessions MentoringSession[]
-  messages Message[]
-  goals    Goal[]
+  request   MentorshipRequest  @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  mentor    User               @relation("MentorshipMentor", fields: [mentorId], references: [id], onDelete: Cascade)
+  mentee    User               @relation("MentorshipMentee", fields: [menteeId], references: [id], onDelete: Cascade)
+  sessions  MentoringSession[]
+  messages  Message[]
+  goals     Goal[]
+  resources Resource[]
 
   @@index([mentorId, status])
   @@index([menteeId, status])
@@ -344,7 +368,50 @@ model SessionFeedback {
   @@map("session_feedbacks")
 }
 
-// ─── Échanges────────────────────────────────────────────────────────────────
+// ─── Ressources & notifications ─────────────────────────────────────────────
+
+/// Ressource partagée (lien et/ou conseil rédigé ; pas de dépôt de fichiers dans le MVP).
+/// mentorshipId null  → bibliothèque publique (publiée par un mentor ou un admin) ;
+/// mentorshipId défini → visible des seuls participants de ce mentorat.
+model Resource {
+  id           String       @id @default(cuid())
+  authorId     String       @map("author_id")
+  mentorshipId String?      @map("mentorship_id")
+  domainId     String?      @map("domain_id")
+  kind         ResourceKind @default(OTHER)
+  title        String       @db.VarChar(160)
+  description  String?      @db.VarChar(2000)
+  url          String?      @db.VarChar(500)
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  author     User             @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  mentorship Mentorship?      @relation(fields: [mentorshipId], references: [id], onDelete: Cascade)
+  domain     ExpertiseDomain? @relation(fields: [domainId], references: [id], onDelete: SetNull)
+
+  @@index([mentorshipId, createdAt])
+  @@index([domainId, createdAt])
+  @@map("resources")
+}
+
+/// Notification in-app : uniquement des événements réels ; lien relatif vers l'écran concerné.
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String           @map("user_id")
+  type      NotificationType
+  title     String           @db.VarChar(160)
+  body      String?          @db.VarChar(500)
+  link      String?          @db.VarChar(300)
+  readAt    DateTime?        @map("read_at") @db.Timestamptz(3)
+  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt])
+  @@map("notifications")
+}
+
+// ─── Échanges ────────────────────────────────────────────────────────────────
 
 /// La conversation est portée par le mentorat : seuls ses deux participants y accèdent.
 model Message {

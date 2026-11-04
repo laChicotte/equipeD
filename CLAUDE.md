@@ -9,7 +9,7 @@ Hackathon « Talents connectés », Conakry, 4–7 novembre 2026. Monolithe modu
 
 ## Structure
 - `backend/` : NestJS 12 (ESM, TypeScript 6, Vitest, oxlint), Prisma 7.10.1 (générateur `prisma-client`, adaptateur `pg`, client généré dans `backend/src/generated/`, ignoré par git), PostgreSQL 17.
-  - `src/modules/*` : auth, domains, profile, mentors, matching, mentorship-requests, mentorships, scheduling (availability et sessions), messages, goals, dashboard, admin, health.
+  - `src/modules/*` : auth, domains, profile, mentors, matching, mentorship-requests, mentorships, scheduling (availability, sessions et évaluations), messages, goals, resources, notifications, dashboard, admin, health.
   - `src/common` : gardes (session globale, rôles), middleware CSRF par Origin, filtre d'erreurs, ValidationPipe (422).
   - `prisma/migrations/*_integrity_constraints` : index partiels et contraintes d'exclusion (anti double réservation). **Ne pas les supprimer.**
 - `frontend/` : Next.js 16.4.5, App Router, React 19.3, Tailwind 4. Lire `frontend/AGENTS.md` (breaking changes de Next 16).
@@ -25,7 +25,7 @@ pnpm db:demo-reset    # remet à zéro le parcours d'Aminata
 pnpm dev:backend      # http://localhost:4000/api/v1 — Swagger : /api/docs
 pnpm dev:frontend     # http://localhost:3000
 pnpm --filter backend test      # tests unitaires (Vitest)
-pnpm --filter backend test:e2e  # 70 tests e2e sur talents_connectes_test (recréée à chaque fois ; copier backend/.env.test.example vers .env.test)
+pnpm --filter backend test:e2e  # 81 tests e2e sur talents_connectes_test (recréée à chaque fois ; copier backend/.env.test.example vers .env.test)
 pnpm --filter backend typecheck
 pnpm --filter backend lint
 ```
@@ -47,8 +47,8 @@ Comptes de démo (dev uniquement) : `<prenom>@demo.talents-connectes.test`, mot 
 - **Git : Claude ne fait ni `git add`, ni `git commit`, ni `git push`.** Il crée la branche, code, vérifie, puis propose les commandes à Bakary. Aucune attribution à Claude dans les commits ni dans les documents.
 
 ## État au 4 novembre 2026
-- Backend P0 et P1 (chat, objectifs, évaluation des séances, admin) implémentés. Vérifiés par 8 tests unitaires et **70 tests e2e** sur un vrai PostgreSQL (double réservation concurrente, accès d'un tiers, transitions invalides, CSRF…).
+- Backend P0 et P1 complets (chat, objectifs, évaluation des séances, ressources, notifications, admin). Vérifiés par 8 tests unitaires et **81 tests e2e** sur un vrai PostgreSQL (double réservation concurrente, accès d'un tiers, transitions invalides, CSRF…).
 - CI GitHub Actions : `.github/workflows/ci.yml` (backend : typecheck, lint, tests unitaires et e2e, build).
 - Livrables du jury : `docs/jury/` (présentation, scénario de démo, note de pérennisation, pitch, checklist).
 - Frontend : scaffold uniquement, **à construire sur un autre poste** (voir `docs/HANDOFF_FRONTEND.md` §5).
-- À faire côté backend : ressources partagées, notifications in-app, emails transactionnels ; surveiller l'avertissement `pg` émis par `@prisma/adapter-pg` 7.10.1 dans les transactions.
+- À faire côté backend : emails transactionnels, réinitialisation du mot de passe, opportunités, WebSocket éventuel ; surveiller l'avertissement `pg` émis par `@prisma/adapter-pg` 7.10.1 dans les transactions.

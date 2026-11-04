@@ -19,6 +19,8 @@ import { MessagesModule } from './modules/messages/messages.module.js';
 import { GoalsModule } from './modules/goals/goals.module.js';
 import { DashboardModule } from './modules/dashboard/dashboard.module.js';
 import { AdminModule } from './modules/admin/admin.module.js';
+import { NotificationsModule } from './modules/notifications/notifications.module.js';
+import { ResourcesModule } from './modules/resources/resources.module.js';
 
 @Module({
   imports: [
@@ -42,6 +44,8 @@ import { AdminModule } from './modules/admin/admin.module.js';
     GoalsModule,
     DashboardModule,
     AdminModule,
+    NotificationsModule,
+    ResourcesModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
