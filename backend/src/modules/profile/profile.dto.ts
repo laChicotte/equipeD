@@ -8,6 +8,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  IsTimeZone,
   Length,
   Max,
   MaxLength,
@@ -128,4 +129,24 @@ export class UpsertMenteeProfileDto {
   @ArrayMaxSize(5, { message: "5 domaines d'intérêt au maximum." })
   @IsString({ each: true })
   interestDomainIds!: string[];
+}
+
+export class UpdateAccountDto {
+  @Transform(trim)
+  @IsOptional()
+  @IsString()
+  @Length(1, 80, { message: 'Le prénom doit contenir entre 1 et 80 caractères.' })
+  firstName?: string;
+
+  @Transform(trim)
+  @IsOptional()
+  @IsString()
+  @Length(1, 80, { message: 'Le nom doit contenir entre 1 et 80 caractères.' })
+  lastName?: string;
+
+  /** Fuseau IANA utilisé pour l'affichage des dates (ex. Africa/Conakry). */
+  @IsOptional()
+  @IsString()
+  @IsTimeZone({ message: 'Fuseau horaire inconnu (format IANA attendu, ex. Africa/Conakry).' })
+  timezone?: string;
 }

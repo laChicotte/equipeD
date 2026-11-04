@@ -31,6 +31,26 @@ pnpm dev:frontend                      # http://localhost:3000
 Comptes fictifs (développement uniquement), mot de passe `Mentorat2026!` :
 `aminata@demo.talents-connectes.test` (mentorée), `fatoumata@demo.talents-connectes.test` (mentore), `admin@demo.talents-connectes.test`.
 
+## Tests
+
+```bash
+pnpm --filter backend test        # tests unitaires
+cp backend/.env.test.example backend/.env.test
+pnpm --filter backend test:e2e    # 89 tests de bout en bout sur une base PostgreSQL de test (recréée)
+```
+
+## API conteneurisée (optionnel)
+
+```bash
+# Image de production (multi-étapes, utilisateur non root, healthcheck)
+docker build -f backend/Dockerfile -t talents-connectes-api .
+
+# PostgreSQL + migrations + API sur http://localhost:4010/api/v1
+docker compose -f backend/docker-compose.yml --profile app up -d --build
+```
+
+En HTTP local, définir `API_NODE_ENV=development` : en production, le cookie de session est `Secure` et exige HTTPS.
+
 ## Documentation
 
 - `CLAUDE.md` : décisions, structure, commandes, état.

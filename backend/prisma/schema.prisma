@@ -88,6 +88,7 @@ enum NotificationType {
   SESSION_CANCELLED
   GOAL_FEEDBACK
   RESOURCE_SHARED
+  MENTORSHIP_COMPLETED
 }
 
 enum GoalStatus {
@@ -282,6 +283,9 @@ model Mentorship {
   status    MentorshipStatus @default(ACTIVE)
   startedAt DateTime         @default(now()) @map("started_at") @db.Timestamptz(3)
   endedAt   DateTime?        @map("ended_at") @db.Timestamptz(3)
+  endedById String?          @map("ended_by_id")
+  /// Bilan facultatif rédigé à la clôture.
+  endNote   String?          @map("end_note") @db.VarChar(1000)
   createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
 

@@ -3,7 +3,36 @@ import { PrismaService } from '../../database/prisma.service.js';
 import { forbidden, unprocessable } from '../../common/errors.js';
 import { cleanTags, normalizeSearch } from '../../common/text.js';
 import type { AuthUser } from '../../common/auth/auth-user.js';
-import type { UpsertMenteeProfileDto, UpsertMentorProfileDto } from './profile.dto.js';
+import type {
+  UpdateAccountDto,
+  UpsertMenteeProfileDto,
+  UpsertMentorProfileDto,
+} from './profile.dto.js';
+
+/** Texte de recherche normalisé d'un mentor : nom, titre, poste, ville, compétences et domaines. */
+export function mentorSearchText(p: {
+  firstName: string;
+  lastName: string;
+  headline: string;
+  currentPosition?: string | null;
+  organization?: string | null;
+  city?: string | null;
+  expertise: string[];
+  domains: { name: string; topics: string[] }[];
+}): string {
+  return normalizeSearch(
+    [
+      p.firstName,
+      p.lastName,
+      p.headline,
+      p.currentPosition ?? '',
+      p.organization ?? '',
+      p.city ?? '',
+      ...p.expertise,
+      ...p.domains.flatMap((d) => [d.name, ...d.topics]),
+    ].join(' '),
+  );
+}
 
 @Injectable()
 export class ProfileService {
@@ -58,6 +87,40 @@ export class ProfileService {
     return { user: base, mentorProfile: null, menteeProfile: null };
   }
 
+  /** Mise à jour des informations de compte (nom, fuseau horaire). */
+  async updateAccount(user: AuthUser, dto: UpdateAccountDto) {
+    const updated = await this.prisma.user.update({
+      where: { id: user.id },
+      data: { firstName: dto.firstName, lastName: dto.lastName, timezone: dto.timezone },
+      select: { firstName: true, lastName: true },
+    });
+    // Le nom fait partie du texte de recherche de l'annuaire : on le recalcule pour un mentor.
+    const profile = await this.prisma.mentorProfile.findUnique({
+      where: { userId: user.id },
+      select: {
+        headline: true,
+        currentPosition: true,
+        organization: true,
+        city: true,
+        expertise: true,
+        domains: { select: { domain: { select: { name: true, topics: true } } } },
+      },
+    });
+    if (profile) {
+      await this.prisma.mentorProfile.update({
+        where: { userId: user.id },
+        data: {
+          searchText: mentorSearchText({
+            ...profile,
+            ...updated,
+            domains: profile.domains.map((d) => d.domain),
+          }),
+        },
+      });
+    }
+    return this.getMine({ ...user, ...updated });
+  }
+
   async upsertMentor(user: AuthUser, dto: UpsertMentorProfileDto) {
     if (user.role !== 'MENTOR')
       throw forbidden('ROLE_FORBIDDEN', 'Seul un mentor peut renseigner un profil mentor.');
@@ -70,18 +133,16 @@ export class ProfileService {
       where: { id: { in: domainIds } },
       select: { name: true, topics: true },
     });
-    const searchText = normalizeSearch(
-      [
-        user.firstName,
-        user.lastName,
-        dto.headline,
-        dto.currentPosition ?? '',
-        dto.organization ?? '',
-        dto.city ?? '',
-        ...expertise,
-        ...domainNames.flatMap((d) => [d.name, ...d.topics]),
-      ].join(' '),
-    );
+    const searchText = mentorSearchText({
+      firstName: user.firstName,
+      lastName: user.lastName,
+      headline: dto.headline,
+      currentPosition: dto.currentPosition,
+      organization: dto.organization,
+      city: dto.city,
+      expertise,
+      domains: domainNames,
+    });
 
     const data = {
       headline: dto.headline,

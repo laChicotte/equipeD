@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service.js';
 import type { AuthUser } from '../../common/auth/auth-user.js';
 import type { Prisma } from '../../generated/prisma/client.js';
+import { conflict } from '../../common/errors.js';
+import { NotificationsService } from '../notifications/notifications.module.js';
 import { MentorshipAccessService } from './mentorship-access.service.js';
 
 const person = {
@@ -42,6 +44,7 @@ export class MentorshipsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly access: MentorshipAccessService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   /** Mentorats de l'utilisateur, avec prochaine séance, objectifs et messages non lus. */
@@ -63,6 +66,49 @@ export class MentorshipsService {
     return this.serialize(user, m);
   }
 
+  /**
+   * Clôture par l'un des participants (ACTIVE → COMPLETED), avec un bilan facultatif.
+   * Les séances futures encore actives sont annulées ; le créneau du mentor redevient libre
+   * et sa capacité d'accompagnement est libérée. Idempotente.
+   */
+  async complete(user: AuthUser, id: string, note?: string) {
+    const access = await this.access.assertParticipant(user, id);
+    if (access.status === 'COMPLETED') return this.getOne(user, id);
+    if (access.status !== 'ACTIVE') {
+      throw conflict(
+        'INVALID_TRANSITION',
+        'Ce mentorat a été interrompu et ne peut pas être clôturé.',
+      );
+    }
+    const now = new Date();
+    const closed = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.mentorship.updateMany({
+        where: { id, status: 'ACTIVE' },
+        data: { status: 'COMPLETED', endedAt: now, endedById: user.id, endNote: note ?? null },
+      });
+      if (updated.count === 0) return false;
+      await tx.mentoringSession.updateMany({
+        where: {
+          mentorshipId: id,
+          status: { in: ['REQUESTED', 'CONFIRMED'] },
+          startsAt: { gt: now },
+        },
+        data: { status: 'CANCELLED', cancelledAt: now, cancelledBy: user.id },
+      });
+      return true;
+    });
+    if (closed) {
+      await this.notifications.notify({
+        userId: access.counterpartId,
+        type: 'MENTORSHIP_COMPLETED',
+        title: `${user.firstName} ${user.lastName} a clôturé votre mentorat`,
+        body: note ?? 'Le mentorat reste consultable en lecture seule.',
+        link: `/mentorats/${id}`,
+      });
+    }
+    return this.getOne(user, id);
+  }
+
   private serialize(user: AuthUser, m: MentorshipRow) {
     const isMentor = m.mentorId === user.id;
     const avg = m.goals.length
@@ -73,6 +119,8 @@ export class MentorshipsService {
       status: m.status,
       startedAt: m.startedAt,
       endedAt: m.endedAt,
+      endedById: m.endedById,
+      endNote: m.endNote,
       myRole: isMentor ? ('MENTOR' as const) : ('MENTEE' as const),
       mentor: m.mentor,
       mentee: m.mentee,

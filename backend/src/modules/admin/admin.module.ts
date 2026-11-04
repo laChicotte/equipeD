@@ -6,6 +6,7 @@ import { CurrentUser, Roles } from '../../common/auth/decorators.js';
 import type { AuthUser } from '../../common/auth/auth-user.js';
 import { forbidden, notFound } from '../../common/errors.js';
 import { Role, UserStatus, VerificationStatus } from '../../generated/prisma/enums.js';
+import { AdminDomainsController, AdminDomainsService } from './admin-domains.js';
 
 export class AdminUsersQuery {
   @IsOptional()
@@ -149,5 +150,8 @@ export class AdminController {
   }
 }
 
-@Module({ controllers: [AdminController], providers: [AdminService] })
+@Module({
+  controllers: [AdminController, AdminDomainsController],
+  providers: [AdminService, AdminDomainsService],
+})
 export class AdminModule {}
