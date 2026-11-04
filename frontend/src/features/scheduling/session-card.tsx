@@ -1,0 +1,214 @@
+'use client';
+
+import { CalendarCheck2, CheckCheck, ExternalLink, MapPin, Video, X } from 'lucide-react';
+import Link from 'next/link';
+import { useState } from 'react';
+import { toast } from 'sonner';
+import { StatusBadge } from '@/components/feedback/status-badge';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog';
+import { Field } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import { errorMessage, isApiError } from '@/lib/api';
+import { formatTime, fullName } from '@/lib/format';
+import { modalityLabels } from '@/lib/labels';
+import type { Me, Session } from '@/lib/types';
+import { cn } from '@/lib/utils';
+import { useNow } from '@/hooks/use-now';
+import { useSessionAction } from './api';
+
+function ConfirmDialog({ session, onClose }: { session: Session; onClose: () => void }) {
+  const action = useSessionAction();
+  const [meetingUrl, setMeetingUrl] = useState('');
+  const [location, setLocation] = useState('');
+  const [urlError, setUrlError] = useState<string>();
+  const [locError, setLocError] = useState<string>();
+
+  const submit = () => {
+    const url = meetingUrl.trim();
+    if (url && !/^https:\/\/\S+\.\S+/.test(url)) {
+      setUrlError('Le lien doit commencer par https://');
+      return;
+    }
+    setUrlError(undefined);
+    setLocError(undefined);
+    action.mutate(
+      {
+        id: session.id,
+        action: 'confirm',
+        body: { meetingUrl: url || undefined, location: location.trim() || undefined },
+      },
+      {
+        onSuccess: () => {
+          toast.success('Séance confirmée', { description: `${session.mentee.firstName} est informé·e.` });
+          onClose();
+        },
+        onError: (e) => {
+          if (isApiError(e) && e.details.length) {
+            for (const d of e.details) {
+              if (d.field === 'meetingUrl') setUrlError(d.messages[0]);
+              if (d.field === 'location') setLocError(d.messages[0]);
+            }
+            return;
+          }
+          toast.error(errorMessage(e));
+        },
+      },
+    );
+  };
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent
+        title="Confirmer la séance"
+        description={`${session.topic} — avec ${fullName(session.mentee)}`}
+      >
+        <div className="grid gap-5">
+          <Field
+            label="Lien de réunion externe"
+            optional
+            error={urlError}
+            hint="Google Meet, Zoom, Jitsi… La visioconférence se fait dans l’outil de votre choix."
+          >
+            <Input
+              type="url"
+              inputMode="url"
+              placeholder="https://meet.jit.si/talents-connectes-…"
+              value={meetingUrl}
+              onChange={(e) => setMeetingUrl(e.target.value)}
+            />
+          </Field>
+          <Field label="Lieu" optional error={locError} hint="Pour une séance en présentiel.">
+            <Input placeholder="Ex. : CCFG, Conakry" value={location} onChange={(e) => setLocation(e.target.value)} />
+          </Field>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>
+            Annuler
+          </Button>
+          <Button variant="accent" onClick={submit} loading={action.isPending}>
+            {!action.isPending && <CalendarCheck2 aria-hidden />}
+            Confirmer la séance
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export function SessionCard({ session, me, showMentorshipLink = true }: { session: Session; me: Me; showMentorshipLink?: boolean }) {
+  const action = useSessionAction();
+  const [confirming, setConfirming] = useState(false);
+  const isMentor = me.id === session.mentorId;
+  const other = isMentor ? session.mentee : session.mentor;
+  const start = new Date(session.startsAt);
+  const now = useNow();
+  const started = now > 0 && start.getTime() <= now;
+  const active = session.status === 'REQUESTED' || session.status === 'CONFIRMED';
+  const tz = me.timezone;
+
+  const run = (kind: 'cancel' | 'complete', success: string) =>
+    action.mutate(
+      { id: session.id, action: kind },
+      { onSuccess: () => toast.success(success), onError: (e) => toast.error(errorMessage(e)) },
+    );
+
+  const month = new Intl.DateTimeFormat('fr-FR', { month: 'short', timeZone: tz }).format(start);
+  const day = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', timeZone: tz }).format(start);
+  const weekday = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', timeZone: tz }).format(start);
+
+  return (
+    <article
+      className={cn(
+        'flex flex-col gap-4 rounded-lg border bg-surface p-4 shadow-card sm:flex-row sm:items-center sm:p-5',
+        session.status === 'CANCELLED' ? 'border-border opacity-75' : 'border-border',
+      )}
+    >
+      <div className="flex items-center gap-4 sm:contents">
+        <div
+          className={cn(
+            'flex w-16 shrink-0 flex-col items-center rounded-md py-2 text-center',
+            session.status === 'CONFIRMED' ? 'bg-ink-900 text-white' : 'bg-surface-muted text-foreground',
+          )}
+        >
+          <span className={cn('text-[11px] font-semibold uppercase', session.status === 'CONFIRMED' ? 'text-teal-200' : 'text-muted-foreground')}>
+            {month}
+          </span>
+          <span className="text-2xl leading-none font-semibold">{day}</span>
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="font-semibold tracking-tight">{session.topic}</h3>
+            <StatusBadge kind="session" status={session.status} />
+          </div>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            <span className="capitalize">{weekday}</span> · {formatTime(session.startsAt, tz)} – {formatTime(session.endsAt, tz)} · avec{' '}
+            <span className="font-medium text-foreground">{fullName(other)}</span>
+          </p>
+          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-muted-foreground">
+            {session.modality && <span>{modalityLabels[session.modality]}</span>}
+            {session.meetingUrl && (
+              <a
+                href={session.meetingUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 font-medium text-accent hover:underline"
+              >
+                <Video className="size-3.5" aria-hidden />
+                Lien de réunion externe
+                <ExternalLink className="size-3" aria-hidden />
+              </a>
+            )}
+            {session.location && (
+              <span className="inline-flex items-center gap-1">
+                <MapPin className="size-3.5" aria-hidden />
+                {session.location}
+              </span>
+            )}
+            {showMentorshipLink && (
+              <Link href={`/mentorats/${session.mentorshipId}`} className="font-medium text-accent hover:underline">
+                Espace de mentorat
+              </Link>
+            )}
+          </div>
+        </div>
+      </div>
+      {active && (
+        <div className="flex shrink-0 flex-wrap gap-2 sm:justify-end">
+          {isMentor && session.status === 'REQUESTED' && (
+            <Button variant="accent" size="sm" onClick={() => setConfirming(true)}>
+              <CalendarCheck2 aria-hidden />
+              Confirmer
+            </Button>
+          )}
+          {isMentor && session.status === 'CONFIRMED' && started && (
+            <Button variant="secondary" size="sm" loading={action.isPending} onClick={() => run('complete', 'Séance marquée comme terminée.')}>
+              <CheckCheck aria-hidden />
+              Marquer terminée
+            </Button>
+          )}
+          {session.status === 'CONFIRMED' && session.meetingUrl && !started && (
+            <Button asChild variant="soft" size="sm">
+              <a href={session.meetingUrl} target="_blank" rel="noopener noreferrer">
+                <ExternalLink aria-hidden />
+                Rejoindre
+              </a>
+            </Button>
+          )}
+          {!started && (
+            <Button
+              variant="danger-ghost"
+              size="sm"
+              loading={action.isPending && action.variables?.action === 'cancel'}
+              onClick={() => run('cancel', 'Séance annulée. Le créneau est de nouveau libre.')}
+            >
+              <X aria-hidden />
+              {isMentor && session.status === 'REQUESTED' ? 'Refuser' : 'Annuler'}
+            </Button>
+          )}
+        </div>
+      )}
+      {confirming && <ConfirmDialog session={session} onClose={() => setConfirming(false)} />}
+    </article>
+  );
+}
