@@ -1,10 +1,10 @@
 import { Body, Controller, Get, Injectable, Module, Param, Patch, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { IsBoolean, IsEnum, IsOptional } from 'class-validator';
+import { IsBoolean, IsEnum, IsIn, IsOptional } from 'class-validator';
 import { PrismaService } from '../../database/prisma.service.js';
 import { CurrentUser, Roles } from '../../common/auth/decorators.js';
 import type { AuthUser } from '../../common/auth/auth-user.js';
-import { forbidden, notFound } from '../../common/errors.js';
+import { conflict, forbidden, notFound } from '../../common/errors.js';
 import { Role, UserStatus, VerificationStatus } from '../../generated/prisma/enums.js';
 import { AdminDomainsController, AdminDomainsService } from './admin-domains.js';
 
@@ -15,8 +15,9 @@ export class AdminUsersQuery {
 }
 
 export class UpdateUserStatusDto {
-  @IsEnum(UserStatus)
-  status!: UserStatus;
+  /** DELETED n'est pas attribuable ici : seule la personne peut supprimer son compte. */
+  @IsIn(['ACTIVE', 'SUSPENDED'], { message: 'Statut attendu : ACTIVE ou SUSPENDED.' })
+  status!: Extract<UserStatus, 'ACTIVE' | 'SUSPENDED'>;
 }
 
 /**
@@ -85,8 +86,17 @@ export class AdminService {
   async updateStatus(admin: AuthUser, userId: string, dto: UpdateUserStatusDto) {
     if (userId === admin.id)
       throw forbidden('SELF_MODERATION', 'Vous ne pouvez pas modifier votre propre statut.');
-    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, status: true },
+    });
     if (!user) throw notFound('USER_NOT_FOUND', 'Utilisateur introuvable.');
+    if (user.status === 'DELETED') {
+      throw conflict(
+        'ACCOUNT_DELETED',
+        'Ce compte a été supprimé par son titulaire : il ne peut pas être réactivé.',
+      );
+    }
     const updated = await this.prisma.$transaction(async (tx) => {
       const u = await tx.user.update({
         where: { id: userId },

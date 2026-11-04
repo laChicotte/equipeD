@@ -25,6 +25,18 @@ enum Role {
 enum UserStatus {
   ACTIVE
   SUSPENDED
+  /// Compte supprimé à la demande de l'utilisateur : données personnelles anonymisées.
+  DELETED
+}
+
+enum OpportunityType {
+  INTERNSHIP
+  JOB
+  CALL_FOR_PROJECTS
+  SCHOLARSHIP
+  TRAINING
+  EVENT
+  OTHER
 }
 
 enum Modality {
@@ -131,6 +143,7 @@ model User {
   sessionFeedbacks SessionFeedback[]
   resources        Resource[]
   notifications    Notification[]
+  opportunities    Opportunity[]
 
   @@index([role, status])
   @@map("users")
@@ -167,10 +180,11 @@ model ExpertiseDomain {
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  mentors   MentorDomain[]
-  mentees   MenteeInterest[]
-  requests  MentorshipRequest[]
-  resources Resource[]
+  mentors       MentorDomain[]
+  mentees       MenteeInterest[]
+  requests      MentorshipRequest[]
+  resources     Resource[]
+  opportunities Opportunity[]
 
   @@map("expertise_domains")
 }
@@ -413,6 +427,33 @@ model Notification {
 
   @@index([userId, readAt, createdAt])
   @@map("notifications")
+}
+
+/// Opportunité professionnelle ou entrepreneuriale (TDR §7.2), publiée par un mentor ou un admin.
+/// L'archivage (archivedAt) la retire de la liste publique sans perdre l'historique.
+model Opportunity {
+  id           String          @id @default(cuid())
+  authorId     String          @map("author_id")
+  domainId     String?         @map("domain_id")
+  type         OpportunityType
+  title        String          @db.VarChar(160)
+  organization String          @db.VarChar(120)
+  description  String          @db.VarChar(3000)
+  location     String?         @db.VarChar(120)
+  isRemote     Boolean         @default(false) @map("is_remote")
+  url          String?         @db.VarChar(500)
+  deadline     DateTime?       @db.Timestamptz(3)
+  archivedAt   DateTime?       @map("archived_at") @db.Timestamptz(3)
+  createdAt    DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  author User             @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  domain ExpertiseDomain? @relation(fields: [domainId], references: [id], onDelete: SetNull)
+
+  @@index([archivedAt, deadline])
+  @@index([type, createdAt])
+  @@index([domainId])
+  @@map("opportunities")
 }
 
 // ─── Échanges ────────────────────────────────────────────────────────────────

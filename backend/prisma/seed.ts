@@ -617,6 +617,60 @@ async function main() {
     });
   }
 
+  // Opportunités fictives (structures inventées, clairement étiquetées), échéances relatives à aujourd'hui.
+  const inDays = (d: number) => new Date(Date.now() + d * 86_400_000);
+  const demoOpportunities = [
+    {
+      id: 'seed_opportunity_stage_dev',
+      author: 'fatoumata',
+      domain: 'numerique-technologies',
+      type: 'INTERNSHIP' as const,
+      title: 'Stage développeur·se web junior (6 mois)',
+      organization: 'Studio numérique (structure fictive)',
+      description:
+        'Opportunité fictive de démonstration. Stage au sein d’une équipe produit : intégration d’interfaces React, tests et revue de code. Profil recherché : jeune diplômé·e motivé·e, portfolio apprécié.',
+      location: 'Conakry',
+      isRemote: false,
+      deadline: inDays(21),
+    },
+    {
+      id: 'seed_opportunity_appel_projets',
+      author: 'thierno',
+      domain: 'entrepreneuriat',
+      type: 'CALL_FOR_PROJECTS' as const,
+      title: 'Appel à projets — jeunes entreprises de services',
+      organization: 'Incubateur (structure fictive)',
+      description:
+        'Opportunité fictive de démonstration. Programme d’accompagnement de trois mois pour des projets en phase d’amorçage : ateliers, mentorat et mise en relation avec des partenaires.',
+      location: 'Conakry',
+      isRemote: true,
+      deadline: inDays(10),
+    },
+    {
+      id: 'seed_opportunity_atelier_cv',
+      author: 'mariama',
+      domain: 'orientation-insertion',
+      type: 'EVENT' as const,
+      title: 'Atelier collectif : CV et lettre de motivation',
+      organization: 'Association d’orientation (structure fictive)',
+      description:
+        'Opportunité fictive de démonstration. Atelier gratuit en ligne de deux heures pour relire son CV et structurer une lettre de motivation, avec exemples commentés.',
+      location: null,
+      isRemote: true,
+      deadline: inDays(5),
+    },
+  ];
+  for (const o of demoOpportunities) {
+    const { id, author, domain, ...rest } = o;
+    const data = {
+      ...rest,
+      authorId: mentorIds.get(author)!,
+      domainId: domainIds.get(domain as DomainSlug)!,
+      archivedAt: null,
+    };
+    await prisma.opportunity.upsert({ where: { id }, create: { id, ...data }, update: data });
+  }
+
   // Une séance passée et terminée (sans créneau), évaluée par le mentoré : historique réaliste.
   const pastStart = new Date();
   pastStart.setUTCDate(pastStart.getUTCDate() - 3);

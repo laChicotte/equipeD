@@ -58,7 +58,7 @@ Une plateforme web responsive (mobile, tablette, ordinateur) qui couvre **tout l
 | Suivi des objectifs et de la progression | ✅ (objectifs, jalons, retour du mentor) |
 | Évaluation des séances | ✅ |
 | Bibliothèque de ressources | ✅ (bibliothèque publique et partage privé dans un mentorat) |
-| Partage d'opportunités | ⏳ prévu |
+| Partage d'opportunités | ✅ (stages, emplois, appels à projets, bourses, formations, événements) |
 | IA de recommandation | ⏳ envisagée après mesure ; score explicable en place |
 
 ## 6. Proposition de valeur

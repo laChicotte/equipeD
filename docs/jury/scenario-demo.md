@@ -49,7 +49,7 @@ pnpm dev:frontend                               # interface sur :3000
 | Incident | Repli |
 |---|---|
 | Pas d'Internet | Rien n'en dépend : tout tourne en local (PostgreSQL dans Docker, API et interface sur le PC). Le lien de réunion n'est qu'affiché. |
-| Le frontend plante | Montrer le même parcours via Swagger (`/api/docs`) avec les deux comptes, ou lancer `pnpm --filter backend test:e2e` (89 tests en environ 35 s) |
+| Le frontend plante | Montrer le même parcours via Swagger (`/api/docs`) avec les deux comptes, ou lancer `pnpm --filter backend test:e2e` (98 tests en environ 40 s) |
 | Base dans un état inattendu | `pnpm db:demo-reset` (moins de 10 s) puis reprendre à l'étape 0:20 |
 | Docker ne démarre pas | Ouvrir Docker Desktop, attendre l'état « running », puis `pnpm db:up` ; prévoir une vidéo enregistrée du parcours |
 | Ordinateur de démo défaillant | Deuxième PC préparé à l'identique (clone du dépôt, même seed) |

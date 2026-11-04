@@ -51,8 +51,10 @@ Tout ce qui suit a été **réellement exécuté** contre PostgreSQL, à l'aide 
 Compte (nom, fuseau, mot de passe, déconnexion de tous les appareils), clôture de mentorat et gestion des domaines par l’admin : ✅.
 Swagger documente désormais les schémas de toutes les requêtes (plugin @nestjs/swagger).
 
-Tests : **8 unitaires et 89 e2e** (Vitest et supertest sur un vrai PostgreSQL de test), typecheck, lint et build OK. CI GitHub Actions dans `.github/workflows/ci.yml`.
-**Pas encore fait côté backend :** emails transactionnels, réinitialisation de mot de passe, opportunités, WebSocket.
+Opportunités (stages, emplois, appels à projets…) et confidentialité (export des données, suppression du compte) : ✅.
+
+Tests : **8 unitaires et 98 e2e** (Vitest et supertest sur un vrai PostgreSQL de test), typecheck, lint et build OK. CI GitHub Actions dans `.github/workflows/ci.yml`.
+**Pas encore fait côté backend :** emails transactionnels, réinitialisation de mot de passe, WebSocket.
 → **Ne crée pas de faux écrans pour ces fonctions.** Si l'une d'elles devient nécessaire, demande d'abord qu'on ajoute l'endpoint.
 
 ---
@@ -305,6 +307,30 @@ Libellés `kind` : Article · Vidéo · Modèle · Outil · Conseil · Autre. Ou
 Types : `REQUEST_RECEIVED`, `REQUEST_ACCEPTED`, `REQUEST_DECLINED`, `SESSION_REQUESTED`, `SESSION_CONFIRMED`, `SESSION_CANCELLED`, `GOAL_FEEDBACK`, `RESOURCE_SHARED`, `MENTORSHIP_COMPLETED`.
 `title` et `body` sont prêts à afficher en français. `link` est un **chemin frontend relatif** (`/demandes`, `/seances`, `/mentors`, `/mentorats/<id>`) : un clic marque la notification comme lue puis navigue vers ce chemin. **Ces routes doivent donc exister côté frontend.**
 
+### Opportunités (TDR §7.2)
+
+| Route | Accès | Détail |
+|---|---|---|
+| `GET /opportunities?q=&type=&domain=<slug>&remote=true&page=&pageSize=` | 🔓 | Opportunités **ouvertes** (non archivées, date limite non dépassée), échéance la plus proche en premier → paginé |
+| `GET /opportunities/:id` | 🔓 | Détail ; une opportunité archivée ou expirée renvoie 404, sauf pour son auteur ou un admin |
+| `GET /opportunities/mine` | 🔒 M ou A | Mes publications, y compris archivées ou expirées |
+| `POST /opportunities` | 🔒 M ou A | `{ type, title (5–160), organization (2–120), description (30–3000), location?, isRemote?, url? (https), deadline? (future), domainId? }` ; 422 `DEADLINE_IN_PAST` |
+| `PATCH /opportunities/:id` | 🔒 auteur ou A | Mêmes champs (facultatifs), `deadline: null` pour la retirer, `archived: true|false` ; 403 `NOT_OPPORTUNITY_AUTHOR` |
+
+Types et libellés : INTERNSHIP → Stage · JOB → Emploi · CALL_FOR_PROJECTS → Appel à projets · SCHOLARSHIP → Bourse · TRAINING → Formation · EVENT → Événement · OTHER → Autre.
+`Opportunity = { id, type, title, organization, description, location, isRemote, url, deadline, archivedAt, createdAt, updatedAt, domain, author: { id, firstName, lastName, role, mentorProfile: { headline } | null } }`
+Afficher « Clôture dans N jours » si `deadline` est proche, et ouvrir `url` dans un nouvel onglet (`rel="noopener noreferrer"`).
+
+### Confidentialité (page « Mon compte »)
+
+| Route | Détail |
+|---|---|
+| `GET /profile/me/export` | Téléchargement JSON de toutes ses données (`Content-Disposition: attachment`). Utiliser un lien direct `<a href="/api/v1/profile/me/export">` |
+| `DELETE /profile/me` | Corps `{ password, confirmation: "SUPPRIMER" }` → `{ ok, closedMentorships }` et cookie effacé. **Irréversible** : le compte est anonymisé (« Compte supprimé »), ses mentorats actifs sont clos, ses séances futures annulées et ses contenus publics retirés. Les messages déjà échangés restent visibles de l'autre participant. 422 `INVALID_PASSWORD`, 403 `ADMIN_CANNOT_SELF_DELETE` |
+
+→ Écran « Supprimer mon compte » : texte d'avertissement clair, champ mot de passe et champ « Tapez SUPPRIMER », bouton rouge, puis redirection vers l'accueil.
+Un utilisateur supprimé apparaît comme « Compte supprimé » dans les conversations et les mentorats passés : prévoir un avatar neutre.
+
 ### Tableau de bord et admin
 
 - `GET /dashboard/me` 🔒 → `{ role, pendingRequests, activeMentorships, upcomingSessions: Session[≤3] (avec mentorshipId et meetingUrl), sessionsAwaitingConfirmation, unreadMessages, goals: { total, completed, averageProgress | null }, mentor: { maxMentees, freeUpcomingSlots } | null }`
@@ -343,7 +369,8 @@ Chaque étape doit être **reliée à l'API réelle** avant de passer à la suiv
 11. Onglet **Ressources** dans `/mentorats/[id]` (partage de liens et de conseils) et page publique `/ressources` (bibliothèque filtrable ; bouton « Publier » pour les mentors).
 12. **Cloche de notifications** dans le header : badge `unread-count`, panneau déroulant avec la liste, « Tout marquer comme lu », navigation via `link`.
 13. `/admin` minimal : vue d'ensemble, liste des comptes, vérifier ou publier un mentor, suspendre un compte, retirer une ressource de la bibliothèque, **gérer les domaines** (créer, renommer, activer ou désactiver).
-13 bis. `/compte` : modifier son nom et son fuseau horaire, changer son mot de passe, « Se déconnecter de tous les appareils ».
+13 bis. `/compte` : modifier son nom et son fuseau horaire, changer son mot de passe, « Se déconnecter de tous les appareils », **exporter mes données**, **supprimer mon compte**.
+13 ter. `/opportunites` : liste publique filtrable (type, domaine, à distance) ; pour les mentors, « Publier une opportunité » et « Mes publications » (archiver ou republier).
 14. Landing `/` concise : proposition de valeur, fonctionnement en 3 étapes, les 7 domaines (`GET /domains`, avec le nombre réel de mentors), CTA « Trouver un mentor » et « Devenir mentor ». **Aucun faux témoignage ni aucune statistique inventée.**
 
 **F4 — Finition**
@@ -402,8 +429,8 @@ Mappe-les sur les variables shadcn (`--primary`, `--accent`, `--muted`, `--destr
 - **Stepper** de l'onboarding (étape x/3, retour possible, sauvegarde finale unique).
 - **États** : skeleton pour chaque liste ; état vide avec icône, phrase utile et action (« Aucune demande pour l'instant — Explorer les mentors ») ; erreur avec message de l'API et bouton « Réessayer » ; écran « Accès refusé » sur 403 ; toasts de succès après chaque mutation.
 - **Navigation** :
-  - mentoré : Tableau de bord · Trouver un mentor · Mes demandes · Mes mentorats · Séances · Ressources ;
-  - mentor : Tableau de bord · Demandes reçues · Mes mentorés · Disponibilités · Séances · Ressources ;
+  - mentoré : Tableau de bord · Trouver un mentor · Mes demandes · Mes mentorats · Séances · Ressources · Opportunités ;
+  - mentor : Tableau de bord · Demandes reçues · Mes mentorés · Disponibilités · Séances · Ressources · Opportunités ;
   - admin : Vue d'ensemble · Comptes · Mentors.
   En mobile, barre d'onglets en bas (4 ou 5 icônes) ; en desktop, sidebar de 240 px et header avec le menu du compte.
 - **Conversation** : bulles alignées (moi à droite sur fond ink-900 avec texte blanc ; l'autre à gauche sur blanc avec bordure), horodatage discret, zone de saisie collée en bas, Entrée pour envoyer et Maj+Entrée pour un saut de ligne.

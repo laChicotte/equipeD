@@ -36,7 +36,7 @@ Comptes fictifs (développement uniquement), mot de passe `Mentorat2026!` :
 ```bash
 pnpm --filter backend test        # tests unitaires
 cp backend/.env.test.example backend/.env.test
-pnpm --filter backend test:e2e    # 89 tests de bout en bout sur une base PostgreSQL de test (recréée)
+pnpm --filter backend test:e2e    # 98 tests de bout en bout sur une base PostgreSQL de test (recréée)
 ```
 
 ## API conteneurisée (optionnel)

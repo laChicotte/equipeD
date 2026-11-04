@@ -21,6 +21,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module.js';
 import { AdminModule } from './modules/admin/admin.module.js';
 import { NotificationsModule } from './modules/notifications/notifications.module.js';
 import { ResourcesModule } from './modules/resources/resources.module.js';
+import { OpportunitiesModule } from './modules/opportunities/opportunities.module.js';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { ResourcesModule } from './modules/resources/resources.module.js';
     AdminModule,
     NotificationsModule,
     ResourcesModule,
+    OpportunitiesModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
