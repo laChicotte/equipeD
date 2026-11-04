@@ -147,3 +147,17 @@ export function useGoalMutations(mentorshipId: string) {
     }),
   };
 }
+
+export function useCompleteMentorship(mentorshipId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (note?: string) =>
+      api<MentorshipSummary>(`/mentorships/${mentorshipId}/complete`, { method: 'POST', body: { note } }),
+    onSuccess: (data) => {
+      qc.setQueryData(['mentorships', mentorshipId], data);
+      void qc.invalidateQueries({ queryKey: ['mentorships'] });
+      void qc.invalidateQueries({ queryKey: ['sessions'] });
+      void qc.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
+}

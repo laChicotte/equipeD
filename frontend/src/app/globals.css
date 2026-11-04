@@ -59,6 +59,7 @@
 
   /* Typographie : une seule famille */
   --font-sans: var(--font-schibsted), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-lexend), var(--font-schibsted), ui-sans-serif, sans-serif;
 
   /* Rayons : formes nettes, une seule logique sur tout le produit */
   --radius-xs: 2px;
@@ -179,7 +180,24 @@
 
   /* Traitement photo unique : noir et blanc contrasté, comme un catalogue imprimé */
   .photo {
-    filter: grayscale(1) contrast(1.08) brightness(1.02);
+    filter: contrast(1.04) saturate(1.05);
+  }
+  .photo-mono {
+    filter: grayscale(1) contrast(1.08);
+  }
+
+  /* Bouton à coin coupé (signature visuelle des actions principales) */
+  .notch {
+    clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%);
+  }
+  /* Panneau incrusté à bord oblique (recherche du hero) */
+  .cut-panel {
+    clip-path: polygon(56px 0, 100% 0, 100% 100%, 0 100%);
+  }
+  @media (max-width: 1023px) {
+    .cut-panel {
+      clip-path: none;
+    }
   }
 
   /* Titre à lignes masquées (signature) */
@@ -256,6 +274,14 @@
   }
 }
 
+@keyframes slide-progress {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
 @keyframes line-up {
   to {
     transform: none;

@@ -1,9 +1,15 @@
 'use client';
 
-import { ArrowLeft, CalendarCheck2, CalendarDays, MessagesSquare, Target } from 'lucide-react';
+import { ArrowLeft, BookOpen, CalendarCheck2, CalendarDays, Flag, MessagesSquare, Target } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
+import { toast } from 'sonner';
+import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog';
+import { Field } from '@/components/ui/field';
+import { Textarea } from '@/components/ui/input';
+import { MentorshipResources } from '@/features/resources/mentorship-resources';
+import { errorMessage } from '@/lib/api';
 import { EmptyState, ErrorState } from '@/components/feedback/states';
 import { StatusBadge } from '@/components/feedback/status-badge';
 import { Avatar } from '@/components/ui/avatar';
@@ -18,7 +24,7 @@ import { SessionCard } from '@/features/scheduling/session-card';
 import { formatDate, formatRange, fullName } from '@/lib/format';
 import { situationLabels } from '@/lib/labels';
 import type { Me, MentorshipSummary } from '@/lib/types';
-import { useMentorship } from './api';
+import { useCompleteMentorship, useMentorship } from './api';
 import { Conversation } from './conversation';
 import { GoalsPanel } from './goals';
 
@@ -89,10 +95,48 @@ function SessionsPanel({ mentorship, me }: { mentorship: MentorshipSummary; me: 
   );
 }
 
+function CompleteDialog({ mentorship, open, onOpenChange }: { mentorship: MentorshipSummary; open: boolean; onOpenChange: (o: boolean) => void }) {
+  const complete = useCompleteMentorship(mentorship.id);
+  const [note, setNote] = useState('');
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        title="Clôturer le mentorat"
+        description={`Le mentorat avec ${mentorship.counterpart.firstName} passera en lecture seule. Les séances à venir seront annulées et ${mentorship.counterpart.firstName} sera prévenu·e.`}
+      >
+        <Field label="Bilan de l’accompagnement" optional counter={{ value: note.length, max: 1000 }} hint="Ce qui a été accompli, les prochaines étapes conseillées.">
+          <Textarea value={note} onChange={(e) => setNote(e.target.value)} maxLength={1000} />
+        </Field>
+        <DialogFooter>
+          <Button variant="secondary" onClick={() => onOpenChange(false)}>
+            Annuler
+          </Button>
+          <Button
+            loading={complete.isPending}
+            onClick={() =>
+              complete.mutate(note.trim() || undefined, {
+                onSuccess: () => {
+                  toast.success('Mentorat clôturé', { description: 'Merci pour cet accompagnement.' });
+                  onOpenChange(false);
+                },
+                onError: (e) => toast.error(errorMessage(e)),
+              })
+            }
+          >
+            <Flag aria-hidden />
+            Clôturer
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function Workspace() {
   const { id } = useParams<{ id: string }>();
   const { data: me } = useMe();
   const q = useMentorship(id);
+  const [closing, setClosing] = useState(false);
 
   if (q.isError) return <ErrorState error={q.error} onRetry={() => void q.refetch()} />;
   if (q.isPending || !me)
@@ -128,7 +172,7 @@ export function Workspace() {
             <Avatar person={other} size="lg" />
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-2xl font-extrabold tracking-[-0.035em] text-ink-900 sm:text-3xl">{fullName(other)}</h1>
+                <h1 className="text-2xl font-display font-semibold tracking-[-0.03em] text-ink-900 sm:text-3xl">{fullName(other)}</h1>
                 <StatusBadge kind="mentorship" status={m.status} />
               </div>
               {subtitle && <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">{subtitle}</p>}
@@ -169,6 +213,27 @@ export function Workspace() {
         </div>
       </Card>
 
+      {m.status !== 'ACTIVE' ? (
+        <div className="mb-6 flex flex-wrap items-start gap-3 bg-ink-900 px-5 py-4 text-white">
+          <Flag className="mt-0.5 size-5 shrink-0 text-amber-400" aria-hidden />
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold">
+              Mentorat {m.status === 'COMPLETED' ? 'clôturé' : 'interrompu'}
+              {m.endedAt && <> le {formatDate(m.endedAt)}</>} : il reste consultable en lecture seule.
+            </p>
+            {m.endNote && <p className="mt-1 text-[15px] text-ink-100">Bilan : « {m.endNote} »</p>}
+          </div>
+        </div>
+      ) : (
+        <div className="mb-4 flex justify-end">
+          <Button variant="ghost" size="sm" onClick={() => setClosing(true)}>
+            <Flag aria-hidden />
+            Clôturer le mentorat
+          </Button>
+        </div>
+      )}
+      <CompleteDialog mentorship={m} open={closing} onOpenChange={setClosing} />
+
       <Tabs defaultValue="conversation">
         <TabsList>
           <TabsTrigger value="conversation">
@@ -188,6 +253,10 @@ export function Workspace() {
             <CalendarDays aria-hidden />
             Séances
           </TabsTrigger>
+          <TabsTrigger value="resources">
+            <BookOpen aria-hidden />
+            Ressources
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="conversation">
           <Conversation mentorship={m} me={me} />
@@ -197,6 +266,9 @@ export function Workspace() {
         </TabsContent>
         <TabsContent value="sessions">
           <SessionsPanel mentorship={m} me={me} />
+        </TabsContent>
+        <TabsContent value="resources">
+          <MentorshipResources mentorship={m} me={me} />
         </TabsContent>
       </Tabs>
     </div>

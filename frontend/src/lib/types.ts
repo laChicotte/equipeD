@@ -15,7 +15,19 @@ export type MentorshipRequestStatus = 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'CAN
 export type MentorshipStatus = 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
 export type SessionStatus = 'REQUESTED' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED';
 export type GoalStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED';
-export type UserStatus = 'ACTIVE' | 'SUSPENDED';
+export type UserStatus = 'ACTIVE' | 'SUSPENDED' | 'DELETED';
+export type ResourceKind = 'ARTICLE' | 'VIDEO' | 'TEMPLATE' | 'TOOL' | 'ADVICE' | 'OTHER';
+export type OpportunityType = 'INTERNSHIP' | 'JOB' | 'CALL_FOR_PROJECTS' | 'SCHOLARSHIP' | 'TRAINING' | 'EVENT' | 'OTHER';
+export type NotificationType =
+  | 'REQUEST_RECEIVED'
+  | 'REQUEST_ACCEPTED'
+  | 'REQUEST_DECLINED'
+  | 'SESSION_REQUESTED'
+  | 'SESSION_CONFIRMED'
+  | 'SESSION_CANCELLED'
+  | 'GOAL_FEEDBACK'
+  | 'RESOURCE_SHARED'
+  | 'MENTORSHIP_COMPLETED';
 
 export interface Me {
   id: string;
@@ -100,6 +112,7 @@ export interface MentorCard {
   maxMentees: number;
   acceptingMentees: boolean;
   nextAvailableAt: string | null;
+  rating?: { average: number | null; count: number };
 }
 
 export interface MentorDetail extends MentorCard {
@@ -172,6 +185,8 @@ export interface MentorshipSummary {
   status: MentorshipStatus;
   startedAt: string;
   endedAt: string | null;
+  endedById?: string | null;
+  endNote?: string | null;
   myRole: 'MENTOR' | 'MENTEE';
   mentor: Person;
   mentee: Person;
@@ -212,6 +227,15 @@ export interface Session {
   updatedAt: string;
   mentor: PersonRef;
   mentee: PersonRef;
+  feedbacks?: SessionFeedback[];
+}
+
+export interface SessionFeedback {
+  id: string;
+  authorId: string;
+  rating: number;
+  comment: string | null;
+  createdAt: string;
 }
 
 export interface OwnSlot extends Slot {
@@ -269,4 +293,63 @@ export interface ApiErrorBody {
   details?: { field: string; messages: string[] }[];
   path?: string;
   timestamp?: string;
+}
+
+export interface AppNotification {
+  id: string;
+  type: NotificationType;
+  title: string;
+  body: string | null;
+  link: string | null;
+  readAt: string | null;
+  createdAt: string;
+}
+
+export interface AuthorRef {
+  id: string;
+  firstName: string;
+  lastName: string;
+  role: Role;
+  mentorProfile: { headline: string } | null;
+}
+
+export interface Resource {
+  id: string;
+  mentorshipId: string | null;
+  kind: ResourceKind;
+  title: string;
+  description: string | null;
+  url: string | null;
+  createdAt: string;
+  author: AuthorRef;
+  domain: DomainRef | null;
+}
+
+export interface Opportunity {
+  id: string;
+  type: OpportunityType;
+  title: string;
+  organization: string;
+  description: string;
+  location: string | null;
+  isRemote: boolean;
+  url: string | null;
+  deadline: string | null;
+  archivedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  domain: DomainRef | null;
+  author: AuthorRef;
+}
+
+export interface AdminDomain {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  icon: string;
+  topics: string[];
+  sortOrder: number;
+  isActive: boolean;
+  _count: { mentors: number; mentees: number; resources: number };
 }

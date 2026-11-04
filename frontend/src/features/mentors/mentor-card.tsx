@@ -1,10 +1,19 @@
-import { ArrowUpRight, BadgeCheck, CalendarClock, Globe2, MapPin, MonitorSmartphone, Users } from 'lucide-react';
+import {
+  ArrowRight,
+  BadgeCheck,
+  Briefcase,
+  CalendarClock,
+  Globe2,
+  Languages,
+  MapPin,
+  MonitorSmartphone,
+  Star,
+} from 'lucide-react';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip } from '@/components/ui/tooltip';
-import { formatShortDate, formatTime, fullName } from '@/lib/format';
+import { formatShortDate, formatTime, fullName, initials } from '@/lib/format';
 import { modalityLabels } from '@/lib/labels';
 import type { MentorCard as MentorCardData, Modality } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -14,6 +23,20 @@ export const modalityIcon: Record<Modality, typeof MapPin> = {
   IN_PERSON: MapPin,
   HYBRID: Globe2,
 };
+
+/** Couleur d'identité stable par personne (pâle, jamais une donnée). */
+const IDENTITIES = [
+  { band: 'bg-ink-900', avatar: 'bg-teal-100 text-teal-800' },
+  { band: 'bg-teal-700', avatar: 'bg-amber-100 text-[#7a4a0f]' },
+  { band: 'bg-ink-700', avatar: 'bg-ink-100 text-ink-900' },
+  { band: 'bg-teal-800', avatar: 'bg-teal-50 text-teal-800' },
+] as const;
+
+export function identityFor(seed: string) {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+  return IDENTITIES[h % IDENTITIES.length];
+}
 
 export function VerifiedBadge({ compact = false }: { compact?: boolean }) {
   if (compact) {
@@ -38,119 +61,125 @@ export function Availability({ iso, className }: { iso: string | null; className
     return <span className={cn('text-muted-foreground', className)}>Aucun créneau publié</span>;
   }
   return (
-    <span className={cn('font-medium text-teal-800', className)}>
-      Disponible {formatShortDate(iso)} à {formatTime(iso)}
+    <span className={cn('font-semibold text-teal-800', className)}>
+      {formatShortDate(iso)}, {formatTime(iso)}
     </span>
   );
 }
 
 export function MentorCard({ mentor, footer }: { mentor: MentorCardData; footer?: ReactNode }) {
   const full = !mentor.acceptingMentees;
+  const id = identityFor(mentor.id);
+  const places = mentor.maxMentees - mentor.activeMentees;
+
   return (
-    <article className="group relative flex h-full flex-col rounded-lg border border-border bg-surface p-5 transition-[border-color,box-shadow,transform] duration-200 focus-within:border-accent hover:-translate-y-0.5 hover:border-teal-200 hover:border-ink-900">
-      <div className="flex items-start gap-3.5">
-        <Avatar person={mentor} size="lg" />
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
-            <h3 className="truncate font-semibold tracking-tight">
-              <Link
-                href={`/mentors/${mentor.id}`}
-                className="after:absolute after:inset-0 after:rounded-lg focus-visible:outline-none"
-              >
-                {fullName(mentor)}
-              </Link>
-            </h3>
-            {mentor.verificationStatus === 'VERIFIED' && <VerifiedBadge compact />}
-          </div>
-          <p className="mt-0.5 line-clamp-2 text-sm leading-snug text-muted-foreground">{mentor.headline}</p>
-        </div>
-        <ArrowUpRight
-          className="size-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100"
-          aria-hidden
-        />
+    <article className="group relative flex h-full flex-col overflow-hidden bg-surface ring-1 ring-border transition-[transform,box-shadow] duration-300 ease-out focus-within:ring-2 focus-within:ring-teal-600 hover:-translate-y-1 hover:shadow-raised">
+      {/* Bandeau d'identité */}
+      <div className={cn('relative h-20', id.band)}>
+        {mentor.verificationStatus === 'VERIFIED' && (
+          <span className="absolute top-3 right-3 inline-flex items-center gap-1 bg-white/15 px-2 py-1 text-[12px] font-semibold text-white">
+            <BadgeCheck className="size-3.5 text-amber-400" aria-hidden />
+            Profil vérifié
+          </span>
+        )}
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-1.5">
-        {mentor.domains.slice(0, 3).map((d) => (
-          <Badge key={d.id} tone="teal">
-            {d.name}
-          </Badge>
-        ))}
-      </div>
-
-      <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-foreground/85">{mentor.bio}</p>
-
-      <dl className="mt-4 grid gap-2 text-[13px] text-muted-foreground">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <dt className="sr-only">Modalités</dt>
-          {mentor.modalities.map((m) => {
-            const Icon = modalityIcon[m];
-            return (
-              <dd key={m} className="inline-flex items-center gap-1.5">
-                <Icon className="size-3.5" aria-hidden />
-                {modalityLabels[m]}
-              </dd>
-            );
-          })}
-          {mentor.city && (
-            <>
-              <dt className="sr-only">Ville</dt>
-              <dd className="inline-flex items-center gap-1.5">
-                <MapPin className="size-3.5" aria-hidden />
-                {mentor.city}
-              </dd>
-            </>
-          )}
-        </div>
-        <div className="flex items-center gap-1.5">
-          <dt className="sr-only">Expérience</dt>
-          <dd>
-            {mentor.yearsExperience} ans d’expérience · {mentor.languages.join(', ')}
-          </dd>
-        </div>
-      </dl>
-
-      <div className="mt-auto flex items-center justify-between gap-3 border-t border-border pt-4 text-[13px]">
-        <span className="inline-flex min-w-0 items-center gap-1.5">
-          <CalendarClock className="size-3.5 shrink-0 text-teal-700" aria-hidden />
-          <Availability iso={mentor.nextAvailableAt} className="truncate" />
-        </span>
+      <div className="flex flex-1 flex-col px-6 pb-6">
         <span
+          aria-hidden
           className={cn(
-            'inline-flex shrink-0 items-center gap-1 font-medium tabular-nums',
-            full ? 'text-warning-700' : 'text-muted-foreground',
+            'relative z-[1] -mt-9 inline-flex size-[72px] items-center justify-center rounded-full font-display text-[22px] font-semibold ring-4 ring-surface',
+            id.avatar,
           )}
         >
-          <Users className="size-3.5" aria-hidden />
-          {full ? 'Complet' : `${mentor.activeMentees}/${mentor.maxMentees}`}
-          <span className="sr-only"> mentorés accompagnés</span>
+          {initials(mentor)}
         </span>
+
+        <h3 className="mt-4 font-display text-[20px] leading-tight font-semibold tracking-[-0.02em] text-ink-900">
+          <Link
+            href={`/mentors/${mentor.id}`}
+            className="after:absolute after:inset-0 focus-visible:outline-none"
+          >
+            {fullName(mentor)}
+          </Link>
+        </h3>
+        <p className="mt-1.5 line-clamp-2 text-[15px] leading-snug text-foreground">{mentor.headline}</p>
+        {mentor.rating && mentor.rating.count > 0 && mentor.rating.average !== null && (
+          <p className="mt-2 inline-flex items-center gap-1.5 text-[14px] font-semibold text-ink-900">
+            <Star className="size-4 fill-amber-400 text-amber-400" aria-hidden />
+            {mentor.rating.average.toLocaleString('fr-FR', { maximumFractionDigits: 1 })}
+            <span className="font-normal text-muted-foreground">
+              ({mentor.rating.count} avis de séance{mentor.rating.count > 1 ? 's' : ''})
+            </span>
+          </p>
+        )}
+
+        <ul className="mt-4 grid gap-1.5 text-[14px] text-muted-foreground">
+          <li className="flex items-center gap-2">
+            <Briefcase className="size-4 shrink-0" aria-hidden />
+            {mentor.yearsExperience} ans d’expérience
+            {mentor.city && <span className="truncate">· {mentor.city}</span>}
+          </li>
+          <li className="flex items-center gap-2">
+            <Languages className="size-4 shrink-0" aria-hidden />
+            <span className="truncate">{mentor.languages.join(', ')}</span>
+          </li>
+          <li className="flex items-center gap-2">
+            {(() => {
+              const Icon = modalityIcon[mentor.modalities[0] ?? 'REMOTE'];
+              return <Icon className="size-4 shrink-0" aria-hidden />;
+            })()}
+            <span className="truncate">{mentor.modalities.map((m) => modalityLabels[m]).join(' · ')}</span>
+          </li>
+        </ul>
+
+        <div className="mt-4 flex flex-wrap gap-1.5">
+          {mentor.domains.slice(0, 2).map((d) => (
+            <Badge key={d.id} tone="teal" className="max-w-full truncate">
+              {d.name}
+            </Badge>
+          ))}
+          {mentor.domains.length > 2 && <Badge tone="neutral">+{mentor.domains.length - 2}</Badge>}
+        </div>
+
+        <div className="mt-auto pt-6">
+          <div className="flex items-center justify-between gap-3 bg-background px-3 py-2.5">
+            <span className="inline-flex min-w-0 items-center gap-2.5">
+              <CalendarClock className="size-5 shrink-0 text-teal-700" aria-hidden />
+              <span className="grid min-w-0 leading-tight">
+                <span className="text-[12px] text-muted-foreground">Prochain créneau</span>
+                <Availability iso={mentor.nextAvailableAt} className="truncate text-[14px]" />
+              </span>
+            </span>
+            <span className={cn('shrink-0 text-[13px] font-semibold tabular-nums', full ? 'text-warning-700' : 'text-muted-foreground')}>
+              {full ? 'Complet' : `${places} place${places > 1 ? 's' : ''}`}
+            </span>
+          </div>
+          <span className="mt-4 inline-flex items-center gap-2 text-[15px] font-semibold text-teal-700">
+            Voir le profil
+            <ArrowRight className="size-4 transition-transform duration-200 group-hover:translate-x-1" aria-hidden />
+          </span>
+        </div>
       </div>
-      {footer && <div className="relative z-10 mt-4">{footer}</div>}
+      {footer && <div className="relative z-10 border-t border-border px-6 py-4">{footer}</div>}
     </article>
   );
 }
 
 export function MentorCardSkeleton() {
   return (
-    <div className="rounded-lg border border-border bg-surface p-5">
-      <div className="flex gap-3.5">
-        <div className="size-14 animate-pulse rounded-full bg-ink-100/70" />
-        <div className="flex-1 space-y-2">
-          <div className="h-4 w-1/2 animate-pulse rounded bg-ink-100/70" />
-          <div className="h-3 w-5/6 animate-pulse rounded bg-ink-100/70" />
+    <div className="overflow-hidden bg-surface ring-1 ring-border">
+      <div className="h-20 animate-pulse bg-ink-100/70" />
+      <div className="px-6 pb-6">
+        <div className="-mt-9 size-[72px] animate-pulse rounded-full bg-ink-100 ring-4 ring-surface" />
+        <div className="mt-4 h-5 w-1/2 animate-pulse bg-ink-100/70" />
+        <div className="mt-2 h-4 w-5/6 animate-pulse bg-ink-100/70" />
+        <div className="mt-5 space-y-2">
+          <div className="h-3 animate-pulse bg-ink-100/70" />
+          <div className="h-3 w-2/3 animate-pulse bg-ink-100/70" />
         </div>
+        <div className="mt-8 h-10 animate-pulse bg-ink-100/50" />
       </div>
-      <div className="mt-4 flex gap-2">
-        <div className="h-5 w-24 animate-pulse rounded bg-ink-100/70" />
-        <div className="h-5 w-20 animate-pulse rounded bg-ink-100/70" />
-      </div>
-      <div className="mt-4 space-y-2">
-        <div className="h-3 animate-pulse rounded bg-ink-100/70" />
-        <div className="h-3 animate-pulse rounded bg-ink-100/70" />
-        <div className="h-3 w-2/3 animate-pulse rounded bg-ink-100/70" />
-      </div>
-      <div className="mt-6 h-4 w-1/2 animate-pulse rounded bg-ink-100/70" />
     </div>
   );
 }

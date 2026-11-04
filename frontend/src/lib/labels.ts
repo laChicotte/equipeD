@@ -2,6 +2,8 @@ import type {
   GoalStatus,
   MenteeSituation,
   MentorshipRequestStatus,
+  OpportunityType,
+  ResourceKind,
   MentorshipStatus,
   Modality,
   Role,
@@ -72,3 +74,33 @@ export const CAMPUS_FRANCE_NOTICE =
 export function isCampusFrance(slug: string | undefined | null): boolean {
   return !!slug && slug.toLowerCase().includes('campus');
 }
+
+export const resourceKindLabels: Record<ResourceKind, string> = {
+  ARTICLE: 'Article',
+  VIDEO: 'Vidéo',
+  TEMPLATE: 'Modèle',
+  TOOL: 'Outil',
+  ADVICE: 'Conseil',
+  OTHER: 'Autre',
+};
+
+export const opportunityTypeLabels: Record<OpportunityType, string> = {
+  INTERNSHIP: 'Stage',
+  JOB: 'Emploi',
+  CALL_FOR_PROJECTS: 'Appel à projets',
+  SCHOLARSHIP: 'Bourse',
+  TRAINING: 'Formation',
+  EVENT: 'Événement',
+  OTHER: 'Autre',
+};
+
+/** Fuseaux proposés dans le compte (le fuseau de référence du programme en premier). */
+export const TIMEZONES = [
+  { value: 'Africa/Conakry', label: 'Conakry (GMT)' },
+  { value: 'Africa/Dakar', label: 'Dakar (GMT)' },
+  { value: 'Africa/Abidjan', label: 'Abidjan (GMT)' },
+  { value: 'Europe/Paris', label: 'Paris (CET/CEST)' },
+  { value: 'Europe/Brussels', label: 'Bruxelles (CET/CEST)' },
+  { value: 'America/Montreal', label: 'Montréal (EST/EDT)' },
+  { value: 'UTC', label: 'UTC' },
+] as const;

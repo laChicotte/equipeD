@@ -21,7 +21,7 @@ export function Logo({ href = '/', inverted = false }: { href?: string; inverted
       href={href}
       className={cn(
         'inline-flex items-baseline text-[17px] leading-none font-extrabold tracking-[-0.04em] whitespace-nowrap focus-visible:outline-offset-4 sm:text-[19px]',
-        inverted ? 'text-white' : 'text-ink-900',
+        inverted ? 'text-white' : 'text-current',
       )}
       aria-label="Talents Connectés, accueil"
     >

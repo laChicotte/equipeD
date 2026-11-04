@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import type {
+  AdminDomain,
   MentorshipRequestStatus,
   Role,
   SessionStatus,
@@ -69,6 +70,38 @@ export function useAdminMutations() {
         id: string;
         patch: { verificationStatus?: VerificationStatus; isPublished?: boolean };
       }) => api<unknown>(`/admin/mentors/${id}`, { method: 'PATCH', body: patch }),
+      onSuccess: invalidate,
+    }),
+  };
+}
+
+export interface DomainInput {
+  slug?: string;
+  name?: string;
+  description?: string;
+  icon?: string;
+  topics?: string[];
+  isActive?: boolean;
+}
+
+export function useAdminDomains() {
+  return useQuery({ queryKey: ['admin', 'domains'], queryFn: () => api<AdminDomain[]>('/admin/domains') });
+}
+
+export function useAdminDomainMutations() {
+  const qc = useQueryClient();
+  const invalidate = () => {
+    void qc.invalidateQueries({ queryKey: ['admin', 'domains'] });
+    void qc.invalidateQueries({ queryKey: ['domains'] });
+  };
+  return {
+    create: useMutation({
+      mutationFn: (input: DomainInput) => api<AdminDomain>('/admin/domains', { method: 'POST', body: input }),
+      onSuccess: invalidate,
+    }),
+    update: useMutation({
+      mutationFn: ({ id, patch }: { id: string; patch: DomainInput }) =>
+        api<AdminDomain>(`/admin/domains/${id}`, { method: 'PATCH', body: patch }),
       onSuccess: invalidate,
     }),
   };

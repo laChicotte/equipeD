@@ -203,8 +203,23 @@ export function MentorProfile() {
                   {!mentor.acceptingMentees && <Badge tone="warning">Complet</Badge>}
                 </div>
               </div>
-              <h1 className="mt-5 text-3xl font-extrabold tracking-[-0.035em] text-ink-900 sm:text-[44px] sm:leading-none">{fullName(mentor)}</h1>
+              <h1 className="mt-5 text-3xl font-display font-semibold tracking-[-0.03em] text-ink-900 sm:text-[44px] sm:leading-none">{fullName(mentor)}</h1>
               <p className="mt-3 max-w-[60ch] text-[17px] leading-relaxed text-foreground">{mentor.headline}</p>
+              {mentor.rating && mentor.rating.count > 0 && mentor.rating.average !== null && (
+                <p className="mt-3 inline-flex items-center gap-1.5 text-[15px] font-semibold text-ink-900">
+                  <span className="inline-flex" aria-hidden>
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <svg key={n} viewBox="0 0 24 24" className={n <= Math.round(mentor.rating!.average!) ? 'size-4 fill-amber-400' : 'size-4 fill-ink-100'}>
+                        <path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z" />
+                      </svg>
+                    ))}
+                  </span>
+                  {mentor.rating.average.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} / 5
+                  <span className="font-normal text-muted-foreground">
+                    · {mentor.rating.count} avis de mentoré{mentor.rating.count > 1 ? 's' : ''} après séance
+                  </span>
+                </p>
+              )}
               <ul className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm text-foreground/85">
                 {(mentor.currentPosition || mentor.organization) && (
                   <li className="inline-flex items-center gap-1.5">

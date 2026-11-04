@@ -23,5 +23,6 @@ export const config = {
     '/seances/:path*',
     '/disponibilites/:path*',
     '/admin/:path*',
+    '/compte/:path*',
   ],
 };

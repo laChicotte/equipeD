@@ -44,14 +44,19 @@
 - [x] Confidentialité : export JSON de ses données, suppression du compte par anonymisation (l’historique de l’autre participant est préservé)
 - [ ] Emails transactionnels, PWA
 
-## Frontend (à compléter par l'équipe frontend)
-- [ ] Landing, connexion et inscription, onboarding
-- [ ] Annuaire, fiche mentor, demande
-- [ ] Demandes reçues et envoyées, tableau de bord
-- [ ] Disponibilités, réservation, séances
-- [ ] Conversation, objectifs, évaluation
-- [ ] Admin
-- [ ] Responsive vérifié à 375 px et à 1440 px
+## Frontend
+- [x] Accueil : hero plein écran (diaporama), recherche de mentors en direct, chiffres réels, domaines, parcours, mentors, confiance
+- [x] Connexion, inscription, onboarding différencié mentor et mentoré
+- [x] Annuaire « Trouver un mentor » : filtres rapides par domaine, modalité, langue, disponibilité, recommandations expliquées
+- [x] Fiche mentor, demande motivée, demandes reçues et envoyées, tableau de bord par rôle
+- [x] Disponibilités, réservation, confirmation avec salle de visio, annulation, évaluation des séances (1 à 5 et commentaire)
+- [x] Espace de mentorat : conversation, objectifs et jalons, séances, ressources partagées, clôture avec bilan
+- [x] Bibliothèque de ressources (/ressources) et opportunités (/opportunites), publication par les mentors
+- [x] Cloche de notifications in-app
+- [x] Mon compte : informations, mot de passe, déconnexion de tous les appareils, export JSON, suppression
+- [x] Administration : vue d’ensemble, comptes, mentors, domaines
+- [x] Build de production : 22 routes, typecheck et lint sans erreur
+- [ ] Revue responsive écran par écran à 375 px (accueil et annuaire vérifiés)
 
 ## Tests exécutés
 

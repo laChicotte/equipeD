@@ -527,7 +527,7 @@ export function Onboarding() {
           <Building2 className="size-4" aria-hidden />
           {me?.role === 'MENTOR' ? 'Profil mentor' : 'Profil mentoré·e'}
         </p>
-        <h1 className="mt-2 text-4xl font-extrabold tracking-[-0.035em] text-ink-900">
+        <h1 className="mt-2 text-4xl font-display font-semibold tracking-[-0.03em] text-ink-900">
           {editing ? 'Modifier votre profil' : `Bienvenue${me ? `, ${me.firstName}` : ''} !`}
         </h1>
         <p className="mt-1.5 text-[15px] text-muted-foreground">

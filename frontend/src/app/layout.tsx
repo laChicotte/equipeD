@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Schibsted_Grotesk } from 'next/font/google';
+import { Lexend, Schibsted_Grotesk } from 'next/font/google';
 import { Providers } from '@/components/providers';
 import './globals.css';
 
@@ -7,6 +7,13 @@ const schibsted = Schibsted_Grotesk({
   variable: '--font-schibsted',
   subsets: ['latin'],
   weight: ['400', '500', '600', '800'],
+  display: 'swap',
+});
+
+const lexend = Lexend({
+  variable: '--font-lexend',
+  subsets: ['latin'],
+  weight: ['500', '600', '700'],
   display: 'swap',
 });
 
@@ -30,7 +37,7 @@ const enableMotion = "document.documentElement.classList.add('js')";
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
-    <html lang="fr" className={`${schibsted.variable} h-full`} suppressHydrationWarning>
+    <html lang="fr" className={`${schibsted.variable} ${lexend.variable} h-full`} suppressHydrationWarning>
       <body className="min-h-full">
         <script dangerouslySetInnerHTML={{ __html: enableMotion }} />
         <a

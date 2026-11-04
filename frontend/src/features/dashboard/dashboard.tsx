@@ -244,7 +244,7 @@ export function Dashboard() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-sm font-medium text-muted-foreground first-letter:uppercase">{today}</p>
-          <h1 className="mt-1 text-3xl font-extrabold tracking-[-0.03em] text-ink-900 sm:text-4xl">Bonjour {me.firstName}</h1>
+          <h1 className="mt-1 text-3xl font-display font-semibold tracking-[-0.03em] text-ink-900 sm:text-4xl">Bonjour {me.firstName}</h1>
           <p className="mt-1 text-[15px] text-muted-foreground">
             {me.role === 'MENTOR'
               ? 'Voici l’essentiel de votre activité de mentor.'

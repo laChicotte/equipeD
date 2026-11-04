@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronDown, LayoutDashboard, LogOut, UserRound } from 'lucide-react';
+import { ChevronDown, LayoutDashboard, LogOut, Settings, UserRound } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Avatar } from '@/components/ui/avatar';
@@ -65,6 +65,10 @@ export function UserMenu({ me, compact = false }: { me: Me; compact?: boolean })
             Modifier mon profil
           </DropdownMenuItem>
         )}
+        <DropdownMenuItem onSelect={() => router.push('/compte')}>
+          <Settings aria-hidden />
+          Mon compte
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={onLogout} className="text-danger-700 [&_svg]:text-danger-700">
           <LogOut aria-hidden />

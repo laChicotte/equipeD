@@ -57,7 +57,7 @@ export function LoginForm() {
 
   return (
     <div className="animate-fade-in">
-      <h1 className="text-4xl font-extrabold tracking-[-0.035em] text-ink-900">Bon retour parmi nous</h1>
+      <h1 className="text-4xl font-display font-semibold tracking-[-0.03em] text-ink-900">Bon retour parmi nous</h1>
       <p className="mt-2 text-[15px] text-muted-foreground">
         Connectez-vous pour retrouver vos demandes, vos séances et vos conversations.
       </p>

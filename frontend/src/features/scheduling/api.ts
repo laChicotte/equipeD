@@ -73,3 +73,12 @@ export function useSessionAction() {
     onSuccess: invalidate,
   });
 }
+
+export function useSessionFeedback() {
+  const invalidate = useInvalidateScheduling();
+  return useMutation({
+    mutationFn: ({ id, rating, comment }: { id: string; rating: number; comment?: string }) =>
+      api<Session>(`/sessions/${id}/feedback`, { method: 'POST', body: { rating, comment } }),
+    onSuccess: invalidate,
+  });
+}

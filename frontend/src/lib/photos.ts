@@ -12,7 +12,7 @@ export interface Photo {
   /** Légende courte affichée sous l'image quand la mise en page le permet. */
   caption: string;
   creator: string;
-  license: 'CC0' | 'CC BY-SA 4.0';
+  license: 'CC0' | 'CC BY 4.0' | 'CC BY-SA 4.0';
   page: string;
 }
 
@@ -76,6 +76,66 @@ export const photos = {
     creator: 'Aboubacarkhoraa',
     license: 'CC BY-SA 4.0',
     page: 'https://commons.wikimedia.org/wiki/File:Wiki_loves_Africa_au_lyc%C3%A9e_Hamdallaye_kamsar.jpg',
+  },
+  lyceennes: {
+    src: '/images/lyceennes-ordinateur.jpg',
+    width: 1920,
+    height: 1279,
+    alt: 'Cinq lycéennes réunies autour d’un ordinateur portable, en plein air, souriantes',
+    caption: 'Lycéennes autour d’un ordinateur, Ghana, 2024',
+    creator: 'Bright Kwame Ayisi',
+    license: 'CC0',
+    page: 'https://commons.wikimedia.org/wiki/File:A_group_of_female_students_looking_on_a_laptop_01.jpg',
+  },
+  eleves: {
+    src: '/images/eleves-ordinateur.jpg',
+    width: 1920,
+    height: 1279,
+    alt: 'Des élèves penchés ensemble sur un ordinateur portable, concentrés et souriants',
+    caption: 'Élèves au travail sur un ordinateur, Ghana, 2024',
+    creator: 'Bright Kwame Ayisi',
+    license: 'CC0',
+    page: 'https://commons.wikimedia.org/wiki/File:Students_using_a_computer_laptop_01.jpg',
+  },
+  mentor: {
+    src: '/images/mentor-accompagne.jpg',
+    width: 1430,
+    height: 1000,
+    alt: 'Un formateur se penche vers l’écran d’une participante pour la guider, dans une salle équipée d’ordinateurs',
+    caption: 'Formation Wiki Mentor Africa Hackathon, Tamale (Ghana)',
+    creator: 'Ruky Wunpini',
+    license: 'CC BY 4.0',
+    page: 'https://commons.wikimedia.org/wiki/File:Wiki_Mentor_Africa_Hackathon_Training_in_Tamale_01.jpg',
+  },
+  communaute: {
+    src: '/images/communaute-atelier.jpg',
+    width: 1430,
+    height: 1000,
+    alt: 'Un grand groupe de participants souriants fait un signe de la main à la fin d’un atelier',
+    caption: 'Participants d’un atelier Wiki Mentor Africa, Tamale (Ghana)',
+    creator: 'Ruky Wunpini',
+    license: 'CC BY 4.0',
+    page: 'https://commons.wikimedia.org/wiki/File:Wiki_Mentor_Africa_Hackathon_Training_in_Tamale_17.jpg',
+  },
+  conakryCentre: {
+    src: '/images/conakry-centre.jpg',
+    width: 1920,
+    height: 1085,
+    alt: 'Vue aérienne du centre de Conakry, ses immeubles, ses toits colorés, une mosquée et la mer',
+    caption: 'Le centre de Conakry vu du ciel, 2021',
+    creator: 'Boubacar Bila Diao Balde',
+    license: 'CC BY-SA 4.0',
+    page: 'https://commons.wikimedia.org/wiki/File:Ville_de_Conaky.jpg',
+  },
+  loos: {
+    src: '/images/iles-de-loos.jpg',
+    width: 1280,
+    height: 2048,
+    alt: 'Image satellite de la presqu’île de Conakry et des îles de Loos dans une mer turquoise',
+    caption: 'La presqu’île de Conakry et les îles de Loos vues par satellite',
+    creator: 'Axelspace Corporation',
+    license: 'CC BY-SA 4.0',
+    page: 'https://commons.wikimedia.org/w/index.php?curid=76430075',
   },
 } satisfies Record<string, Photo>;
 

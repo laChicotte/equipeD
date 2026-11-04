@@ -1,7 +1,10 @@
 'use client';
 
 import {
+  BookOpen,
+  Briefcase,
   CalendarDays,
+  Shapes,
   CalendarPlus,
   Inbox,
   LayoutDashboard,
@@ -23,6 +26,7 @@ import { cn } from '@/lib/utils';
 import { DemoBanner } from './demo-banner';
 import { Logo } from './logo';
 import { PublicFooter, PublicHeader } from './public-header';
+import { NotificationBell } from './notification-bell';
 import { UserMenu } from './user-menu';
 
 interface NavItem {
@@ -32,6 +36,8 @@ interface NavItem {
   icon: LucideIcon;
   badge?: 'requests' | 'messages';
   exact?: boolean;
+  /** Masqué de la barre d'onglets mobile (limitée à cinq entrées). */
+  desktopOnly?: boolean;
 }
 
 function navFor(me: Me): NavItem[] {
@@ -40,6 +46,9 @@ function navFor(me: Me): NavItem[] {
       { href: '/admin', label: 'Vue d’ensemble', short: 'Synthèse', icon: LayoutDashboard, exact: true },
       { href: '/admin/comptes', label: 'Comptes', short: 'Comptes', icon: UserCog },
       { href: '/admin/mentors', label: 'Mentors', short: 'Mentors', icon: ShieldCheck },
+      { href: '/admin/domaines', label: 'Domaines', short: 'Domaines', icon: Shapes },
+      { href: '/ressources', label: 'Ressources', short: 'Ressources', icon: BookOpen, desktopOnly: true },
+      { href: '/opportunites', label: 'Opportunités', short: 'Opportunités', icon: Briefcase, desktopOnly: true },
     ];
   }
   if (me.role === 'MENTOR') {
@@ -49,6 +58,8 @@ function navFor(me: Me): NavItem[] {
       { href: '/mentorats', label: 'Mes mentorés', short: 'Mentorés', icon: Users, badge: 'messages' },
       { href: '/disponibilites', label: 'Disponibilités', short: 'Créneaux', icon: CalendarPlus },
       { href: '/seances', label: 'Séances', short: 'Séances', icon: CalendarDays },
+      { href: '/ressources', label: 'Ressources', short: 'Ressources', icon: BookOpen, desktopOnly: true },
+      { href: '/opportunites', label: 'Opportunités', short: 'Opportunités', icon: Briefcase, desktopOnly: true },
     ];
   }
   return [
@@ -57,6 +68,8 @@ function navFor(me: Me): NavItem[] {
     { href: '/demandes', label: 'Mes demandes', short: 'Demandes', icon: Send },
     { href: '/mentorats', label: 'Mes mentorats', short: 'Mentorats', icon: Users, badge: 'messages' },
     { href: '/seances', label: 'Séances', short: 'Séances', icon: CalendarDays },
+    { href: '/ressources', label: 'Ressources', short: 'Ressources', icon: BookOpen, desktopOnly: true },
+    { href: '/opportunites', label: 'Opportunités', short: 'Opportunités', icon: Briefcase, desktopOnly: true },
   ];
 }
 
@@ -152,7 +165,7 @@ function MobileTabBar({ items, counts }: { items: NavItem[]; counts: Record<stri
       className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden"
     >
       <ul className="mx-auto flex max-w-lg items-stretch justify-around">
-        {items.map((item) => {
+        {items.filter((i) => !i.desktopOnly).map((item) => {
           const active = isActive(pathname, item);
           const Icon = item.icon;
           const count = item.badge ? (counts[item.badge] ?? 0) : 0;
@@ -218,7 +231,10 @@ function AuthenticatedLayout({ me, children }: { me: Me; children: ReactNode }) 
             <p className="hidden text-sm text-muted-foreground lg:block">
               {me.role === 'ADMIN' ? 'Administration' : me.role === 'MENTOR' ? 'Espace mentor' : 'Espace mentoré'} · Talents Connectés
             </p>
-            <UserMenu me={me} />
+            <div className="flex items-center gap-1">
+              {me.role !== 'ADMIN' && <NotificationBell />}
+              <UserMenu me={me} />
+            </div>
           </header>
           <main id="contenu" className="mx-auto w-full max-w-6xl flex-1 px-4 pt-6 pb-28 sm:px-8 sm:pt-8 lg:pb-12">
             {children}

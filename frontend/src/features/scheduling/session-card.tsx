@@ -1,6 +1,6 @@
 'use client';
 
-import { CalendarCheck2, CheckCheck, ExternalLink, MapPin, Video, X } from 'lucide-react';
+import { CalendarCheck2, CheckCheck, ExternalLink, MapPin, Star, Video, X } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -8,14 +8,91 @@ import { StatusBadge } from '@/components/feedback/status-badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
+import { Input, Textarea } from '@/components/ui/input';
 import { errorMessage, isApiError } from '@/lib/api';
 import { formatTime, fullName } from '@/lib/format';
 import { modalityLabels } from '@/lib/labels';
 import type { Me, Session } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useNow } from '@/hooks/use-now';
-import { useSessionAction } from './api';
+import { useSessionAction, useSessionFeedback } from './api';
+
+function Stars({ value, size = 'size-4' }: { value: number; size?: string }) {
+  return (
+    <span className="inline-flex items-center gap-0.5" role="img" aria-label={`${value} sur 5`}>
+      {[1, 2, 3, 4, 5].map((n) => (
+        <Star key={n} className={cn(size, n <= value ? 'fill-amber-400 text-amber-400' : 'text-ink-100')} aria-hidden />
+      ))}
+    </span>
+  );
+}
+
+const RATING_LABELS = ['', 'Décevante', 'Moyenne', 'Utile', 'Très utile', 'Excellente'];
+
+function FeedbackDialog({ session, onClose }: { session: Session; onClose: () => void }) {
+  const feedback = useSessionFeedback();
+  const [rating, setRating] = useState(0);
+  const [hover, setHover] = useState(0);
+  const [comment, setComment] = useState('');
+  const shown = hover || rating;
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent title="Évaluer la séance" description={session.topic}>
+        <div className="grid gap-5">
+          <div>
+            <p className="text-sm font-semibold">Votre note</p>
+            <div className="mt-2 flex items-center gap-3">
+              <div className="flex gap-1" role="radiogroup" aria-label="Note de 1 à 5" onMouseLeave={() => setHover(0)}>
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    role="radio"
+                    aria-checked={rating === n}
+                    aria-label={`${n} sur 5 : ${RATING_LABELS[n]}`}
+                    onMouseEnter={() => setHover(n)}
+                    onClick={() => setRating(n)}
+                    className="rounded-sm p-1 transition-transform hover:scale-110"
+                  >
+                    <Star className={cn('size-8', n <= shown ? 'fill-amber-400 text-amber-400' : 'text-ink-100')} aria-hidden />
+                  </button>
+                ))}
+              </div>
+              <span className="text-sm font-semibold text-muted-foreground">{RATING_LABELS[shown]}</span>
+            </div>
+          </div>
+          <Field label="Commentaire" optional counter={{ value: comment.length, max: 1000 }}>
+            <Textarea value={comment} onChange={(e) => setComment(e.target.value)} maxLength={1000} placeholder="Ce qui vous a aidé, ce qui pourrait être amélioré…" />
+          </Field>
+        </div>
+        <DialogFooter>
+          <Button variant="secondary" onClick={onClose}>
+            Annuler
+          </Button>
+          <Button
+            disabled={!rating}
+            loading={feedback.isPending}
+            onClick={() =>
+              feedback.mutate(
+                { id: session.id, rating, comment: comment.trim() || undefined },
+                {
+                  onSuccess: () => {
+                    toast.success('Merci pour votre évaluation');
+                    onClose();
+                  },
+                  onError: (e) => toast.error(errorMessage(e)),
+                },
+              )
+            }
+          >
+            Envoyer
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 function ConfirmDialog({ session, onClose }: { session: Session; onClose: () => void }) {
   const action = useSessionAction();
@@ -99,6 +176,7 @@ function ConfirmDialog({ session, onClose }: { session: Session; onClose: () => 
 export function SessionCard({ session, me, showMentorshipLink = true }: { session: Session; me: Me; showMentorshipLink?: boolean }) {
   const action = useSessionAction();
   const [confirming, setConfirming] = useState(false);
+  const [rating, setRating] = useState(false);
   const isMentor = me.id === session.mentorId;
   const other = isMentor ? session.mentee : session.mentor;
   const start = new Date(session.startsAt);
@@ -106,6 +184,9 @@ export function SessionCard({ session, me, showMentorshipLink = true }: { sessio
   const started = now > 0 && start.getTime() <= now;
   const active = session.status === 'REQUESTED' || session.status === 'CONFIRMED';
   const tz = me.timezone;
+  const ended = session.status === 'COMPLETED' || (session.status === 'CONFIRMED' && now > 0 && new Date(session.endsAt).getTime() <= now);
+  const myFeedback = session.feedbacks?.find((f) => f.authorId === me.id);
+  const otherFeedback = session.feedbacks?.find((f) => f.authorId !== me.id);
 
   const run = (kind: 'cancel' | 'complete', success: string) =>
     action.mutate(
@@ -155,7 +236,7 @@ export function SessionCard({ session, me, showMentorshipLink = true }: { sessio
                 className="inline-flex items-center gap-1 font-medium text-accent hover:underline"
               >
                 <Video className="size-3.5" aria-hidden />
-                Lien de réunion externe
+                Salle de visio (service externe)
                 <ExternalLink className="size-3" aria-hidden />
               </a>
             )}
@@ -163,6 +244,16 @@ export function SessionCard({ session, me, showMentorshipLink = true }: { sessio
               <span className="inline-flex items-center gap-1">
                 <MapPin className="size-3.5" aria-hidden />
                 {session.location}
+              </span>
+            )}
+            {myFeedback && (
+              <span className="inline-flex items-center gap-1.5">
+                Votre note <Stars value={myFeedback.rating} size="size-3.5" />
+              </span>
+            )}
+            {otherFeedback && (
+              <span className="inline-flex items-center gap-1.5">
+                Note de {other.firstName} <Stars value={otherFeedback.rating} size="size-3.5" />
               </span>
             )}
             {showMentorshipLink && (
@@ -173,6 +264,14 @@ export function SessionCard({ session, me, showMentorshipLink = true }: { sessio
           </div>
         </div>
       </div>
+      {ended && !myFeedback && (
+        <div className="flex shrink-0 sm:justify-end">
+          <Button variant="secondary" size="sm" onClick={() => setRating(true)}>
+            <Star aria-hidden />
+            Évaluer la séance
+          </Button>
+        </div>
+      )}
       {active && (
         <div className="flex shrink-0 flex-wrap gap-2 sm:justify-end">
           {isMentor && session.status === 'REQUESTED' && (
@@ -209,6 +308,7 @@ export function SessionCard({ session, me, showMentorshipLink = true }: { sessio
         </div>
       )}
       {confirming && <ConfirmDialog session={session} onClose={() => setConfirming(false)} />}
+      {rating && <FeedbackDialog session={session} onClose={() => setRating(false)} />}
     </article>
   );
 }
