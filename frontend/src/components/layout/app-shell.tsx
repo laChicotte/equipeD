@@ -28,6 +28,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Skeleton } from '@/components/ui/misc';
+import { AssistantWidget } from '@/features/ai/assistant-widget';
 import { homeFor, useMe } from '@/features/auth/api';
 import { useDashboard } from '@/features/mentorships/api';
 import { OfflineBanner } from '@/features/offline/offline-banner';
@@ -354,6 +355,7 @@ function AuthenticatedLayout({ me, children }: { me: Me; children: ReactNode }) 
         {children}
       </main>
       <MobileTabBar items={items} counts={counts} />
+      <AssistantWidget role={me.role} />
     </div>
   );
 }

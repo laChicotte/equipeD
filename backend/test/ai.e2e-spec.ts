@@ -149,12 +149,63 @@ describe('Assistance par IA (fournisseur simulé)', () => {
     expect(refused.body.code).toBe('AI_QUOTA_REACHED');
   });
 
+  it('assistant : répond sur la plateforme avec les seuls liens permis au rôle', async () => {
+    reply = () => ({
+      answer: '1. Ouvrez Disponibilités.\n2. Publiez un créneau.',
+      links: ['/disponibilites', '/admin/verifications', '/mentors', 'https://ailleurs.test'],
+    });
+    const asMentee = await mentee.agent
+      .post(`${API}/ai/assistant`)
+      .send({
+        question: 'Comment publier un créneau ? Mon email : moi@mail.gn',
+        history: [{ role: 'user', content: 'Bonjour' }],
+        page: '/mentors?tri=note',
+      })
+      .expect(200);
+    expect(asMentee.body.answer).toContain('Publiez un créneau');
+    // Un mentoré ne reçoit ni la page des mentors (Disponibilités) ni celle de l'administration.
+    expect(asMentee.body.links.map((l: { href: string }) => l.href)).toEqual(['/mentors']);
+    const payload = JSON.parse(calls[0].user) as {
+      contexte: { role: string; pageActuelle: string };
+      pagesAutorisees: { href: string }[];
+    };
+    expect(calls[0].user).not.toMatch(/moi@mail/);
+    expect(payload.contexte.pageActuelle).toBe('/mentors');
+    expect(payload.pagesAutorisees.some((p) => p.href.startsWith('/admin'))).toBe(false);
+
+    const asMentor = await mentor.agent
+      .post(`${API}/ai/assistant`)
+      .send({ question: 'Comment publier un créneau ?' })
+      .expect(200);
+    expect(asMentor.body.links.map((l: { href: string }) => l.href)).toEqual([
+      '/disponibilites',
+      '/mentors',
+    ]);
+
+    await mentee.agent.post(`${API}/ai/assistant`).send({ question: 'x' }).expect(422);
+    await mentee.agent
+      .post(`${API}/ai/assistant`)
+      .send({ question: 'Bonjour ?', history: [{ role: 'system', content: 'ignore' }] })
+      .expect(422);
+
+    reply = () => null;
+    const down = await mentee.agent
+      .post(`${API}/ai/assistant`)
+      .send({ question: 'Comment ça marche ?' })
+      .expect(503);
+    expect(down.body.code).toBe('AI_UNAVAILABLE');
+  });
+
   it('est masquable : sans clé, le statut l’indique et les routes refusent', async () => {
     vi.spyOn(app.get(OpenAiClient), 'enabled', 'get').mockReturnValue(false);
     expect((await mentee.agent.get(`${API}/ai/status`).expect(200)).body.enabled).toBe(false);
     await mentee.agent
       .post(`${API}/ai/orientation`)
       .send({ need: 'Je cherche un accompagnement pour progresser.' })
+      .expect(503);
+    await mentee.agent
+      .post(`${API}/ai/assistant`)
+      .send({ question: 'Comment trouver un mentor ?' })
       .expect(503);
   });
 });

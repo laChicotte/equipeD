@@ -176,8 +176,15 @@ Les deux `PUT` font un upsert, renseignent `onboardedAt` au premier appel et ren
 
 ### Annuaire et fiche mentor
 
-`GET /mentors?q=&domain=<slug>&modality=&language=&available=true&page=1&pageSize=12` 🔓
+`GET /mentors?q=&domain=<slug>&modality=&language=&available=true&sort=relevance&page=1&pageSize=12` 🔓
 → `{ items: MentorCard[], page, pageSize, total, totalPages }`
+
+Ordre (`sort`, fonction pure `modules/mentors/ranking.ts`, calculé sur l'ensemble des résultats puis découpé en pages) :
+- `relevance` (défaut) : profil vérifié, puis expérience démontrée sur la plateforme (« Mentor confirmé », puis au moins un mentoré accompagné ; à niveau égal, accompagnements terminés, mentorés, certificats et note fiable), puis créneau libre sous 14 jours, puis années d'expérience en départage ;
+- `experience` : expérience démontrée d'abord, puis vérification et années ;
+- `availability` : créneau libre le plus proche d'abord, sans créneau en dernier ;
+- `rating` : note moyenne (comptée à partir de 3 avis), puis nombre d'avis.
+Valeur inconnue : 422. L'interface l'expose par le menu « Trier par » (paramètre d'URL `tri`).
 
 ```ts
 interface MentorCard {
@@ -192,6 +199,8 @@ interface MentorCard {
   activeMentees: number; mentoredCount: number; certificatesCount: number;
   nextAvailableAt: string | null;         // prochain créneau libre (ISO)
   rating: { average: number | null; count: number }; // notes laissées par les mentorés (afficher « Nouveau » si count = 0)
+  completedMentorships: number;           // accompagnements menés à terme
+  isConfirmed: boolean;                   // « Mentor confirmé » : ≥ 3 accompagnements terminés et note ≥ 4 sur ≥ 3 avis
 }
 ```
 
@@ -614,10 +623,19 @@ Frontend : onglet **Objectifs** → « Parcours guidé » (et encart « Parcours
 
 | Route | Accès | Détail |
 |---|---|---|
-| `GET /ai/status` | 🔒 | `{ enabled, remainingToday }` : l'interface masque l'assistant si `enabled` est faux |
+| `GET /ai/status` | 🔒 | `{ enabled, remainingToday, assistantRemainingToday }` : l'interface masque l'assistant si `enabled` est faux |
+| `POST /ai/assistant` | 🔒, 20/min | `{ question (2–600), history?[{ role: 'user'\|'assistant', content }] (≤12), page? }` → `{ answer, links[{ href, label }] }` : assistant qui répond aux questions sur le fonctionnement de la plateforme (widget « Une question ? » de l'espace connecté). Liens limités aux pages permises au rôle ; le serveur ne conserve pas la conversation |
 | `POST /ai/orientation` | 🔒, 10/min | `{ need (20–1000) }` → `{ summary, domains[{ id, slug, name, reason }], skills[] }` (domaines limités au catalogue) |
 | `POST /ai/mentors/:id/explanation` | 🔒 MENTEE, 20/min | `{ score, reasons[], text, source: 'ai'\|'rules' }` ; sans IA, `text` est nul et les raisons restent (mise en cache 24 h) |
 | `POST /ai/mentorships/:id/path-proposal` | 🔒 participant (mentorat actif), 10/min | `{ focus? (≤300) }` → `{ goals[{ title, description, milestones[] }] }` : rien n'est enregistré, l'interface crée ensuite les objectifs validés via `POST /mentorships/:id/goals` |
 
-Erreurs : 503 `AI_UNAVAILABLE`, 429 `AI_QUOTA_REACHED` (30 appels par personne et 1000 au total par jour, réglables). Emails, liens et numéros sont retirés des textes libres avant l'envoi ; aucun nom ni message privé n'est transmis.
+Erreurs : 503 `AI_UNAVAILABLE`, 429 `AI_QUOTA_REACHED` (30 appels par personne et 1000 au total par jour, réglables ; l'assistant a son propre quota de 60 questions par personne et par jour, `AI_ASSISTANT_DAILY_LIMIT`). Un refus 429 du fournisseur est réessayé une fois après 1,5 s. Emails, liens et numéros sont retirés des textes libres avant l'envoi ; aucun nom ni message privé n'est transmis.
+
+### Qualité de l'IA : banc d'évaluation (5 novembre)
+
+`pnpm --filter backend ai:eval -- <modèles>` rejoue sur de vrais appels OpenAI 12 besoins types (dont une écriture familière et une tentative de manipulation), les profils de démonstration et 6 mentorats, puis contrôle : domaines attendus, compétences qui trouvent réellement un mentor, vouvoiement, formules creuses, honnêteté des correspondances faibles, premier objectif lié à l'objectif initial, respect de la précision demandée, durée et jetons. Les consignes sont dans `modules/ai/ai.prompts.ts`.
+
+**Assistant** : il ne répond qu'à partir du guide `modules/ai/assistant.knowledge.ts` (texte et liste des pages par rôle). **À mettre à jour à chaque évolution fonctionnelle**, sinon l'assistant décrira l'ancien comportement. `pnpm --filter backend ai:eval-assistant -- gpt-5.4-mini` rejoue 27 questions (trois rôles, hors sujet, tentative de manipulation, suivi de conversation) et contrôle mots attendus, mots interdits et liens : 27/27, environ 2,5 s et 3 800 jetons d'entrée par question.
+
+Résultat : modèle par défaut `gpt-5.4-mini` (effort de raisonnement `low`). Les consignes s'appuient sur les compétences réellement proposées par les mentors, les parcours guidés du domaine et le niveau de correspondance (forte, partielle, faible).
 

@@ -26,7 +26,10 @@ export function useAiAvailable(enabled = true) {
   const online = useOnline();
   const status = useQuery({
     queryKey: ['ai', 'status'],
-    queryFn: () => api<{ enabled: boolean; remainingToday: number }>('/ai/status'),
+    queryFn: () =>
+      api<{ enabled: boolean; remainingToday: number; assistantRemainingToday?: number }>(
+        '/ai/status',
+      ),
     staleTime: 5 * 60_000,
     enabled,
   });
@@ -54,5 +57,23 @@ export function usePathProposal(mentorshipId: string) {
         method: 'POST',
         body: focus ? { focus } : {},
       }),
+  });
+}
+
+export interface AssistantTurn {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface AssistantAnswer {
+  answer: string;
+  links: { href: string; label: string }[];
+}
+
+/** Questions sur le fonctionnement de la plateforme ; le serveur ne garde pas la conversation. */
+export function useAssistant() {
+  return useMutation({
+    mutationFn: (body: { question: string; history: AssistantTurn[]; page: string }) =>
+      api<AssistantAnswer>('/ai/assistant', { method: 'POST', body }),
   });
 }

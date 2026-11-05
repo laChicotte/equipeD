@@ -28,8 +28,11 @@ export interface MentorFilters {
   modality?: Modality | '';
   language?: string;
   available?: boolean;
+  sort?: MentorSort;
   page?: number;
 }
+
+export type MentorSort = 'relevance' | 'experience' | 'availability' | 'rating';
 
 export function useMentors(filters: MentorFilters) {
   return useQuery({
@@ -42,6 +45,7 @@ export function useMentors(filters: MentorFilters) {
           modality: filters.modality,
           language: filters.language,
           available: filters.available ? 'true' : undefined,
+          sort: filters.sort && filters.sort !== 'relevance' ? filters.sort : undefined,
           page: filters.page ?? 1,
           pageSize: 12,
         },

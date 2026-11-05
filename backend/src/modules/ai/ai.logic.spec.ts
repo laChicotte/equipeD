@@ -1,4 +1,5 @@
 import {
+  parseAssistant,
   parseExplanation,
   parseOrientation,
   parsePathProposal,
@@ -76,5 +77,35 @@ describe('assistance par IA : données envoyées et réponses reçues', () => {
     expect(result?.goals[0].title).toBe('Portfolio');
     expect(result?.goals[0].description).toHaveLength(600);
     expect(result?.goals[0].milestones).toHaveLength(6);
+  });
+});
+
+describe('assistant : lecture de la réponse', () => {
+  const allowed = [
+    { href: '/mentors', label: 'Trouver un mentor' },
+    { href: '/seances', label: 'Séances' },
+  ];
+
+  it('garde les liens autorisés pour ce rôle et retire la mise en forme', () => {
+    const result = parseAssistant(
+      {
+        answer: '**Allez** sur la page.\n\n\n\n# Ensuite\nRéservez.',
+        links: ['/seances', '/admin', 'https://exemple.test', '/seances', '/mentors'],
+      },
+      allowed,
+    );
+    expect(result).toEqual({
+      answer: 'Allez sur la page.\n\nEnsuite\nRéservez.',
+      links: [
+        { href: '/seances', label: 'Séances' },
+        { href: '/mentors', label: 'Trouver un mentor' },
+      ],
+    });
+  });
+
+  it('refuse une réponse vide ou mal formée', () => {
+    expect(parseAssistant({ answer: '   ', links: [] }, allowed)).toBeNull();
+    expect(parseAssistant({ links: [] }, allowed)).toBeNull();
+    expect(parseAssistant(null, allowed)).toBeNull();
   });
 });

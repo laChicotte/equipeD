@@ -7,6 +7,7 @@ import type { AuthUser } from '../../common/auth/auth-user.js';
 import type { Prisma } from '../../generated/prisma/client.js';
 import { computeMatch } from '../matching/matching.js';
 import type { AvailabilityRangeQuery, ListMentorsQuery } from './mentors.dto.js';
+import { isConfirmedMentor, rankMentors } from './ranking.js';
 
 const AVAILABILITY_WINDOW_DAYS = 14;
 const ACTIVE_SESSION_STATUSES = ['REQUESTED', 'CONFIRMED'] as const;
@@ -90,24 +91,52 @@ export class MentorsService {
         : {}),
     };
 
-    const [total, rows] = await Promise.all([
-      this.prisma.user.count({ where }),
-      this.prisma.user.findMany({
-        where,
-        select: mentorCardSelect,
-        orderBy: [{ mentorProfile: { verificationStatus: 'desc' } }, { createdAt: 'asc' }],
-        skip: (query.page - 1) * query.pageSize,
-        take: query.pageSize,
-      }),
-    ]);
-
+    // Le classement dépend de l'historique (accompagnements, avis, créneaux) : il est calculé sur
+    // l'ensemble des résultats, puis découpé en pages. Suffisant pour quelques milliers de mentors.
+    const candidates = await this.prisma.user.findMany({
+      where,
+      select: {
+        id: true,
+        createdAt: true,
+        mentorProfile: { select: { verificationStatus: true, yearsExperience: true } },
+      },
+      take: 2_000,
+    });
     const extras = await this.extras(
-      rows.map((r) => r.id),
+      candidates.map((c) => c.id),
       now,
     );
+    const ranked = rankMentors(
+      candidates.map((c) => {
+        const e = extras.get(c.id)!;
+        return {
+          id: c.id,
+          createdAt: c.createdAt,
+          verified: c.mentorProfile?.verificationStatus === 'VERIFIED',
+          yearsExperience: c.mentorProfile?.yearsExperience ?? 0,
+          completedMentorships: e.completedMentorships,
+          mentoredCount: e.mentoredCount,
+          certificatesCount: e.certificatesCount,
+          ratingAverage: e.ratingCount ? e.ratingSum / e.ratingCount : null,
+          ratingCount: e.ratingCount,
+          nextAvailableAt: e.nextAvailableAt,
+        };
+      }),
+      query.sort,
+      now,
+      AVAILABILITY_WINDOW_DAYS,
+    );
+    const pageIds = ranked
+      .slice((query.page - 1) * query.pageSize, query.page * query.pageSize)
+      .map((m) => m.id);
+    const rows = await this.prisma.user.findMany({
+      where: { id: { in: pageIds } },
+      select: mentorCardSelect,
+    });
+    const byId = new Map(rows.map((r) => [r.id, r]));
     return paginate(
-      rows.map((r) => this.toCard(r, extras.get(r.id))),
-      total,
+      pageIds.flatMap((id) => (byId.has(id) ? [this.toCard(byId.get(id)!, extras.get(id))] : [])),
+      candidates.length,
       query,
     );
   }
@@ -236,7 +265,7 @@ export class MentorsService {
   private async extras(mentorIds: string[], now: Date): Promise<Map<string, MentorExtras>> {
     const result = new Map<string, MentorExtras>();
     if (mentorIds.length === 0) return result;
-    const [slots, feedbacks, pairs, certificates] = await Promise.all([
+    const [slots, feedbacks, pairs, certificates, completed] = await Promise.all([
       this.prisma.availabilitySlot.groupBy({
         by: ['mentorId'],
         where: { mentorId: { in: mentorIds }, ...freeSlotWhere(now) },
@@ -255,6 +284,11 @@ export class MentorsService {
         where: { mentorId: { in: mentorIds }, revokedAt: null },
         _count: { _all: true },
       }),
+      this.prisma.mentorship.groupBy({
+        by: ['mentorId'],
+        where: { mentorId: { in: mentorIds }, status: 'COMPLETED' },
+        _count: { _all: true },
+      }),
     ]);
     for (const id of mentorIds)
       result.set(id, {
@@ -263,7 +297,9 @@ export class MentorsService {
         ratingCount: 0,
         mentoredCount: 0,
         certificatesCount: 0,
+        completedMentorships: 0,
       });
+    for (const c of completed) result.get(c.mentorId)!.completedMentorships = c._count._all;
     for (const p of pairs) result.get(p.mentorId)!.mentoredCount += 1;
     for (const c of certificates) result.get(c.mentorId)!.certificatesCount = c._count._all;
     for (const g of slots) result.get(g.mentorId)!.nextAvailableAt = g._min.startsAt ?? null;
@@ -307,6 +343,14 @@ export class MentorsService {
         average: ratingCount ? Math.round((extra!.ratingSum / ratingCount) * 10) / 10 : null,
         count: ratingCount,
       },
+      /** Accompagnements menés à terme. */
+      completedMentorships: extra?.completedMentorships ?? 0,
+      /** Badge « Mentor confirmé » (règle publique : voir ranking.ts). */
+      isConfirmed: isConfirmedMentor({
+        completedMentorships: extra?.completedMentorships ?? 0,
+        ratingAverage: ratingCount ? extra!.ratingSum / ratingCount : null,
+        ratingCount,
+      }),
     };
   }
 }
@@ -317,6 +361,7 @@ interface MentorExtras {
   ratingCount: number;
   mentoredCount: number;
   certificatesCount: number;
+  completedMentorships: number;
 }
 
 function addDays(date: Date, days: number): Date {

@@ -21,6 +21,7 @@ import { ErrorState } from '@/components/feedback/states';
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/misc';
+import { ConfirmedBadge } from './mentor-card';
 import { WhyThisMentor } from '@/features/ai/ai-parts';
 import { useMe } from '@/features/auth/api';
 import { useMentor, useMentorAvailability, useMentors } from '@/features/catalog/api';
@@ -228,6 +229,7 @@ export function MentorProfile() {
                         Profil vérifié
                       </span>
                     )}
+                    {mentor.isConfirmed && <ConfirmedBadge />}
                   </h1>
                   <p className="mt-1 text-[16px] leading-snug text-foreground">{mentor.headline}</p>
                   <p className="mt-1.5 text-[14px] text-muted-foreground">

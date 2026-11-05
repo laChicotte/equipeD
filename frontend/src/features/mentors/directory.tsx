@@ -19,7 +19,13 @@ import { EmptyState, ErrorState } from '@/components/feedback/states';
 import { Button } from '@/components/ui/button';
 import { OrientationPanel, WhyThisMentor } from '@/features/ai/ai-parts';
 import { useMe } from '@/features/auth/api';
-import { useDomains, useMentors, useSuggestions, type MentorFilters } from '@/features/catalog/api';
+import {
+  useDomains,
+  useMentors,
+  useSuggestions,
+  type MentorFilters,
+  type MentorSort,
+} from '@/features/catalog/api';
 import { CAMPUS_FRANCE_NOTICE, LANGUAGES, isCampusFrance, modalityLabels } from '@/lib/labels';
 import type { Modality } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -37,6 +43,9 @@ function useFilters(): [MentorFilters, (patch: Partial<MentorFilters>) => void] 
       modality: (params.get('modality') as Modality | null) ?? '',
       language: params.get('language') ?? '',
       available: params.get('available') === 'true',
+      sort: (SORTS.some((s) => s.value === params.get('tri'))
+        ? params.get('tri')
+        : 'relevance') as MentorSort,
       page: Number(params.get('page') ?? 1) || 1,
     }),
     [params],
@@ -50,6 +59,7 @@ function useFilters(): [MentorFilters, (patch: Partial<MentorFilters>) => void] 
     if (next.modality) sp.set('modality', next.modality);
     if (next.language) sp.set('language', next.language);
     if (next.available) sp.set('available', 'true');
+    if (next.sort && next.sort !== 'relevance') sp.set('tri', next.sort);
     if (next.page && next.page > 1) sp.set('page', String(next.page));
     const qs = sp.toString();
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
@@ -59,6 +69,29 @@ function useFilters(): [MentorFilters, (patch: Partial<MentorFilters>) => void] 
 }
 
 /* ── Briques ──────────────────────────────────────────────────────────────── */
+
+const SORTS: { value: MentorSort; label: string; hint: string }[] = [
+  {
+    value: 'relevance',
+    label: 'Pertinence',
+    hint: 'Profils vérifiés d’abord, puis l’expérience démontrée sur la plateforme, la disponibilité et les années d’expérience.',
+  },
+  {
+    value: 'experience',
+    label: 'Expérience',
+    hint: 'Accompagnements menés à terme, certificats et avis sur la plateforme, puis années d’expérience.',
+  },
+  {
+    value: 'availability',
+    label: 'Disponibilité',
+    hint: 'Le prochain créneau libre le plus proche d’abord.',
+  },
+  {
+    value: 'rating',
+    label: 'Note',
+    hint: 'Note moyenne des séances, prise en compte à partir de 3 avis.',
+  },
+];
 
 const panel = 'overflow-hidden rounded-lg bg-surface shadow-card ring-1 ring-border/70';
 const MODALITIES: Modality[] = ['REMOTE', 'IN_PERSON', 'HYBRID'];
@@ -292,6 +325,22 @@ export function Directory() {
             >
               Disponible sous 14 jours
             </Pill>
+            <span className="h-6 w-px shrink-0 bg-border" aria-hidden />
+            <label className="inline-flex shrink-0 items-center gap-2 text-[13px] text-muted-foreground">
+              Trier par
+              <select
+                value={filters.sort ?? 'relevance'}
+                onChange={(e) => update({ sort: e.target.value as MentorSort })}
+                title={SORTS.find((s) => s.value === (filters.sort ?? 'relevance'))?.hint}
+                className="h-8 cursor-pointer rounded-full bg-surface pr-3 pl-3 text-[14px] font-semibold text-ink-900 ring-1 ring-border-strong outline-none ring-inset focus-visible:ring-2 focus-visible:ring-teal-600"
+              >
+                {SORTS.map((s) => (
+                  <option key={s.value} value={s.value}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+            </label>
             {activeCount > 0 && (
               <button
                 type="button"

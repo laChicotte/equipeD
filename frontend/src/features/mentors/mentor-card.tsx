@@ -2,6 +2,7 @@ import {
   ArrowUpRight,
   Award,
   BadgeCheck,
+  Medal,
   CalendarClock,
   Globe2,
   MapPin,
@@ -71,6 +72,24 @@ export function MentoredLabel({
   );
 }
 
+/** « Mentor confirmé » : règle publique, affichée au survol. */
+export function ConfirmedBadge({ compact = false }: { compact?: boolean }) {
+  return (
+    <Tooltip content="Mentor confirmé : au moins 3 accompagnements menés à terme et une note moyenne d’au moins 4 sur 5, sur 3 avis ou plus.">
+      <span
+        tabIndex={0}
+        className={cn(
+          'inline-flex shrink-0 items-center gap-1 rounded-full bg-ink-900 font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600',
+          compact ? 'px-2 py-0.5 text-[11px]' : 'px-2.5 py-1 text-[12px]',
+        )}
+      >
+        <Medal className={compact ? 'size-3' : 'size-3.5'} aria-hidden />
+        Mentor confirmé
+      </span>
+    </Tooltip>
+  );
+}
+
 export function CertificatesBadge({ count }: { count: number }) {
   if (count === 0) return null;
   return (
@@ -125,6 +144,11 @@ export function MentorCard({ mentor, footer }: { mentor: MentorCardData; footer?
             </Link>
             {mentor.verificationStatus === 'VERIFIED' && <VerifiedBadge compact />}
           </h3>
+          {mentor.isConfirmed && (
+            <span className="relative z-10 mt-1 inline-flex">
+              <ConfirmedBadge compact />
+            </span>
+          )}
           <p className="mt-1 line-clamp-2 text-[14px] leading-snug text-foreground">
             {mentor.headline}
           </p>
@@ -242,6 +266,11 @@ export function MentorResult({ mentor, aside }: { mentor: MentorCardData; aside?
             <Availability iso={mentor.nextAvailableAt} className="font-medium" />
           </span>
           <MentoredLabel mentor={mentor} />
+          {mentor.isConfirmed && (
+            <span className="relative z-10 inline-flex">
+              <ConfirmedBadge compact />
+            </span>
+          )}
           <CertificatesBadge count={mentor.certificatesCount} />
           <Rating mentor={mentor} />
         </p>

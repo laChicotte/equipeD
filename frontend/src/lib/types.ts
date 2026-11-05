@@ -123,6 +123,10 @@ export interface MentorCard {
   mentoredCount: number;
   /** Certificats d’accompagnement valides. */
   certificatesCount: number;
+  /** Accompagnements menés à terme. */
+  completedMentorships: number;
+  /** Badge « Mentor confirmé » : 3 accompagnements terminés et une note de 4 sur au moins 3 avis. */
+  isConfirmed: boolean;
   nextAvailableAt: string | null;
   rating?: { average: number | null; count: number };
 }

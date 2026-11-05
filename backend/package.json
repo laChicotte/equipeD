@@ -27,6 +27,8 @@
     "prisma:seed": "prisma db seed",
     "prisma:reset": "prisma migrate reset --force",
     "postinstall": "prisma generate",
+    "ai:eval": "tsx scripts/ai-eval.ts",
+    "ai:eval-assistant": "tsx scripts/assistant-eval.ts",
     "prisma:demo-reset": "cross-env SEED_RESET_SCENARIO=true prisma db seed"
   },
   "dependencies": {

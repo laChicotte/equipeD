@@ -23,9 +23,13 @@ export interface AppEnv {
   OPENAI_API_KEY: string;
   OPENAI_MODEL: string;
   OPENAI_BASE_URL: string;
+  /** Effort de raisonnement des modèles GPT-5 (ignoré par les autres modèles). */
+  OPENAI_REASONING_EFFORT: string;
   /** Garde-fous de coût : nombre d'appels par personne et au total, par jour. */
   AI_USER_DAILY_LIMIT: number;
   AI_GLOBAL_DAILY_LIMIT: number;
+  /** Questions à l'assistant par personne et par jour. */
+  AI_ASSISTANT_DAILY_LIMIT: number;
 }
 
 export function validateEnv(raw: Record<string, unknown>): AppEnv {
@@ -112,10 +116,12 @@ export function validateEnv(raw: Record<string, unknown>): AppEnv {
     TURN_URLS: turnUrls,
     TURN_SECRET: turnSecret,
     OPENAI_API_KEY: typeof raw.OPENAI_API_KEY === 'string' ? raw.OPENAI_API_KEY.trim() : '',
-    OPENAI_MODEL: str('OPENAI_MODEL', 'gpt-4o-mini'),
+    OPENAI_MODEL: str('OPENAI_MODEL', 'gpt-5.4-mini'),
     OPENAI_BASE_URL: openAiBase,
+    OPENAI_REASONING_EFFORT: str('OPENAI_REASONING_EFFORT', 'low'),
     AI_USER_DAILY_LIMIT: positive('AI_USER_DAILY_LIMIT', 30),
     AI_GLOBAL_DAILY_LIMIT: positive('AI_GLOBAL_DAILY_LIMIT', 1000),
+    AI_ASSISTANT_DAILY_LIMIT: positive('AI_ASSISTANT_DAILY_LIMIT', 60),
   };
 
   if (errors.length > 0) {

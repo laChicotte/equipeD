@@ -74,7 +74,7 @@ export function parsePathProposal(
     const title = text(entry.title, 160);
     if (!title || title.length < 3 || existing.has(title.toLowerCase())) continue;
     const milestones = asArray(entry.milestones)
-      .map((m) => text(m, 160))
+      .map((m) => text(m, 160)?.replace(/[.;]+$/, '') ?? null)
       .filter((m): m is string => !!m && m.length >= 2)
       .slice(0, 6);
     if (milestones.length === 0) continue;
@@ -82,4 +82,31 @@ export function parsePathProposal(
     goals.push({ title, description: text(entry.description, 600) ?? '', milestones });
   }
   return goals.length > 0 ? { goals: goals.slice(0, 3) } : null;
+}
+
+export interface AssistantAnswer {
+  answer: string;
+  links: { href: string; label: string }[];
+}
+
+/** Réponse de l'assistant : texte borné, liens limités aux pages autorisées pour ce rôle. */
+export function parseAssistant(
+  raw: unknown,
+  allowed: { href: string; label: string }[],
+): AssistantAnswer | null {
+  const data = (raw ?? {}) as { answer?: unknown; links?: unknown };
+  if (typeof data.answer !== 'string') return null;
+  const answer = data.answer
+    .replace(/\*\*|__|^#+\s*/gm, '')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+    .slice(0, 1500);
+  if (!answer) return null;
+  const links: AssistantAnswer['links'] = [];
+  for (const href of asArray(data.links)) {
+    const page = allowed.find((p) => p.href === href);
+    if (page && !links.some((l) => l.href === page.href)) links.push(page);
+  }
+  return { answer, links: links.slice(0, 3) };
 }
