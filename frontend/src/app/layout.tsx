@@ -43,9 +43,11 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
     <html
       lang="fr"
       className={`${schibsted.variable} ${lexend.variable} h-full`}
+      data-scroll-behavior="smooth"
       suppressHydrationWarning
     >
-      <body className="min-h-full">
+      {/* suppressHydrationWarning : certaines extensions (ColorZilla…) ajoutent des attributs au body. */}
+      <body className="min-h-full" suppressHydrationWarning>
         <script dangerouslySetInnerHTML={{ __html: enableMotion }} />
         <a
           href="#contenu"

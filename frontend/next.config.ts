@@ -6,6 +6,11 @@ const nextConfig: NextConfig = {
   // Le test Playwright construit dans un dossier séparé (voir playwright.config.ts).
   distDir: process.env.NEXT_DIST_DIR ?? '.next',
   cacheComponents: true,
+  experimental: {
+    // L'interface attend la session côté navigateur (`useMe`) : les pages ne sont pas prérendues,
+    // c'est voulu. Seules les pages déclarant `instant` sont validées (sinon, erreur sur chaque page).
+    instantInsights: { validationLevel: 'manual-warning' },
+  },
   partialPrefetching: true,
   turbopack: {
     rules: {
