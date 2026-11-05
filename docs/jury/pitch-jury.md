@@ -24,13 +24,14 @@
 
 | Question | Réponse courte |
 |---|---|
-| Pourquoi pas de visio intégrée ? | Développer une visio fiable en quatre jours n'aurait pas été sérieux. Le mentor colle un lien de réunion externe ; l'intégration d'une solution éprouvée est prévue entre 3 et 6 mois. |
-| Où est l'IA ? | Les TDR la rendent facultative. Nous avons préféré un score transparent : le mentoré voit *pourquoi* un mentor est proposé. L'IA viendra si les données montrent un gain réel. |
+| Et la visio ? | À la confirmation d'une séance à distance, la plateforme crée automatiquement une salle Jitsi Meet privée, au nom impossible à deviner. Développer notre propre visio en trois jours n'aurait pas été sérieux : nous nous appuyons sur une solution open source éprouvée, et nous le disons. Une intégration plus poussée est prévue entre 3 et 6 mois. |
+| Où est l'IA ? | En assistance, jamais en décision : elle aide à formuler un besoin, explique le score et propose un parcours que les participants valident. Le score reste calculé par des règles transparentes, et la plateforme fonctionne entièrement sans IA. Aucun nom ni message privé n'est envoyé au fournisseur. |
 | Comment garantir la qualité des mentors ? | Vérification humaine (entretien, références), badge attribué par l'équipe, évaluations après les séances, suspension possible. Pas de fausse validation automatique de diplômes. |
 | Et la confidentialité ? | Mots de passe hachés (Argon2id), sessions révocables en cookie sécurisé, aucun contact privé public, conversation réservée aux deux participants et vérifiée côté serveur à chaque requête. Une revue juridique est prévue avant la production. |
-| Et si un mentor est débordé ? | Il fixe sa capacité maximale et ses créneaux ; au-delà, l'acceptation est bloquée. |
+| Et si un mentor est débordé ? | Il reste maître de ses créneaux et accepte ou refuse chaque demande motivée : il n'y a pas de plafond imposé, c'est lui qui décide. |
+| Comment savoir qu'un mentor est sérieux ? | Sa fiche affiche les personnes réellement accompagnées et ses certificats d'accompagnement, délivrés par la plateforme après des séances réalisées et vérifiables par un code. |
 | Que se passe-t-il si deux personnes réservent le même créneau ? | La base de données l'empêche : une seule réservation réussit, l'autre reçoit un message clair. C'est testé automatiquement. |
-| Accès sans bonne connexion ? | Interface légère et responsive ; le mode faible connectivité et la PWA sont dans la feuille de route. |
+| Accès sans bonne connexion ? | Application installable (PWA). Sans réseau : relecture des conversations, séances et objectifs, et messages envoyés au retour de la connexion. Économie de données automatique sur 2G. |
 | Combien ça coûte ? | Technologies open source, auto-hébergeables ; le principal coût est l'animation et la modération. Le chiffrage se fera avec les partenaires. |
 | Comment mesurer l'impact ? | Indicateurs issus de l'usage réel : demandes acceptées, séances réalisées, objectifs atteints, satisfaction. Puis enquêtes de suivi. |
 | Après le hackathon ? | Une base solide (architecture modulaire, migrations, tests, CI) et une feuille de route à 3, 6 et 12 mois (voir la note de pérennisation). |

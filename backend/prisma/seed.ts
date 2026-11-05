@@ -5,11 +5,15 @@
  * - Comptes et profils : FICTIFS, réservés au développement et à la démonstration.
  *   Aucun nom, email ou parcours ne correspond à une personne réelle.
  *   Refusés en production sauf SEED_DEMO=true explicite.
+ * - Photos de profil des comptes de démo : portraits libres de droits (Unsplash), sans lien avec
+ *   les personnes photographiées. Crédits : prisma/demo-avatars/CREDITS.md.
  *
  * Relançable à volonté : upserts sur clés naturelles, créneaux créés seulement s'ils
  * ne chevauchent pas l'existant (contrainte d'exclusion PostgreSQL).
  */
 import 'dotenv/config';
+import { existsSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../src/generated/prisma/client.js';
 import type {
@@ -19,6 +23,7 @@ import type {
 } from '../src/generated/prisma/enums.js';
 import { hashPassword } from '../src/modules/auth/password.js';
 import { normalizeSearch } from '../src/common/text.js';
+import { issueCertificateIfEligible } from '../src/modules/certificates/certificates.module.js';
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }),
@@ -146,7 +151,6 @@ interface DemoMentor {
   city: string;
   domains: DomainSlug[];
   verificationStatus: VerificationStatus;
-  maxMentees: number;
 }
 
 const MENTORS: DemoMentor[] = [
@@ -167,12 +171,11 @@ const MENTORS: DemoMentor[] = [
       'Portfolio',
       'Entretien technique',
     ],
-    languages: ['Français', 'Anglais', 'Soussou'],
+    languages: ['Français', 'Anglais'],
     modalities: ['REMOTE', 'HYBRID'],
     city: 'Conakry',
     domains: ['numerique-technologies', 'orientation-insertion'],
     verificationStatus: 'VERIFIED',
-    maxMentees: 5,
   },
   {
     key: 'thierno',
@@ -190,12 +193,11 @@ const MENTORS: DemoMentor[] = [
       'Prévisionnel financier',
       'Développement commercial',
     ],
-    languages: ['Français', 'Pular'],
+    languages: ['Français'],
     modalities: ['IN_PERSON', 'REMOTE'],
     city: 'Conakry',
     domains: ['entrepreneuriat', 'gestion-finance-administration'],
     verificationStatus: 'VERIFIED',
-    maxMentees: 4,
   },
   {
     key: 'mariama',
@@ -212,7 +214,6 @@ const MENTORS: DemoMentor[] = [
     city: 'Conakry',
     domains: ['campus-france', 'orientation-insertion'],
     verificationStatus: 'VERIFIED',
-    maxMentees: 6,
   },
   {
     key: 'sekou',
@@ -230,12 +231,11 @@ const MENTORS: DemoMentor[] = [
       'Données',
       'Certifications',
     ],
-    languages: ['Français', 'Anglais', 'Malinké'],
+    languages: ['Français', 'Anglais'],
     modalities: ['REMOTE', 'HYBRID'],
     city: 'Kankan',
     domains: ['numerique-technologies'],
     verificationStatus: 'PENDING',
-    maxMentees: 3,
   },
   {
     key: 'aissatou',
@@ -247,12 +247,11 @@ const MENTORS: DemoMentor[] = [
     organization: 'Maison d’édition (fictive)',
     yearsExperience: 11,
     expertise: ['Écriture', 'Édition', 'Création de contenu', 'Entrepreneuriat culturel'],
-    languages: ['Français', 'Pular'],
+    languages: ['Français'],
     modalities: ['IN_PERSON', 'HYBRID'],
     city: 'Conakry',
     domains: ['culture-industries-creatives', 'developpement-personnel-leadership'],
     verificationStatus: 'VERIFIED',
-    maxMentees: 4,
   },
   {
     key: 'lansana',
@@ -275,7 +274,6 @@ const MENTORS: DemoMentor[] = [
     city: 'Conakry',
     domains: ['developpement-personnel-leadership', 'gestion-finance-administration'],
     verificationStatus: 'UNVERIFIED',
-    maxMentees: 5,
   },
 ];
 
@@ -404,6 +402,31 @@ async function seedSlots(mentorId: string, seedIndex: number) {
   return created;
 }
 
+/**
+ * Photos de profil des comptes de démo (portraits Unsplash, crédits dans demo-avatars/CREDITS.md).
+ * Posées seulement si le compte n'a pas déjà de photo : une photo changée depuis l'interface
+ * n'est jamais écrasée par une nouvelle seed.
+ */
+async function seedDemoAvatars(accounts: [key: string, userId: string][]) {
+  let added = 0;
+  for (const [key, userId] of accounts) {
+    const file = new URL(`./demo-avatars/${key}.jpg`, import.meta.url);
+    if (!existsSync(file)) continue;
+    const existing = await prisma.userAvatar.findUnique({
+      where: { userId },
+      select: { userId: true },
+    });
+    if (existing) continue;
+    const data = new Uint8Array(await readFile(file));
+    await prisma.$transaction([
+      prisma.userAvatar.create({ data: { userId, mimeType: 'image/jpeg', data } }),
+      prisma.user.update({ where: { id: userId }, data: { avatarUpdatedAt: new Date() } }),
+    ]);
+    added++;
+  }
+  return added;
+}
+
 async function main() {
   if (process.env.NODE_ENV === 'production' && process.env.SEED_DEMO !== 'true') {
     console.log('Production : chargement des domaines uniquement (comptes de démo désactivés).');
@@ -462,7 +485,6 @@ async function main() {
       modalities: m.modalities,
       city: m.city,
       verificationStatus: m.verificationStatus,
-      maxMentees: m.maxMentees,
       sessionDurationMin: 60,
       searchText,
     };
@@ -506,6 +528,8 @@ async function main() {
   }
 
   await upsertUser('admin', 'Équipe', 'Modération', 'ADMIN', passwordHash);
+  // Ancien compte de démo « super-administrateur » : le rôle a été supprimé (un seul rôle ADMIN).
+  await prisma.user.deleteMany({ where: { email: email('superadmin') } });
 
   // Un mentorat déjà actif (Mohamed ↔ Thierno) pour que les tableaux de bord ne soient pas vides.
   // Le parcours principal de démo (Aminata → Fatoumata) reste volontairement vierge.
@@ -558,6 +582,118 @@ async function main() {
       },
     });
   }
+  // Un mentorat déjà mené à terme (Mohamed ↔ Fatoumata, le mois dernier) : trois séances réalisées
+  // et évaluées, un objectif atteint, puis la clôture qui délivre le certificat d'accompagnement.
+  // Données fictives, comme le reste de la seed ; le certificat est produit par le code de l'application.
+  const fatoumataId = mentorIds.get('fatoumata')!;
+  const pastRequestId = 'seed_request_mohamed_fatoumata';
+  const daysAgo = (d: number, hourUtc = 15) => {
+    const t = new Date();
+    t.setUTCDate(t.getUTCDate() - d);
+    t.setUTCHours(hourUtc, 0, 0, 0);
+    return t;
+  };
+  await prisma.mentorshipRequest.upsert({
+    where: { id: pastRequestId },
+    create: {
+      id: pastRequestId,
+      menteeId: mohamedId,
+      mentorId: fatoumataId,
+      domainId: domainIds.get('numerique-technologies')!,
+      goal: 'Mettre en ligne le site vitrine de mon projet',
+      message:
+        'Bonjour, je voudrais apprendre à créer moi-même un site simple pour présenter mon projet de livraison et recevoir des commandes.',
+      status: 'ACCEPTED',
+      createdAt: daysAgo(48),
+      respondedAt: daysAgo(47),
+    },
+    update: {},
+  });
+  const pastMentorship = await prisma.mentorship.upsert({
+    where: { requestId: pastRequestId },
+    create: {
+      requestId: pastRequestId,
+      mentorId: fatoumataId,
+      menteeId: mohamedId,
+      startedAt: daysAgo(47),
+    },
+    update: {},
+    select: { id: true, status: true },
+  });
+  const pastTopics = [
+    {
+      id: 'seed_session_mohamed_fatoumata_1',
+      days: 40,
+      topic: 'Définir les pages et le contenu du site',
+      rating: 5,
+    },
+    {
+      id: 'seed_session_mohamed_fatoumata_2',
+      days: 30,
+      topic: 'Construire la page d’accueil et le formulaire de commande',
+      rating: 5,
+    },
+    {
+      id: 'seed_session_mohamed_fatoumata_3',
+      days: 19,
+      topic: 'Mise en ligne et premiers retours clients',
+      rating: 4,
+    },
+  ];
+  for (const p of pastTopics) {
+    const startsAt = daysAgo(p.days);
+    await prisma.mentoringSession.upsert({
+      where: { id: p.id },
+      create: {
+        id: p.id,
+        mentorshipId: pastMentorship.id,
+        mentorId: fatoumataId,
+        menteeId: mohamedId,
+        startsAt,
+        endsAt: new Date(startsAt.getTime() + 60 * 60_000),
+        status: 'COMPLETED',
+        topic: p.topic,
+        modality: 'REMOTE',
+        confirmedAt: new Date(startsAt.getTime() - 86_400_000),
+      },
+      update: {},
+    });
+    await prisma.sessionFeedback.upsert({
+      where: { sessionId_authorId: { sessionId: p.id, authorId: mohamedId } },
+      create: { sessionId: p.id, authorId: mohamedId, rating: p.rating },
+      update: {},
+    });
+  }
+  if ((await prisma.goal.count({ where: { mentorshipId: pastMentorship.id } })) === 0) {
+    await prisma.goal.create({
+      data: {
+        mentorshipId: pastMentorship.id,
+        createdById: mohamedId,
+        title: 'Publier le site vitrine',
+        description: 'Trois pages en ligne et un formulaire de commande qui fonctionne.',
+        status: 'COMPLETED',
+        progress: 100,
+        completedAt: daysAgo(19),
+      },
+    });
+  }
+  if (pastMentorship.status === 'ACTIVE') {
+    const endedAt = daysAgo(18, 10);
+    await prisma.$transaction(async (tx) => {
+      await tx.mentorship.update({
+        where: { id: pastMentorship.id },
+        data: {
+          status: 'COMPLETED',
+          endedAt,
+          endedById: fatoumataId,
+          endNote:
+            'Site en ligne et premières commandes reçues : objectif atteint. Bravo Mohamed !',
+        },
+      });
+      await issueCertificateIfEligible(tx, pastMentorship.id, endedAt);
+    });
+  }
+
   // Bibliothèque publique : quelques ressources publiées par les mentors fictifs.
   // Les seuls liens externes pointent vers des sites officiels de référence.
   const libraryResources = [
@@ -615,6 +751,60 @@ async function main() {
       create: { id: r.id, ...data },
       update: data,
     });
+  }
+
+  // Opportunités fictives (structures inventées, clairement étiquetées), échéances relatives à aujourd'hui.
+  const inDays = (d: number) => new Date(Date.now() + d * 86_400_000);
+  const demoOpportunities = [
+    {
+      id: 'seed_opportunity_stage_dev',
+      author: 'fatoumata',
+      domain: 'numerique-technologies',
+      type: 'INTERNSHIP' as const,
+      title: 'Stage développeur·se web junior (6 mois)',
+      organization: 'Studio numérique (structure fictive)',
+      description:
+        'Opportunité fictive de démonstration. Stage au sein d’une équipe produit : intégration d’interfaces React, tests et revue de code. Profil recherché : jeune diplômé·e motivé·e, portfolio apprécié.',
+      location: 'Conakry',
+      isRemote: false,
+      deadline: inDays(21),
+    },
+    {
+      id: 'seed_opportunity_appel_projets',
+      author: 'thierno',
+      domain: 'entrepreneuriat',
+      type: 'CALL_FOR_PROJECTS' as const,
+      title: 'Appel à projets — jeunes entreprises de services',
+      organization: 'Incubateur (structure fictive)',
+      description:
+        'Opportunité fictive de démonstration. Programme d’accompagnement de trois mois pour des projets en phase d’amorçage : ateliers, mentorat et mise en relation avec des partenaires.',
+      location: 'Conakry',
+      isRemote: true,
+      deadline: inDays(10),
+    },
+    {
+      id: 'seed_opportunity_atelier_cv',
+      author: 'mariama',
+      domain: 'orientation-insertion',
+      type: 'EVENT' as const,
+      title: 'Atelier collectif : CV et lettre de motivation',
+      organization: 'Association d’orientation (structure fictive)',
+      description:
+        'Opportunité fictive de démonstration. Atelier gratuit en ligne de deux heures pour relire son CV et structurer une lettre de motivation, avec exemples commentés.',
+      location: null,
+      isRemote: true,
+      deadline: inDays(5),
+    },
+  ];
+  for (const o of demoOpportunities) {
+    const { id, author, domain, ...rest } = o;
+    const data = {
+      ...rest,
+      authorId: mentorIds.get(author)!,
+      domainId: domainIds.get(domain as DomainSlug)!,
+      archivedAt: null,
+    };
+    await prisma.opportunity.upsert({ where: { id }, create: { id, ...data }, update: data });
   }
 
   // Une séance passée et terminée (sans créneau), évaluée par le mentoré : historique réaliste.
@@ -675,11 +865,14 @@ async function main() {
     });
   }
 
+  const photosAjoutées = await seedDemoAvatars([...mentorIds, ...menteeIds]);
+
   const counts = {
     domaines: await prisma.expertiseDomain.count(),
     mentors: await prisma.user.count({ where: { role: 'MENTOR' } }),
     mentorés: await prisma.user.count({ where: { role: 'MENTEE' } }),
     créneauxAjoutés: slotCount,
+    photosAjoutées,
   };
   console.log('Seed terminée :', counts);
   console.log(`Comptes de démonstration (dev uniquement) — mot de passe commun : ${DEMO_PASSWORD}`);

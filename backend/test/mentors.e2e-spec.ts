@@ -40,9 +40,9 @@ describe('Annuaire, fiche mentor et suggestions', () => {
     for (const m of inPerson.body.items) {
       expect(m.modalities.some((x: string) => x === 'IN_PERSON' || x === 'HYBRID')).toBe(true);
     }
-    const pular = await list('?language=pular&pageSize=50');
-    expect(pular.body.items.length).toBeGreaterThan(0);
-    for (const m of pular.body.items) expect(m.languages).toContain('Pular');
+    const english = await list('?language=anglais&pageSize=50');
+    expect(english.body.items.length).toBeGreaterThan(0);
+    for (const m of english.body.items) expect(m.languages).toContain('Anglais');
   });
 
   it('pagine les résultats', async () => {
@@ -51,6 +51,40 @@ describe('Annuaire, fiche mentor et suggestions', () => {
     expect(page1.body.totalPages).toBe(Math.ceil(page1.body.total / 2));
     const page2 = await list('?pageSize=2&page=2');
     expect(page2.body.items[0].id).not.toBe(page1.body.items[0].id);
+  });
+
+  it('trie par pertinence, expérience, disponibilité ou note, toujours sur l’ensemble', async () => {
+    for (const sort of ['relevance', 'experience', 'availability', 'rating']) {
+      const all = await list(`?sort=${sort}&pageSize=50`);
+      const paged = [
+        ...(await list(`?sort=${sort}&pageSize=3&page=1`)).body.items,
+        ...(await list(`?sort=${sort}&pageSize=3&page=2`)).body.items,
+      ];
+      // Le découpage en pages suit le même ordre que la liste complète.
+      expect(paged.map((m: { id: string }) => m.id)).toEqual(
+        all.body.items.slice(0, 6).map((m: { id: string }) => m.id),
+      );
+      expect(all.body.items).toHaveLength(Math.min(all.body.total, 50));
+    }
+    // Pertinence : les profils vérifiés d'abord.
+    const relevance = (await list('?pageSize=50')).body.items as { verificationStatus: string }[];
+    const firstUnverified = relevance.findIndex((m) => m.verificationStatus !== 'VERIFIED');
+    if (firstUnverified >= 0) {
+      expect(
+        relevance.slice(firstUnverified).every((m) => m.verificationStatus !== 'VERIFIED'),
+      ).toBe(true);
+    }
+    // Disponibilité : créneaux les plus proches d'abord, sans créneau en dernier.
+    const byAvailability = (await list('?sort=availability&pageSize=50')).body.items as {
+      nextAvailableAt: string | null;
+    }[];
+    const times = byAvailability.map((m) =>
+      m.nextAvailableAt ? new Date(m.nextAvailableAt).getTime() : Infinity,
+    );
+    expect([...times].sort((a, b) => a - b)).toEqual(times);
+    expect(relevance[0]).toHaveProperty('isConfirmed');
+    expect(relevance[0]).toHaveProperty('completedMentorships');
+    await request(app.getHttpServer()).get(`${API}/mentors?sort=hasard`).expect(422);
   });
 
   it('renvoie 422 pour un filtre invalide', async () => {

@@ -51,8 +51,12 @@ Tout ce qui suit a été **réellement exécuté** contre PostgreSQL, à l'aide 
 Compte (nom, fuseau, mot de passe, déconnexion de tous les appareils), clôture de mentorat et gestion des domaines par l’admin : ✅.
 Swagger documente désormais les schémas de toutes les requêtes (plugin @nestjs/swagger).
 
-Tests : **8 unitaires et 89 e2e** (Vitest et supertest sur un vrai PostgreSQL de test), typecheck, lint et build OK. CI GitHub Actions dans `.github/workflows/ci.yml`.
-**Pas encore fait côté backend :** emails transactionnels, réinitialisation de mot de passe, opportunités, WebSocket.
+Opportunités (stages, emplois, appels à projets…) et confidentialité (export des données, suppression du compte) : ✅.
+
+Visio : lien Jitsi Meet généré automatiquement à la confirmation (service externe). ✅
+
+Tests : **8 unitaires et 100 e2e** (Vitest et supertest sur un vrai PostgreSQL de test), typecheck, lint et build OK. CI GitHub Actions dans `.github/workflows/ci.yml`.
+**Pas encore fait côté backend :** emails transactionnels, réinitialisation de mot de passe, WebSocket.
 → **Ne crée pas de faux écrans pour ces fonctions.** Si l'une d'elles devient nécessaire, demande d'abord qu'on ajoute l'endpoint.
 
 ---
@@ -123,7 +127,7 @@ interface ApiError {
    Pour créer un créneau, envoie un ISO avec fuseau (`new Date(...).toISOString()`).
 8. **Données serveur.** TanStack Query pour les écrans connectés (invalidation après mutation ; `refetchInterval` de 4 à 5 s sur la conversation ouverte et de 30 s sur les compteurs).
    Next 16.4 active `cacheComponents: true` : les écrans authentifiés seront surtout des Client Components ; lis la documentation locale avant d'utiliser du rendu serveur avec des cookies.
-9. **Honnêteté produit.** La visioconférence n'est **pas** native : le mentor colle un lien de réunion externe (https) à la confirmation, et l'interface le présente comme tel (« Lien de réunion externe »).
+9. **Visio et honnêteté produit.** À la confirmation d'une séance à distance ou hybride, l'API **génère automatiquement** une salle Jitsi Meet au nom imprévisible (`meetingUrl`), sauf si le mentor fournit son propre lien. Affichez un bouton « Rejoindre la visio » (nouvel onglet), actif quelques minutes avant le début. Présentez-le honnêtement : « visio via Jitsi Meet (service externe, connexion Internet requise) ». Une intégration par `iframe` dans l'application est possible, mais elle est gourmande en bande passante : à garder en option.
    Le domaine Campus France affiche toujours la mention « Conseil et orientation, sans garantie d'admission ni de visa ».
 
 ---
@@ -164,7 +168,7 @@ Préfixe : `/api/v1`. Swagger : `http://localhost:4000/api/docs`. 🔓 = public,
 |---|---|---|
 | `GET /domains` | 🔓 | `[{ id, slug, name, description, icon, topics: string[], mentorCount }]`. `icon` = nom d'icône Lucide (`rocket`, `code`, `compass`, `book-open`, `landmark`, `sparkles`, `graduation-cap`) |
 | `GET /profile/me` | 🔒 | `{ user, mentorProfile \| null (avec domains[]), menteeProfile \| null (avec interests[]) }` |
-| `PUT /profile/mentor` | 🔒 M | `{ headline (10–140), bio (80–2000), currentPosition?, organization?, yearsExperience (1–60), expertise: string[] (1–15), languages: string[] (1–6), modalities: Modality[] (1–3), city?, domainIds: string[] (1–4), sessionDurationMin: 30\|45\|60\|90, maxMentees (1–20) }` |
+| `PUT /profile/mentor` | 🔒 M | `{ headline (10–140), bio (80–2000), currentPosition?, organization?, yearsExperience (1–60), expertise: string[] (1–15), languages: string[] (1–6), modalities: Modality[] (1–3), city?, domainIds: string[] (1–4), sessionDurationMin: 30\|45\|60\|90 }` |
 | `PATCH /profile/me` | 🔒 | `{ firstName?, lastName?, timezone? (IANA, ex. Africa/Conakry) }` → même forme que `GET /profile/me` |
 | `PUT /profile/mentee` | 🔒 E | `{ situation, goalsSummary (20–1000), desiredSkills: string[] (0–15), preferredModality, city?, interestDomainIds: string[] (1–5) }` |
 
@@ -172,8 +176,15 @@ Les deux `PUT` font un upsert, renseignent `onboardedAt` au premier appel et ren
 
 ### Annuaire et fiche mentor
 
-`GET /mentors?q=&domain=<slug>&modality=&language=&available=true&page=1&pageSize=12` 🔓
+`GET /mentors?q=&domain=<slug>&modality=&language=&available=true&sort=relevance&page=1&pageSize=12` 🔓
 → `{ items: MentorCard[], page, pageSize, total, totalPages }`
+
+Ordre (`sort`, fonction pure `modules/mentors/ranking.ts`, calculé sur l'ensemble des résultats puis découpé en pages) :
+- `relevance` (défaut) : profil vérifié, puis expérience démontrée sur la plateforme (« Mentor confirmé », puis au moins un mentoré accompagné ; à niveau égal, accompagnements terminés, mentorés, certificats et note fiable), puis créneau libre sous 14 jours, puis années d'expérience en départage ;
+- `experience` : expérience démontrée d'abord, puis vérification et années ;
+- `availability` : créneau libre le plus proche d'abord, sans créneau en dernier ;
+- `rating` : note moyenne (comptée à partir de 3 avis), puis nombre d'avis.
+Valeur inconnue : 422. L'interface l'expose par le menu « Trier par » (paramètre d'URL `tri`).
 
 ```ts
 interface MentorCard {
@@ -185,9 +196,11 @@ interface MentorCard {
   modalities: Modality[]; city: string | null; sessionDurationMin: number;
   verificationStatus: VerificationStatus;
   domains: { id: string; slug: string; name: string }[];
-  activeMentees: number; maxMentees: number; acceptingMentees: boolean;
+  activeMentees: number; mentoredCount: number; certificatesCount: number;
   nextAvailableAt: string | null;         // prochain créneau libre (ISO)
   rating: { average: number | null; count: number }; // notes laissées par les mentorés (afficher « Nouveau » si count = 0)
+  completedMentorships: number;           // accompagnements menés à terme
+  isConfirmed: boolean;                   // « Mentor confirmé » : ≥ 3 accompagnements terminés et note ≥ 4 sur ≥ 3 avis
 }
 ```
 
@@ -211,11 +224,11 @@ interface MentorCard {
 
 `MentorshipRequest = { id, menteeId, mentorId, domainId, goal, message, status, decisionNote, respondedAt, createdAt, updatedAt, mentee: { id, firstName, lastName, menteeProfile: { situation, goalsSummary, preferredModality, city, desiredSkills } }, mentor: { id, firstName, lastName, mentorProfile: { headline } }, domain: { id, slug, name } | null, mentorship: { id, status } | null }`
 
-Erreurs : 422 `PROFILE_REQUIRED` (mentoré sans profil), `SELF_REQUEST`, `INVALID_DOMAIN` · 404 `MENTOR_NOT_FOUND`, `REQUEST_NOT_FOUND` · 403 `NOT_REQUEST_MENTOR`, `NOT_REQUEST_OWNER`, `NOT_PARTICIPANT` · 409 `REQUEST_ALREADY_PENDING`, `ALREADY_MENTORED`, `INVALID_TRANSITION`, `MENTOR_AT_CAPACITY`.
+Erreurs : 422 `PROFILE_REQUIRED` (mentoré sans profil), `SELF_REQUEST`, `INVALID_DOMAIN` · 404 `MENTOR_NOT_FOUND`, `REQUEST_NOT_FOUND` · 403 `NOT_REQUEST_MENTOR`, `NOT_REQUEST_OWNER`, `NOT_PARTICIPANT` · 409 `REQUEST_ALREADY_PENDING`, `ALREADY_MENTORED`, `INVALID_TRANSITION`.
 
 ### Mentorats
 
-`POST /mentorships/:id/complete` 🔒 participant : `{ note? (≤1000) }` → `MentorshipSummary` avec `status: COMPLETED`. Les séances futures sont annulées, la capacité du mentor est libérée et l'autre participant est notifié. Le mentorat devient **lecture seule** : écrire renvoie 409 `MENTORSHIP_NOT_ACTIVE`. Prévoyez un bouton « Clôturer le mentorat » avec confirmation et un champ bilan.
+`POST /mentorships/:id/complete` 🔒 participant : `{ note? (≤1000) }` → `MentorshipSummary` avec `status: COMPLETED`. Les séances futures sont annulées. Si au moins une séance a été réalisée, un certificat est délivré au mentor (`certificate: { code, issuedAt }` dans la réponse) ; `GET /certificates/:code` (public) le vérifie, `GET /mentors/:id/certificates` (public) les liste. Le mentorat devient **lecture seule** : écrire renvoie 409 `MENTORSHIP_NOT_ACTIVE`. Prévoyez un bouton « Clôturer le mentorat » avec confirmation et un champ bilan.
 
 `GET /mentorships/me` 🔒 et `GET /mentorships/:id` 🔒 participant →
 
@@ -243,7 +256,7 @@ type Person = { id; firstName; lastName; mentorProfile: { headline } | null; men
 | `DELETE /availability/:id` | 🔒 M (propriétaire) | Refusé si le créneau est réservé |
 | `POST /sessions` | 🔒 E | `{ slotId, topic (5–200), modality? }` → séance `REQUESTED` (le créneau est bloqué) |
 | `GET /sessions/me?scope=upcoming\|past\|all` | 🔒 | Séances de l'utilisateur (mentor ou mentoré) |
-| `POST /sessions/:id/confirm` | 🔒 M | `{ meetingUrl? (https), location? }` → `CONFIRMED` |
+| `POST /sessions/:id/confirm` | 🔒 M | `{ meetingUrl? (https), location? }` → `CONFIRMED`. Sans `meetingUrl`, et si la séance n'est pas en présentiel : lien Jitsi généré automatiquement |
 | `POST /sessions/:id/cancel` | 🔒 participant | → `CANCELLED` (le créneau redevient libre) |
 | `POST /sessions/:id/complete` | 🔒 M | Uniquement une séance CONFIRMED déjà commencée → `COMPLETED` |
 | `POST /sessions/:id/feedback` | 🔒 participant | `{ rating: 1–5, comment? (≤1000) }` → `Session` (201). Possible si COMPLETED, ou CONFIRMED et terminée ; **une seule fois par participant** |
@@ -259,7 +272,7 @@ Erreurs : 422 `SLOT_IN_PAST`, `SLOT_INVALID_DURATION`, `SLOT_TOO_FAR` · 409 `SL
 | Route | Accès | Détail |
 |---|---|---|
 | `GET /mentorships/:id/messages?after=<ISO>&limit=100` | 🔒 participant | `[{ id, content, createdAt, readAt, senderId }]`, ordre chronologique ; `after` sert au rafraîchissement incrémental |
-| `POST /mentorships/:id/messages` | 🔒 participant, 30/min | `{ content (1–2000) }` ; 409 `MENTORSHIP_NOT_ACTIVE` |
+| `POST /mentorships/:id/messages` | 🔒 participant, 30/min | `{ content (1–2000) }`. Reste possible après la clôture (mentor et mentoré restent en contact) ; 409 `MENTORSHIP_CANCELLED` si le mentorat est annulé, 409 `COUNTERPART_UNAVAILABLE` si l'autre compte est supprimé ou suspendu |
 | `POST /mentorships/:id/messages/read` | 🔒 participant | Marque comme lus les messages reçus → `{ updated }` |
 
 Pas de WebSocket pour l'instant : utilise un polling maîtrisé (4 à 5 s sur la conversation ouverte, mis en pause quand l'onglet est caché).
@@ -288,9 +301,12 @@ Avec des jalons, la progression vaut la part des jalons cochés. Sans jalon, ell
 | `DELETE /resources/:id` | 🔒 auteur (ou admin pour la bibliothèque) | 403 `NOT_RESOURCE_AUTHOR` |
 | `GET /mentorships/:id/resources` | 🔒 participant | Ressources privées du mentorat |
 | `POST /mentorships/:id/resources` | 🔒 participant (mentorat actif) | Partage privé ; l'autre participant est notifié |
+| `POST /resources/upload` | 🔒 M ou A | Comme `POST /resources`, avec un document joint (multipart) |
+| `POST /mentorships/:id/resources/upload` | 🔒 participant (mentorat actif) | Comme le partage privé, avec un document joint (multipart) |
+| `GET /resources/:id/file` | 🔓 bibliothèque · 🔒 participants pour un mentorat | Téléchargement en pièce jointe ; 404 `RESOURCE_FILE_NOT_FOUND` pour un tiers (l'existence n'est pas révélée) |
 
-Corps de création : `{ title (3–160), description? (≤2000), url? (https uniquement), kind?: 'ARTICLE'|'VIDEO'|'TEMPLATE'|'TOOL'|'ADVICE'|'OTHER', domainId? }`. **Il faut un `url` ou une `description`** (sinon 422 `RESOURCE_EMPTY`). Il n'y a pas de dépôt de fichiers : ce sont des liens et des conseils rédigés.
-`Resource = { id, mentorshipId | null, kind, title, description, url, createdAt, author: { id, firstName, lastName, role, mentorProfile: { headline } | null }, domain: { id, slug, name } | null }`
+Corps de création : `{ title (3–160), description? (≤2000), url? (https uniquement), kind?: 'ARTICLE'|'VIDEO'|'TEMPLATE'|'TOOL'|'ADVICE'|'OTHER', domainId? }`. **Il faut un document, un `url` ou une `description`** (sinon 422 `RESOURCE_EMPTY`). Document joint : champs ci-dessus en multipart et fichier dans le champ `file`, 10 Mo au plus (413 au-delà). Formats acceptés : PDF, Word, Excel, PowerPoint (anciens et récents), OpenDocument, texte, CSV, PNG, JPEG et WebP. L'extension doit correspondre au contenu réel du fichier (422 `FILE_INVALID_TYPE` sinon) ; le HTML, le SVG et les exécutables sont refusés.
+`Resource = { id, mentorshipId | null, kind, title, description, url, file: { fileName, mimeType, size } | null, createdAt, author: { id, firstName, lastName, role, mentorProfile: { headline } | null }, domain: { id, slug, name } | null }`
 Libellés `kind` : Article · Vidéo · Modèle · Outil · Conseil · Autre. Ouvrez les liens externes avec `target="_blank" rel="noopener noreferrer"`.
 
 ### Notifications in-app
@@ -305,9 +321,33 @@ Libellés `kind` : Article · Vidéo · Modèle · Outil · Conseil · Autre. Ou
 Types : `REQUEST_RECEIVED`, `REQUEST_ACCEPTED`, `REQUEST_DECLINED`, `SESSION_REQUESTED`, `SESSION_CONFIRMED`, `SESSION_CANCELLED`, `GOAL_FEEDBACK`, `RESOURCE_SHARED`, `MENTORSHIP_COMPLETED`.
 `title` et `body` sont prêts à afficher en français. `link` est un **chemin frontend relatif** (`/demandes`, `/seances`, `/mentors`, `/mentorats/<id>`) : un clic marque la notification comme lue puis navigue vers ce chemin. **Ces routes doivent donc exister côté frontend.**
 
+### Opportunités (TDR §7.2)
+
+| Route | Accès | Détail |
+|---|---|---|
+| `GET /opportunities?q=&type=&domain=<slug>&remote=true&page=&pageSize=` | 🔓 | Opportunités **ouvertes** (non archivées, date limite non dépassée), échéance la plus proche en premier → paginé |
+| `GET /opportunities/:id` | 🔓 | Détail ; une opportunité archivée ou expirée renvoie 404, sauf pour son auteur ou un admin |
+| `GET /opportunities/mine` | 🔒 M ou A | Mes publications, y compris archivées ou expirées |
+| `POST /opportunities` | 🔒 M ou A | `{ type, title (5–160), organization (2–120), description (30–3000), location?, isRemote?, url? (https), deadline? (future), domainId? }` ; 422 `DEADLINE_IN_PAST` |
+| `PATCH /opportunities/:id` | 🔒 auteur ou A | Mêmes champs (facultatifs), `deadline: null` pour la retirer, `archived: true|false` ; 403 `NOT_OPPORTUNITY_AUTHOR` |
+
+Types et libellés : INTERNSHIP → Stage · JOB → Emploi · CALL_FOR_PROJECTS → Appel à projets · SCHOLARSHIP → Bourse · TRAINING → Formation · EVENT → Événement · OTHER → Autre.
+`Opportunity = { id, type, title, organization, description, location, isRemote, url, deadline, archivedAt, createdAt, updatedAt, domain, author: { id, firstName, lastName, role, mentorProfile: { headline } | null } }`
+Afficher « Clôture dans N jours » si `deadline` est proche, et ouvrir `url` dans un nouvel onglet (`rel="noopener noreferrer"`).
+
+### Confidentialité (page « Mon compte »)
+
+| Route | Détail |
+|---|---|
+| `GET /profile/me/export` | Téléchargement JSON de toutes ses données (`Content-Disposition: attachment`). Utiliser un lien direct `<a href="/api/v1/profile/me/export">` |
+| `DELETE /profile/me` | Corps `{ password, confirmation: "SUPPRIMER" }` → `{ ok, closedMentorships }` et cookie effacé. **Irréversible** : le compte est anonymisé (« Compte supprimé »), ses mentorats actifs sont clos, ses séances futures annulées et ses contenus publics retirés. Les messages déjà échangés restent visibles de l'autre participant. 422 `INVALID_PASSWORD`, 403 `ADMIN_CANNOT_SELF_DELETE` |
+
+→ Écran « Supprimer mon compte » : texte d'avertissement clair, champ mot de passe et champ « Tapez SUPPRIMER », bouton rouge, puis redirection vers l'accueil.
+Un utilisateur supprimé apparaît comme « Compte supprimé » dans les conversations et les mentorats passés : prévoir un avatar neutre.
+
 ### Tableau de bord et admin
 
-- `GET /dashboard/me` 🔒 → `{ role, pendingRequests, activeMentorships, upcomingSessions: Session[≤3] (avec mentorshipId et meetingUrl), sessionsAwaitingConfirmation, unreadMessages, goals: { total, completed, averageProgress | null }, mentor: { maxMentees, freeUpcomingSlots } | null }`
+- `GET /dashboard/me` 🔒 → `{ role, pendingRequests, activeMentorships, upcomingSessions: Session[≤3] (avec mentorshipId et meetingUrl), sessionsAwaitingConfirmation, unreadMessages, goals: { total, completed, averageProgress | null }, mentor: { freeUpcomingSlots } | null }`
 - `GET /admin/overview`, `GET /admin/users?role=`, `PATCH /admin/users/:id/status { status }`, `PATCH /admin/mentors/:id { verificationStatus?, isPublished? }` (🔒 A)
 - Domaines (🔒 A) : `GET /admin/domains` (tous, y compris inactifs, avec `_count: { mentors, mentees, resources }`), `POST /admin/domains { slug (kebab-case), name, description, icon (nom Lucide), topics[] }` (409 `DOMAIN_SLUG_TAKEN`), `PATCH /admin/domains/:id { name?, description?, icon?, topics?, isActive?, sortOrder? }`. Un domaine désactivé disparaît de `GET /domains`.
 - `GET /health` 🔓 → `{ status, database, time }`
@@ -329,7 +369,7 @@ Chaque étape doit être **reliée à l'API réelle** avant de passer à la suiv
 1. `/connexion`, `/inscription` (choix du rôle en deux grandes cartes) ; erreurs par champ.
 2. `/onboarding` différencié selon le rôle, avec indicateur d'étapes (mentoré en 3 étapes : situation, domaines et compétences, objectif et modalité ; mentor en 3 étapes : parcours, expertise et domaines, modalités et capacité).
 3. `/mentors` : annuaire avec recherche, filtres (domaine, modalité, langue, disponible), pagination, skeletons et état vide ; bloc « Suggestions pour vous » si mentoré connecté.
-4. `/mentors/[id]` : fiche complète, éléments de confiance (vérification, années d'expérience, capacité), créneaux libres, CTA adapté à `relation`.
+4. `/mentors/[id]` : fiche complète, éléments de confiance (vérification, années d'expérience, mentorés accompagnés, certificats), créneaux libres, CTA adapté à `relation`.
 5. Formulaire de demande (dialogue ou page) : objectif et message motivé avec compteurs de caractères.
 6. `/demandes` : onglets Reçues (mentor) ou Envoyées (mentoré), badges de statut, Accepter/Refuser avec note facultative.
 7. `/tableau-de-bord` adapté au rôle : demandes en attente, prochaines séances, mentorats, objectifs (uniquement des chiffres issus de `/dashboard/me`).
@@ -343,7 +383,8 @@ Chaque étape doit être **reliée à l'API réelle** avant de passer à la suiv
 11. Onglet **Ressources** dans `/mentorats/[id]` (partage de liens et de conseils) et page publique `/ressources` (bibliothèque filtrable ; bouton « Publier » pour les mentors).
 12. **Cloche de notifications** dans le header : badge `unread-count`, panneau déroulant avec la liste, « Tout marquer comme lu », navigation via `link`.
 13. `/admin` minimal : vue d'ensemble, liste des comptes, vérifier ou publier un mentor, suspendre un compte, retirer une ressource de la bibliothèque, **gérer les domaines** (créer, renommer, activer ou désactiver).
-13 bis. `/compte` : modifier son nom et son fuseau horaire, changer son mot de passe, « Se déconnecter de tous les appareils ».
+13 bis. `/compte` : modifier son nom et son fuseau horaire, changer son mot de passe, « Se déconnecter de tous les appareils », **exporter mes données**, **supprimer mon compte**.
+13 ter. `/opportunites` : liste publique filtrable (type, domaine, à distance) ; pour les mentors, « Publier une opportunité » et « Mes publications » (archiver ou republier).
 14. Landing `/` concise : proposition de valeur, fonctionnement en 3 étapes, les 7 domaines (`GET /domains`, avec le nombre réel de mentors), CTA « Trouver un mentor » et « Devenir mentor ». **Aucun faux témoignage ni aucune statistique inventée.**
 
 **F4 — Finition**
@@ -402,8 +443,8 @@ Mappe-les sur les variables shadcn (`--primary`, `--accent`, `--muted`, `--destr
 - **Stepper** de l'onboarding (étape x/3, retour possible, sauvegarde finale unique).
 - **États** : skeleton pour chaque liste ; état vide avec icône, phrase utile et action (« Aucune demande pour l'instant — Explorer les mentors ») ; erreur avec message de l'API et bouton « Réessayer » ; écran « Accès refusé » sur 403 ; toasts de succès après chaque mutation.
 - **Navigation** :
-  - mentoré : Tableau de bord · Trouver un mentor · Mes demandes · Mes mentorats · Séances · Ressources ;
-  - mentor : Tableau de bord · Demandes reçues · Mes mentorés · Disponibilités · Séances · Ressources ;
+  - mentoré : Tableau de bord · Trouver un mentor · Mes demandes · Mes mentorats · Séances · Ressources · Opportunités ;
+  - mentor : Tableau de bord · Demandes reçues · Mes mentorés · Disponibilités · Séances · Ressources · Opportunités ;
   - admin : Vue d'ensemble · Comptes · Mentors.
   En mobile, barre d'onglets en bas (4 ou 5 icônes) ; en desktop, sidebar de 240 px et header avec le menu du compte.
 - **Conversation** : bulles alignées (moi à droite sur fond ink-900 avec texte blanc ; l'autre à gauche sur blanc avec bordure), horodatage discret, zone de saisie collée en bas, Entrée pour envoyer et Maj+Entrée pour un saut de ligne.
@@ -459,3 +500,142 @@ frontend/src/
 - Aucune mention d'attribution à Claude dans les commits ni dans les documents.
 - Ne modifie pas `backend/` sans concertation. Si un endpoint manque, décris le besoin (route, entrée, sortie) dans `docs/BACKEND_REQUESTS.md`.
 - Ne jamais committer de `.env` (seuls les fichiers `.env.example` sont versionnés).
+
+## Ajouts du 5 novembre 2026
+
+- **Photo de profil** : `PUT /profile/me/avatar` (corps binaire JPEG, PNG ou WebP, 1 Mo maximum), `DELETE /profile/me/avatar`, `GET /users/:id/avatar?v=<date>` (public pour un mentor publié, sinon la personne, l'équipe ou une personne liée). Les personnes renvoyées par l'API portent `avatarUpdatedAt`.
+- **Certificats** : `GET /certificates/:code` (public), `GET /mentors/:id/certificates` (public), `GET /certificates/me`. La clôture d'un mentorat renvoie `certificate: { code, issuedAt } | null`.
+- **Fiche mentor** : `mentoredCount` (personnes distinctes accompagnées, tous domaines), `certificatesCount` ; plus de `maxMentees` ni de `acceptingMentees`.
+- **Administration** (`@Roles('ADMIN')`, ex-super-administrateur, rôle supprimé) : `GET /admin/metrics`, `GET /admin/team`, `PATCH /admin/users/:id/role` (`ADMIN`, `MENTOR` ou `MENTEE`), `GET /admin/audit?action=&page=`, `GET /admin/certificates`, `POST /admin/certificates/:code/revoke` (`{ reason }`). Erreurs : `SELF_ROLE_CHANGE`, `SUPER_ADMIN_PROTECTED`, `USER_HAS_ACTIVE_MENTORING`, `CERTIFICATE_ALREADY_REVOKED`, `STAFF_PROTECTED` (un admin ne peut pas suspendre un membre de l'équipe).
+- **Frontend** : `/messages` (messagerie), `/certificats/[code]`, `/admin/pilotage`, `/admin/equipe`, `/admin/journal`, `/admin/certificats`, `/admin/contenus`.
+
+## Ajouts du 5 novembre 2026 (suite) : groupes d'accompagnement
+
+Un mentor crée un groupe pour accompagner plusieurs personnes ensemble. Il peut y ajouter ses mentorés, actuels ou anciens, et des mentors publiés, mais personne d'autre. Le fil du groupe est commun : tous les membres lisent et écrivent.
+
+| Route | Accès | Détail |
+|---|---|---|
+| `GET /groups/me` | 🔒 | `[{ id, name, description, isOwner, createdAt, memberCount, preview[≤3], lastMessage, unreadCount }]`, du plus récent au plus ancien |
+| `GET /groups/candidates?q=` | 🔒 MENTOR | Personnes ajoutables : `[{ id, firstName, lastName, avatarUpdatedAt, role, relation }]` (mentorés d'abord) |
+| `POST /groups` | 🔒 MENTOR, 10/h | `{ name (2–80), description? (≤500), memberIds[] }` → détail ; 422 `GROUP_MEMBER_NOT_ELIGIBLE` |
+| `GET /groups/:id` | 🔒 membre | `{ id, name, description, ownerId, isOwner, members[{ …, role, isOwner, joinedAt }] }` |
+| `PATCH /groups/:id` | 🔒 responsable | `{ name?, description? }` (chaîne vide : description retirée) |
+| `DELETE /groups/:id` | 🔒 responsable | 204 ; supprime aussi les messages |
+| `GET /groups/:id/candidates?q=` | 🔒 responsable | Personnes ajoutables, sauf les membres actuels |
+| `POST /groups/:id/members` | 🔒 responsable | `{ userIds[] }` → détail ; 409 `GROUP_FULL` (50 membres au plus) |
+| `DELETE /groups/:id/members/:userId` | 🔒 responsable, ou le membre lui-même pour quitter | 204 ; 409 `GROUP_OWNER_CANNOT_LEAVE` |
+| `GET /groups/:id/messages?after=&limit=` | 🔒 membre | `[{ id, content, createdAt, senderId, sender }]` |
+| `POST /groups/:id/messages` | 🔒 membre, 30/min | `{ content (1–2000) }` |
+| `POST /groups/:id/read` | 🔒 membre | Marque le fil comme lu |
+
+Un non-membre reçoit 404 `GROUP_NOT_FOUND` : l'existence du groupe n'est pas révélée. Un membre qui n'est pas responsable reçoit 403 `NOT_GROUP_OWNER` sur les actions de gestion. Notification `GROUP_ADDED` (lien `/messages?g=<id>`). `unreadMessages` du tableau de bord inclut les groupes. Les membres d'un même groupe voient leurs photos de profil respectives. Frontend : les groupes apparaissent dans `/messages`, avec le bouton « Nouveau groupe » pour les mentors.
+
+## Ajouts du 5 novembre 2026 (suite) : messagerie enrichie et appels
+
+**Pièces jointes** (messages privés et de groupe) : mêmes formats et mêmes contrôles que les documents des ressources (10 Mo, signature du fichier vérifiée). La légende `content` est facultative.
+
+| Route | Accès | Détail |
+|---|---|---|
+| `POST /mentorships/:id/messages/upload` | 🔒 participant, 10/min | Multipart : `file`, `content?` |
+| `GET /messages/:id/file[?inline=1]` | 🔒 participant | Téléchargement ; `inline=1` affiche une image (PNG, JPEG, WebP) dans la page |
+| `POST /groups/:id/messages/upload` | 🔒 membre, 10/min | Multipart : `file`, `content?` |
+| `GET /groups/messages/:id/file[?inline=1]` | 🔒 membre | Idem |
+
+`Message` gagne `file: { fileName, mimeType, size } | null` et `call: { id, kind, status, answeredAt, endedAt } | null`. `GroupMessage` gagne `file`. Le `lastMessage` des mentorats gagne `callId` et `file`.
+
+**Canal temps réel** : WebSocket `ws(s)://<origine>/api/v1/ws`, relayé par le rewrite Next.js. Il est authentifié par le cookie de session, avec un en-tête `Origin` autorisé (sinon 401 ou 403), et fermé à la déconnexion. Le serveur envoie `ready`, `message:new { mentorshipId }`, `message:read { mentorshipId }` et `group:message { groupId }`. Le frontend rafraîchit alors les requêtes concernées ; le polling reste un filet de sécurité.
+
+**Appels audio et vidéo** (WebRTC pair à pair, conversations privées uniquement) :
+- `GET /calls/config` → `{ iceServers, ringTimeoutMs }`, avec des identifiants TURN temporaires si `TURN_URLS` et `TURN_SECRET` sont configurés.
+- Événements envoyés par le client : `call:invite { mentorshipId, kind: 'AUDIO'|'VIDEO' }`, `call:accept|call:decline|call:hangup { callId }`, `call:signal { callId, payload }` (SDP ou candidat ICE, seulement après le décroché).
+- Événements envoyés par le serveur : `call:ringing`, `call:incoming { callId, kind, mentorshipId, caller }`, `call:accepted` (à l'appelant, qui envoie alors l'offre), `call:connected` (à l'appelé), `call:signal`, `call:ended { callId, reason }` (`hangup`, `declined`, `missed`, `cancelled`, `disconnected`, `unavailable`, `busy`, `answered-elsewhere`) et `error { code, message, event }`.
+- Sonnerie de 40 s. La fin de l'appel est inscrite dans la conversation : « Appel vidéo · 3 min », « Appel audio manqué » (non lu), « … refusé ». La base garantit au plus un appel en cours par mentorat. Aucun flux média ne passe par l'API.
+- Limites : l'état des appels en cours est en mémoire (une seule instance de l'API). Le navigateur exige un contexte sécurisé (https ou localhost) pour la caméra et le micro. Entre réseaux mobiles, un relais TURN est nécessaire : le service `coturn` est fourni dans `backend/docker-compose.yml` (profil `calls`), et les variables sont documentées dans `.env.example`.
+
+## Ajouts du 5 novembre 2026 (suite) : parcours guidés, ateliers, rapport d’impact, mot de passe, PWA
+
+**Parcours guidés** (catalogue versionné dans `backend/src/modules/guided-paths/guided-paths.catalog.ts`, un parcours par domaine des TDR, dont Campus France avec sa mention « ni admission ni visa garantis ») :
+
+| Route | Accès | Détail |
+|---|---|---|
+| `GET /guided-paths?domain=<slug>` | 🔓 | `[{ key, title, summary, notice, domain: { id, slug, name }, goals: [{ key, title, description, milestones[] }] }]` (domaines actifs uniquement) |
+| `POST /mentorships/:id/guided-paths/:key` | 🔒 participant (mentorat actif) | `{ goalKeys?: string[] }` (tous si absent) → `{ created: Goal[], skipped: string[] }`. Un objectif dont le titre existe déjà n’est pas recréé. 404 `GUIDED_PATH_NOT_FOUND`, 422 `INVALID_GUIDED_GOAL`. L’autre participant est notifié |
+
+Frontend : onglet **Objectifs** → « Parcours guidé » (et encart « Parcours conseillé » si le domaine du mentorat en a un).
+
+**Ateliers de groupe** (TDR, étape 4) : séance collective planifiée par le mentor responsable d’un groupe.
+
+| Route | Accès | Détail |
+|---|---|---|
+| `GET /workshops/me?scope=upcoming\|past\|all` | 🔒 | Ateliers de tous mes groupes |
+| `GET /groups/:id/workshops?scope=` | 🔒 membre | 404 `GROUP_NOT_FOUND` pour un non-membre |
+| `POST /groups/:id/workshops` | 🔒 M responsable, 20/h | `{ title (3–160), description?, startsAt, endsAt (15 min–4 h, futur, ≤ 120 j), modality?, meetingUrl? (https), location? }`. Salle Jitsi générée hors présentiel. 409 `WORKSHOP_OVERLAP` (autre atelier de l’animateur : contrainte d’exclusion SQL ; ou séance individuelle active), 422 `INVALID_WORKSHOP_TIME`, 403 `NOT_GROUP_OWNER` |
+| `POST /workshops/:id/cancel` | 🔒 responsable | Membres notifiés (`WORKSHOP_CANCELLED`) |
+| `PUT /workshops/:id/attendance` | 🔒 membre | `{ going: boolean }` ; 409 `WORKSHOP_CANCELLED`, `WORKSHOP_ENDED`, `WORKSHOP_HOST_REQUIRED` |
+
+`Workshop = { id, groupId, title, description, startsAt, endsAt, modality, meetingUrl, location, cancelledAt, group: { id, name }, createdBy, isOwner, status: 'UPCOMING'|'PAST'|'CANCELLED', goingCount, notGoingCount, myResponse }`. Notification `WORKSHOP_SCHEDULED` (lien `/seances?atelier=<id>`), événement temps réel `group:workshop { groupId }`. Frontend : bouton « Ateliers » dans l’en-tête d’un groupe (`/messages`) et section « Ateliers de groupe à venir » sur `/seances`.
+
+**Rapport d’impact** : `GET /admin/impact-report.csv` (🔒 ADMIN) → CSV `;` + BOM UTF-8 (Excel), comptages agrégés uniquement, export tracé (`IMPACT_REPORT_EXPORTED`). `GET /admin/metrics` gagne `goals`, `workshops` et `calls` (appels aboutis et minutes). Frontend : boutons « Rapport d’impact (CSV) » et « Imprimer ou PDF » sur `/admin/pilotage`.
+
+**Réinitialisation du mot de passe, sans email** (la plateforme n’envoie pas d’email) : l’équipe génère un lien personnel, à usage unique, valable 2 heures, et le remet à la personne.
+- `POST /admin/users/:id/password-reset-link` (🔒 A) → `{ token, path, expiresAt }` ; un nouveau lien invalide le précédent ; tracé `PASSWORD_RESET_LINK_ISSUED` ; 403 `STAFF_PROTECTED` (un admin ne réinitialise pas un membre de l’équipe), `SELF_RESET`.
+- `POST /auth/password-reset/check` (🔓) `{ token }` → `{ valid, firstName, expiresAt }` ; `POST /auth/password-reset` (🔓, 5/min) `{ token, newPassword }` → toutes les sessions du compte sont révoquées. 404 `RESET_LINK_INVALID`.
+- Frontend : « Mot de passe oublié ? » sur `/connexion` → `/mot-de-passe-oublie` (marche à suivre honnête), `/reinitialiser-mot-de-passe?jeton=…`, bouton « Réinitialiser » dans `/admin/comptes`.
+
+**Appels sobres en données** : débit audio plafonné à 32 kbit/s, mode « économie de données » pour la vidéo (150 kbit/s, résolution divisée par deux), consommation réelle affichée pendant l’appel (statistiques WebRTC du navigateur). Le bouton « Audio » est mis en avant dans les conversations.
+
+**PWA** : `src/app/manifest.ts`, icônes `public/icons/`, service worker `public/sw.js` (production uniquement : fichiers statiques en cache, page `hors-ligne.html`, API jamais mise en cache), « Installer l’application » dans le menu du compte (navigateurs Chromium).
+
+**Test Playwright du scénario de démo** : `pnpm --filter frontend test:e2e` (voir `frontend/playwright.config.ts`). Il démarre sa propre API (port 4100) et un build de production (port 3100, dossier `.next-e2e`) pour ne pas gêner les serveurs de développement, et remet le parcours d’Aminata à zéro avant et après. Sous Windows, Playwright peut laisser tourner les serveurs qu’il a lancés : vérifiez les ports 3100 et 4100 après coup.
+
+## Ajouts du 5 novembre 2026 (suite) : rôle admin unique, vérification des profils, mentoré devenant mentor
+
+**Rôle unique.** `SUPER_ADMIN` est supprimé (migration `single_admin_role` : les comptes concernés deviennent `ADMIN`). Toutes les routes de l'ancien espace super-admin sont désormais sous `/admin/*` et réservées à `ADMIN` : `metrics`, `impact-report.csv`, `team`, `users/:id/role`, `audit`, `certificates`, `certificates/:code/revoke`. Un admin peut suspendre un autre admin (action tracée), jamais lui-même ; il ne peut pas générer de lien de réinitialisation pour un autre admin (403 `STAFF_PROTECTED`).
+
+**Vérification et candidatures.**
+
+| Route | Accès | Détail |
+|---|---|---|
+| `GET /verification/me` | 🔒 | `{ requests: VerificationRequest[], mentorProfile: { verificationStatus, isPublished } \| null }` |
+| `POST /verification/mentor` | 🔒 MENTOR, 5/h | `{ message (30–2000), profileUrl? (https) }` ; 409 `VERIFICATION_ALREADY_PENDING`, `ALREADY_VERIFIED`, `MENTOR_PROFILE_REQUIRED` |
+| `POST /verification/mentor-application` | 🔒 MENTEE, 5/h | Corps du profil mentor (comme `PUT /profile/mentor`) + `message` + `profileUrl?` ; le profil est créé **non publié** |
+| `POST /verification/:id/documents` | 🔒 auteur, demande en attente | Multipart `file` : PDF, JPEG, PNG ou WebP, 10 Mo, 3 par demande (409 `TOO_MANY_DOCUMENTS`) |
+| `DELETE /verification/:id` | 🔒 auteur | Retrait d'une demande en attente |
+| `GET /verification/documents/:id` | 🔒 auteur ou admin | Téléchargement (404 pour les autres) |
+| `GET /admin/verifications?status=&kind=` | 🔒 ADMIN | File d'examen (en attente : la plus ancienne d'abord) avec profil, historique en tant que mentoré, justificatifs |
+| `POST /admin/verifications/:id/approve` | 🔒 ADMIN | `{ note? }` ; candidature : le compte devient MENTOR, profil publié et vérifié, demandes en attente annulées ; 409 `USER_HAS_ACTIVE_MENTORING` si un mentorat est en cours en tant que mentoré |
+| `POST /admin/verifications/:id/reject` | 🔒 ADMIN | `{ note }` obligatoire (10 caractères au moins) |
+
+`VerificationRequest = { id, kind: 'MENTOR_VERIFICATION'|'MENTOR_APPLICATION', status: 'PENDING'|'APPROVED'|'REJECTED'|'WITHDRAWN', message, profileUrl, decisionNote, decidedAt, createdAt, documents[] }`. Notifications `VERIFICATION_APPROVED` et `VERIFICATION_REJECTED` ; décisions tracées dans le journal d'audit. La base garantit une seule demande en attente par personne et un motif pour chaque refus. Frontend : section « Vérification du profil » ou « Devenir mentor » dans `/compte`, page `/devenir-mentor`, page `/admin/verifications`.
+
+## Ajouts du 6 novembre 2026 : hors ligne, faible débit et assistance par IA
+
+**Hors ligne** (build de production : le service worker n'est pas actif avec `pnpm dev`).
+- Le cache TanStack Query est écrit dans IndexedDB (`features/offline/cache.ts`), 7 jours au plus : session, profil, tableau de bord, mentorats, messages, objectifs, séances, groupes. Effacé dès qu'il n'y a plus de session.
+- Après la connexion, les 5 dernières conversations et les pages de l'espace connecté sont préchargées, sauf en économie de données.
+- `POST /mentorships/:id/messages` et `POST /groups/:id/messages` acceptent `clientId` (8 à 64 caractères, lettres, chiffres, tiret) : renvoyer le même identifiant renvoie le même message.
+- La file d'envoi (`features/offline/outbox.ts`) ne contient que du texte. Les fichiers exigent le réseau.
+- `lib/connectivity.ts` combine `navigator.onLine` et l'échec réel des requêtes (test de `/health` toutes les 15 s).
+
+**Économie de données** (`lib/data-saver.ts`) : automatique sur 2G ou si le téléphone le demande, réglable dans Mon compte. Actualisations espacées (`poll()`), photos décoratives et de profil masquées, photos de conversation à la demande.
+
+**Assistance par IA** (`modules/ai`, facultative, `OPENAI_API_KEY` dans `backend/.env`). Le score reste calculé par les règles.
+
+| Route | Accès | Détail |
+|---|---|---|
+| `GET /ai/status` | 🔒 | `{ enabled, remainingToday, assistantRemainingToday }` : l'interface masque l'assistant si `enabled` est faux |
+| `POST /ai/assistant` | 🔒, 20/min | `{ question (2–600), history?[{ role: 'user'\|'assistant', content }] (≤12), page? }` → `{ answer, links[{ href, label }] }` : assistant qui répond aux questions sur le fonctionnement de la plateforme (widget « Une question ? » de l'espace connecté). Liens limités aux pages permises au rôle ; le serveur ne conserve pas la conversation |
+| `POST /ai/orientation` | 🔒, 10/min | `{ need (20–1000) }` → `{ summary, domains[{ id, slug, name, reason }], skills[] }` (domaines limités au catalogue) |
+| `POST /ai/mentors/:id/explanation` | 🔒 MENTEE, 20/min | `{ score, reasons[], text, source: 'ai'\|'rules' }` ; sans IA, `text` est nul et les raisons restent (mise en cache 24 h) |
+| `POST /ai/mentorships/:id/path-proposal` | 🔒 participant (mentorat actif), 10/min | `{ focus? (≤300) }` → `{ goals[{ title, description, milestones[] }] }` : rien n'est enregistré, l'interface crée ensuite les objectifs validés via `POST /mentorships/:id/goals` |
+
+Erreurs : 503 `AI_UNAVAILABLE`, 429 `AI_QUOTA_REACHED` (30 appels par personne et 1000 au total par jour, réglables ; l'assistant a son propre quota de 60 questions par personne et par jour, `AI_ASSISTANT_DAILY_LIMIT`). Un refus 429 du fournisseur est réessayé une fois après 1,5 s. Emails, liens et numéros sont retirés des textes libres avant l'envoi ; aucun nom ni message privé n'est transmis.
+
+### Qualité de l'IA : banc d'évaluation (5 novembre)
+
+`pnpm --filter backend ai:eval -- <modèles>` rejoue sur de vrais appels OpenAI 12 besoins types (dont une écriture familière et une tentative de manipulation), les profils de démonstration et 6 mentorats, puis contrôle : domaines attendus, compétences qui trouvent réellement un mentor, vouvoiement, formules creuses, honnêteté des correspondances faibles, premier objectif lié à l'objectif initial, respect de la précision demandée, durée et jetons. Les consignes sont dans `modules/ai/ai.prompts.ts`.
+
+**Assistant** : il ne répond qu'à partir du guide `modules/ai/assistant.knowledge.ts` (texte et liste des pages par rôle). **À mettre à jour à chaque évolution fonctionnelle**, sinon l'assistant décrira l'ancien comportement. `pnpm --filter backend ai:eval-assistant -- gpt-5.4-mini` rejoue 27 questions (trois rôles, hors sujet, tentative de manipulation, suivi de conversation) et contrôle mots attendus, mots interdits et liens : 27/27, environ 2,5 s et 3 800 jetons d'entrée par question.
+
+Résultat : modèle par défaut `gpt-5.4-mini` (effort de raisonnement `low`). Les consignes s'appuient sur les compétences réellement proposées par les mentors, les parcours guidés du domaine et le niveau de correspondance (forte, partielle, faible).
+

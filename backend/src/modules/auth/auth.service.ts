@@ -4,6 +4,7 @@ import { AppConfigService } from '../../config/app-config.service.js';
 import { conflict, isConstraintViolation, unprocessable } from '../../common/errors.js';
 import { generateSessionToken, hashSessionToken } from '../../common/auth/session-token.js';
 import type { AuthUser } from '../../common/auth/auth-user.js';
+import { RealtimeService } from '../realtime/realtime.service.js';
 import { getDummyHash, hashPassword, verifyPassword } from './password.js';
 import type { ChangePasswordDto, LoginDto, RegisterDto } from './auth.dto.js';
 
@@ -17,6 +18,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: AppConfigService,
+    private readonly realtime: RealtimeService,
   ) {}
 
   async register(dto: RegisterDto, userAgent?: string) {
@@ -98,6 +100,7 @@ export class AuthService {
         data: { revokedAt: new Date() },
       }),
     ]);
+    this.realtime.disconnectWhere((u) => u.id === user.id && u.sessionId !== user.sessionId);
     return { revokedSessions: revoked.count };
   }
 
@@ -107,6 +110,7 @@ export class AuthService {
       where: { userId, revokedAt: null },
       data: { revokedAt: new Date() },
     });
+    this.realtime.disconnectWhere((u) => u.id === userId);
     return result.count;
   }
 
@@ -115,6 +119,7 @@ export class AuthService {
       where: { id: sessionId, revokedAt: null },
       data: { revokedAt: new Date() },
     });
+    this.realtime.disconnectWhere((u) => u.sessionId === sessionId);
   }
 
   /** Données de l'utilisateur courant, sans aucun champ sensible. */
@@ -126,6 +131,7 @@ export class AuthService {
         email: true,
         firstName: true,
         lastName: true,
+        avatarUpdatedAt: true,
         role: true,
         timezone: true,
         onboardedAt: true,

@@ -38,3 +38,6 @@ pnpm-debug.log*
 
 # Archives de kit
 *.zip
+
+# Captures et fichiers de travail du skill de design
+.taste-skill/

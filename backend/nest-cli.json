@@ -13,7 +13,8 @@
           "dtoFileNameSuffix": [
             ".dto.ts",
             ".module.ts",
-            "admin-domains.ts"
+            "admin-domains.ts",
+            "privacy.ts"
           ]
         }
       }

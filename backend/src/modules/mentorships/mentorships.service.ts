@@ -5,12 +5,14 @@ import type { Prisma } from '../../generated/prisma/client.js';
 import { conflict } from '../../common/errors.js';
 import { NotificationsService } from '../notifications/notifications.module.js';
 import { MentorshipAccessService } from './mentorship-access.service.js';
+import { issueCertificateIfEligible } from '../certificates/certificates.module.js';
 
 const person = {
   select: {
     id: true,
     firstName: true,
     lastName: true,
+    avatarUpdatedAt: true,
     mentorProfile: { select: { headline: true } },
     menteeProfile: { select: { situation: true, goalsSummary: true } },
   },
@@ -28,10 +30,17 @@ function buildInclude(userId: string, now: Date) {
       select: { id: true, startsAt: true, endsAt: true, status: true },
     },
     goals: { select: { progress: true, status: true } },
+    certificate: { select: { code: true, issuedAt: true } },
     messages: {
       orderBy: { createdAt: 'desc' },
       take: 1,
-      select: { content: true, createdAt: true, senderId: true },
+      select: {
+        content: true,
+        createdAt: true,
+        senderId: true,
+        callId: true,
+        file: { select: { fileName: true, mimeType: true } },
+      },
     },
     _count: { select: { messages: { where: { readAt: null, senderId: { not: userId } } } } },
   } satisfies Prisma.MentorshipInclude;
@@ -86,7 +95,7 @@ export class MentorshipsService {
         where: { id, status: 'ACTIVE' },
         data: { status: 'COMPLETED', endedAt: now, endedById: user.id, endNote: note ?? null },
       });
-      if (updated.count === 0) return false;
+      if (updated.count === 0) return null;
       await tx.mentoringSession.updateMany({
         where: {
           mentorshipId: id,
@@ -95,16 +104,27 @@ export class MentorshipsService {
         },
         data: { status: 'CANCELLED', cancelledAt: now, cancelledBy: user.id },
       });
-      return true;
+      // Certificat d'accompagnement : au moins une séance réalisée (voir certificates.module).
+      return { certificate: await issueCertificateIfEligible(tx, id, now) };
     });
     if (closed) {
       await this.notifications.notify({
         userId: access.counterpartId,
         type: 'MENTORSHIP_COMPLETED',
         title: `${user.firstName} ${user.lastName} a clôturé votre mentorat`,
-        body: note ?? 'Le mentorat reste consultable en lecture seule.',
+        body:
+          note ?? 'Le mentorat reste consultable et vous pouvez continuer à échanger par message.',
         link: `/mentorats/${id}`,
       });
+      if (closed.certificate) {
+        await this.notifications.notify({
+          userId: closed.certificate.mentorId,
+          type: 'CERTIFICATE_ISSUED',
+          title: 'Nouveau certificat d’accompagnement',
+          body: `Accompagnement de ${closed.certificate.menteeName} en ${closed.certificate.domainName} : ${closed.certificate.completedSessions} séance(s) réalisée(s). Il est visible sur votre fiche.`,
+          link: `/certificats/${closed.certificate.code}`,
+        });
+      }
     }
     return this.getOne(user, id);
   }
@@ -133,6 +153,7 @@ export class MentorshipsService {
       averageProgress: avg,
       lastMessage: m.messages[0] ?? null,
       unreadCount: m._count.messages,
+      certificate: m.certificate,
     };
   }
 }

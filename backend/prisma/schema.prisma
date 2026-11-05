@@ -19,12 +19,25 @@ datasource db {
 enum Role {
   MENTEE
   MENTOR
+  /// Équipe de la plateforme : modération, vérification des profils, pilotage, équipe, journal d'audit.
   ADMIN
 }
 
 enum UserStatus {
   ACTIVE
   SUSPENDED
+  /// Compte supprimé à la demande de l'utilisateur : données personnelles anonymisées.
+  DELETED
+}
+
+enum OpportunityType {
+  INTERNSHIP
+  JOB
+  CALL_FOR_PROJECTS
+  SCHOLARSHIP
+  TRAINING
+  EVENT
+  OTHER
 }
 
 enum Modality {
@@ -38,6 +51,19 @@ enum VerificationStatus {
   PENDING
   VERIFIED
   REJECTED
+}
+
+/// Vérification d'un profil mentor existant, ou candidature d'un mentoré pour devenir mentor.
+enum VerificationKind {
+  MENTOR_VERIFICATION
+  MENTOR_APPLICATION
+}
+
+enum VerificationRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  WITHDRAWN
 }
 
 enum MenteeSituation {
@@ -89,6 +115,33 @@ enum NotificationType {
   GOAL_FEEDBACK
   RESOURCE_SHARED
   MENTORSHIP_COMPLETED
+  CERTIFICATE_ISSUED
+  GROUP_ADDED
+  WORKSHOP_SCHEDULED
+  WORKSHOP_CANCELLED
+  VERIFICATION_APPROVED
+  VERIFICATION_REJECTED
+}
+
+/// Réponse d'un membre à l'invitation à un atelier.
+enum WorkshopResponse {
+  GOING
+  NOT_GOING
+}
+
+enum CallKind {
+  AUDIO
+  VIDEO
+}
+
+/// RINGING → ACTIVE → ENDED ; ou RINGING → MISSED (sans réponse), DECLINED, CANCELLED (l'appelant raccroche).
+enum CallStatus {
+  RINGING
+  ACTIVE
+  ENDED
+  MISSED
+  DECLINED
+  CANCELLED
 }
 
 enum GoalStatus {
@@ -100,19 +153,22 @@ enum GoalStatus {
 // ─── Identité & authentification ─────────────────────────────────────────────
 
 model User {
-  id           String     @id @default(cuid())
-  email        String     @unique
-  passwordHash String     @map("password_hash")
-  firstName    String     @map("first_name") @db.VarChar(80)
-  lastName     String     @map("last_name") @db.VarChar(80)
-  role         Role
-  status       UserStatus @default(ACTIVE)
-  timezone     String     @default("Africa/Conakry") @db.VarChar(64)
-  onboardedAt  DateTime?  @map("onboarded_at") @db.Timestamptz(3)
-  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt    DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+  id              String     @id @default(cuid())
+  email           String     @unique
+  passwordHash    String     @map("password_hash")
+  firstName       String     @map("first_name") @db.VarChar(80)
+  lastName        String     @map("last_name") @db.VarChar(80)
+  role            Role
+  status          UserStatus @default(ACTIVE)
+  timezone        String     @default("Africa/Conakry") @db.VarChar(64)
+  onboardedAt     DateTime?  @map("onboarded_at") @db.Timestamptz(3)
+  /// Date de la dernière photo de profil (null = aucune) : sert aussi de clé de cache côté client.
+  avatarUpdatedAt DateTime?  @map("avatar_updated_at") @db.Timestamptz(3)
+  createdAt       DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   sessions      AuthSession[]
+  avatar        UserAvatar?
   mentorProfile MentorProfile?
   menteeProfile MenteeProfile?
 
@@ -131,9 +187,39 @@ model User {
   sessionFeedbacks SessionFeedback[]
   resources        Resource[]
   notifications    Notification[]
+  opportunities    Opportunity[]
+
+  certificatesAsMentor MentorshipCertificate[] @relation("CertificateMentor")
+  certificatesAsMentee MentorshipCertificate[] @relation("CertificateMentee")
+  auditEntries         AuditLog[]
+
+  ownedGroups      MentoringGroup[] @relation("GroupOwner")
+  groupMemberships GroupMember[]
+  groupMessages    GroupMessage[]
+
+  callsMade     Call[] @relation("CallCaller")
+  callsReceived Call[] @relation("CallCallee")
+
+  verificationRequests  VerificationRequest[] @relation("VerificationApplicant")
+  verificationDecisions VerificationRequest[] @relation("VerificationReviewer")
+
+  workshopsCreated    GroupWorkshop[]
+  workshopAttendances WorkshopAttendance[]
+  passwordResets      PasswordResetToken[]
 
   @@index([role, status])
   @@map("users")
+}
+
+/// Photo de profil (recadrée et réduite par le navigateur). Taille et type bornés par des CHECK SQL.
+model UserAvatar {
+  userId    String   @id @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mimeType  String   @map("mime_type") @db.VarChar(32)
+  data      Bytes
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("user_avatars")
 }
 
 /// Session d'authentification opaque : seul le hash SHA-256 du jeton est stocké.
@@ -153,6 +239,24 @@ model AuthSession {
   @@map("auth_sessions")
 }
 
+/// Lien de réinitialisation du mot de passe, à usage unique et de courte durée.
+/// Émis par l'équipe (aucun email n'est envoyé par la plateforme pour l'instant) : seul le hash
+/// HMAC du jeton est stocké, comme pour les sessions.
+model PasswordResetToken {
+  id          String    @id @default(cuid())
+  userId      String    @map("user_id")
+  tokenHash   String    @unique @map("token_hash") @db.Char(64)
+  expiresAt   DateTime  @map("expires_at") @db.Timestamptz(3)
+  usedAt      DateTime? @map("used_at") @db.Timestamptz(3)
+  createdById String?   @map("created_by_id")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("password_reset_tokens")
+}
+
 // ─── Catalogue des domaines (issus des TDR, section 5) ───────────────────────
 
 model ExpertiseDomain {
@@ -167,10 +271,11 @@ model ExpertiseDomain {
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  mentors   MentorDomain[]
-  mentees   MenteeInterest[]
-  requests  MentorshipRequest[]
-  resources Resource[]
+  mentors       MentorDomain[]
+  mentees       MenteeInterest[]
+  requests      MentorshipRequest[]
+  resources     Resource[]
+  opportunities Opportunity[]
 
   @@map("expertise_domains")
 }
@@ -190,7 +295,6 @@ model MentorProfile {
   modalities         Modality[]
   city               String?            @db.VarChar(80)
   sessionDurationMin Int                @default(60) @map("session_duration_min")
-  maxMentees         Int                @default(5) @map("max_mentees")
   verificationStatus VerificationStatus @default(UNVERIFIED) @map("verification_status")
   isPublished        Boolean            @default(true) @map("is_published")
   /// Texte de recherche normalisé (minuscules, sans accents) : titre, expertises, domaines, nom.
@@ -289,17 +393,73 @@ model Mentorship {
   createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  request   MentorshipRequest  @relation(fields: [requestId], references: [id], onDelete: Restrict)
-  mentor    User               @relation("MentorshipMentor", fields: [mentorId], references: [id], onDelete: Cascade)
-  mentee    User               @relation("MentorshipMentee", fields: [menteeId], references: [id], onDelete: Cascade)
-  sessions  MentoringSession[]
-  messages  Message[]
-  goals     Goal[]
-  resources Resource[]
+  request     MentorshipRequest      @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  mentor      User                   @relation("MentorshipMentor", fields: [mentorId], references: [id], onDelete: Cascade)
+  mentee      User                   @relation("MentorshipMentee", fields: [menteeId], references: [id], onDelete: Cascade)
+  sessions    MentoringSession[]
+  messages    Message[]
+  calls       Call[]
+  goals       Goal[]
+  resources   Resource[]
+  certificate MentorshipCertificate?
 
   @@index([mentorId, status])
   @@index([menteeId, status])
   @@map("mentorships")
+}
+
+/// Certificat d'accompagnement délivré au mentor à la clôture d'un mentorat ayant au moins une
+/// séance réalisée. Les chiffres sont figés au moment de la délivrance ; le code permet à
+/// quiconque de vérifier le certificat. Invariants (CHECK SQL) : au moins une séance, dates cohérentes.
+model MentorshipCertificate {
+  id                String    @id @default(cuid())
+  code              String    @unique @db.VarChar(16)
+  mentorshipId      String    @unique @map("mentorship_id")
+  mentorId          String    @map("mentor_id")
+  menteeId          String    @map("mentee_id")
+  /// Nom complet du mentor et prénom + initiale du mentoré (minimisation des données publiques).
+  mentorName        String    @map("mentor_name") @db.VarChar(170)
+  menteeName        String    @map("mentee_name") @db.VarChar(100)
+  domainName        String    @map("domain_name") @db.VarChar(120)
+  startedAt         DateTime  @map("started_at") @db.Timestamptz(3)
+  endedAt           DateTime  @map("ended_at") @db.Timestamptz(3)
+  completedSessions Int       @map("completed_sessions")
+  totalMinutes      Int       @map("total_minutes")
+  goalsCompleted    Int       @map("goals_completed")
+  goalsTotal        Int       @map("goals_total")
+  /// Moyenne des évaluations laissées par le mentoré (null s'il n'a rien évalué).
+  averageRating     Float?    @map("average_rating")
+  issuedAt          DateTime  @default(now()) @map("issued_at") @db.Timestamptz(3)
+  /// Renseignée si le compte du mentor est supprimé : le certificat n'est plus valide.
+  revokedAt         DateTime? @map("revoked_at") @db.Timestamptz(3)
+  /// Motif de la révocation (suppression du compte ou décision de l'équipe).
+  revokedReason     String?   @map("revoked_reason") @db.VarChar(300)
+
+  mentorship Mentorship @relation(fields: [mentorshipId], references: [id], onDelete: Cascade)
+  mentor     User       @relation("CertificateMentor", fields: [mentorId], references: [id], onDelete: Cascade)
+  mentee     User       @relation("CertificateMentee", fields: [menteeId], references: [id], onDelete: Cascade)
+
+  @@index([mentorId, issuedAt])
+  @@map("mentorship_certificates")
+}
+
+/// Journal d'audit des actions de l'équipe (modération, rôles, certificats). Jamais le contenu des conversations.
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?  @map("actor_id")
+  /// Nom de l'auteur au moment de l'action (conservé si le compte disparaît).
+  actorName  String   @map("actor_name") @db.VarChar(170)
+  action     String   @db.VarChar(60)
+  targetType String   @map("target_type") @db.VarChar(40)
+  targetId   String?  @map("target_id")
+  summary    String   @db.VarChar(300)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([action, createdAt])
+  @@map("audit_logs")
 }
 
 // ─── Disponibilités & séances ────────────────────────────────────────────────
@@ -386,16 +546,34 @@ model Resource {
   title        String       @db.VarChar(160)
   description  String?      @db.VarChar(2000)
   url          String?      @db.VarChar(500)
+  /// Vrai si un document est joint (ResourceFile) : permet la contrainte « lien, texte ou document ».
+  hasFile      Boolean      @default(false) @map("has_file")
   createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt    DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   author     User             @relation(fields: [authorId], references: [id], onDelete: Cascade)
   mentorship Mentorship?      @relation(fields: [mentorshipId], references: [id], onDelete: Cascade)
   domain     ExpertiseDomain? @relation(fields: [domainId], references: [id], onDelete: SetNull)
+  file       ResourceFile?
 
   @@index([mentorshipId, createdAt])
   @@index([domainId, createdAt])
   @@map("resources")
+}
+
+/// Document joint à une ressource (PDF, Word, Excel, PowerPoint, image, texte), 10 Mo au plus.
+/// Stocké à part pour que les listes de ressources restent légères. Type et taille bornés par des CHECK SQL.
+model ResourceFile {
+  resourceId String   @id @map("resource_id")
+  fileName   String   @map("file_name") @db.VarChar(200)
+  mimeType   String   @map("mime_type") @db.VarChar(120)
+  size       Int
+  data       Bytes
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  resource Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@map("resource_files")
 }
 
 /// Notification in-app : uniquement des événements réels ; lien relatif vers l'écran concerné.
@@ -415,6 +593,33 @@ model Notification {
   @@map("notifications")
 }
 
+/// Opportunité professionnelle ou entrepreneuriale (TDR §7.2), publiée par un mentor ou un admin.
+/// L'archivage (archivedAt) la retire de la liste publique sans perdre l'historique.
+model Opportunity {
+  id           String          @id @default(cuid())
+  authorId     String          @map("author_id")
+  domainId     String?         @map("domain_id")
+  type         OpportunityType
+  title        String          @db.VarChar(160)
+  organization String          @db.VarChar(120)
+  description  String          @db.VarChar(3000)
+  location     String?         @db.VarChar(120)
+  isRemote     Boolean         @default(false) @map("is_remote")
+  url          String?         @db.VarChar(500)
+  deadline     DateTime?       @db.Timestamptz(3)
+  archivedAt   DateTime?       @map("archived_at") @db.Timestamptz(3)
+  createdAt    DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  author User             @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  domain ExpertiseDomain? @relation(fields: [domainId], references: [id], onDelete: SetNull)
+
+  @@index([archivedAt, deadline])
+  @@index([type, createdAt])
+  @@index([domainId])
+  @@map("opportunities")
+}
+
 // ─── Échanges ────────────────────────────────────────────────────────────────
 
 /// La conversation est portée par le mentorat : seuls ses deux participants y accèdent.
@@ -422,15 +627,219 @@ model Message {
   id           String    @id @default(cuid())
   mentorshipId String    @map("mentorship_id")
   senderId     String    @map("sender_id")
+  /// Vide si le message ne porte qu'une pièce jointe ou un compte rendu d'appel.
   content      String
+  /// Vrai si une pièce jointe est stockée dans message_files.
+  hasFile      Boolean   @default(false) @map("has_file")
+  /// Identifiant choisi par le navigateur : un message renvoyé après une coupure n'est pas dupliqué.
+  clientId     String?   @map("client_id") @db.VarChar(64)
+  /// Compte rendu d'appel (« Appel vidéo · 3 min », « Appel manqué ») inscrit dans le fil.
+  callId       String?   @unique @map("call_id")
   readAt       DateTime? @map("read_at") @db.Timestamptz(3)
   createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
 
-  mentorship Mentorship @relation(fields: [mentorshipId], references: [id], onDelete: Cascade)
-  sender     User       @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  mentorship Mentorship   @relation(fields: [mentorshipId], references: [id], onDelete: Cascade)
+  sender     User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  file       MessageFile?
+  call       Call?        @relation(fields: [callId], references: [id], onDelete: SetNull)
 
+  @@unique([senderId, clientId])
   @@index([mentorshipId, createdAt])
   @@map("messages")
+}
+
+/// Pièce jointe d'un message privé (mêmes formats et limites que les documents des ressources).
+model MessageFile {
+  messageId String   @id @map("message_id")
+  fileName  String   @map("file_name") @db.VarChar(200)
+  mimeType  String   @map("mime_type") @db.VarChar(120)
+  size      Int
+  data      Bytes
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@map("message_files")
+}
+
+/// Appel audio ou vidéo entre les deux participants d'un mentorat (WebRTC pair à pair).
+/// Seule la trace de l'appel est conservée : aucun flux audio ou vidéo ne transite par le serveur.
+model Call {
+  id           String     @id @default(cuid())
+  mentorshipId String     @map("mentorship_id")
+  callerId     String     @map("caller_id")
+  calleeId     String     @map("callee_id")
+  kind         CallKind
+  status       CallStatus @default(RINGING)
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  answeredAt   DateTime?  @map("answered_at") @db.Timestamptz(3)
+  endedAt      DateTime?  @map("ended_at") @db.Timestamptz(3)
+
+  mentorship Mentorship @relation(fields: [mentorshipId], references: [id], onDelete: Cascade)
+  caller     User       @relation("CallCaller", fields: [callerId], references: [id], onDelete: Cascade)
+  callee     User       @relation("CallCallee", fields: [calleeId], references: [id], onDelete: Cascade)
+  message    Message?
+
+  @@index([mentorshipId, createdAt])
+  @@index([callerId, status])
+  @@index([calleeId, status])
+  @@map("calls")
+}
+
+// ─── Groupes d'accompagnement ───────────────────────────────────────────────
+
+/// Groupe créé par un mentor pour accompagner plusieurs personnes ensemble (mentorés et mentors).
+/// Le créateur en est aussi membre (ligne GroupMember) : l'accès se vérifie par l'appartenance.
+model MentoringGroup {
+  id          String   @id @default(cuid())
+  ownerId     String   @map("owner_id")
+  name        String   @db.VarChar(80)
+  description String?  @db.VarChar(500)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  owner     User            @relation("GroupOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members   GroupMember[]
+  messages  GroupMessage[]
+  workshops GroupWorkshop[]
+
+  @@index([ownerId])
+  @@map("mentoring_groups")
+}
+
+model GroupMember {
+  groupId    String    @map("group_id")
+  userId     String    @map("user_id")
+  joinedAt   DateTime  @default(now()) @map("joined_at") @db.Timestamptz(3)
+  /// Dernière lecture du fil : les messages postérieurs (des autres) sont non lus.
+  lastReadAt DateTime? @map("last_read_at") @db.Timestamptz(3)
+
+  group MentoringGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([groupId, userId])
+  @@index([userId])
+  @@map("group_members")
+}
+
+model GroupMessage {
+  id        String   @id @default(cuid())
+  groupId   String   @map("group_id")
+  senderId  String   @map("sender_id")
+  /// Vide si le message ne porte qu'une pièce jointe.
+  content   String
+  hasFile   Boolean  @default(false) @map("has_file")
+  /// Identifiant choisi par le navigateur : un message renvoyé après une coupure n'est pas dupliqué.
+  clientId  String?  @map("client_id") @db.VarChar(64)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  group  MentoringGroup    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  sender User              @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  file   GroupMessageFile?
+
+  @@unique([senderId, clientId])
+  @@index([groupId, createdAt])
+  @@map("group_messages")
+}
+
+/// Pièce jointe d'un message de groupe.
+model GroupMessageFile {
+  groupMessageId String   @id @map("group_message_id")
+  fileName       String   @map("file_name") @db.VarChar(200)
+  mimeType       String   @map("mime_type") @db.VarChar(120)
+  size           Int
+  data           Bytes
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  message GroupMessage @relation(fields: [groupMessageId], references: [id], onDelete: Cascade)
+
+  @@map("group_message_files")
+}
+
+/// Atelier thématique (TDR, étape 4) : séance planifiée par le mentor responsable d'un groupe,
+/// ouverte à tous ses membres. Annulation par cancelledAt (l'historique est conservé).
+/// Invariants (CHECK SQL) : fin après le début, durée de 15 min à 4 h.
+model GroupWorkshop {
+  id          String    @id @default(cuid())
+  groupId     String    @map("group_id")
+  createdById String    @map("created_by_id")
+  title       String    @db.VarChar(160)
+  description String?   @db.VarChar(2000)
+  startsAt    DateTime  @map("starts_at") @db.Timestamptz(3)
+  endsAt      DateTime  @map("ends_at") @db.Timestamptz(3)
+  modality    Modality  @default(REMOTE)
+  meetingUrl  String?   @map("meeting_url") @db.VarChar(500)
+  location    String?   @db.VarChar(200)
+  cancelledAt DateTime? @map("cancelled_at") @db.Timestamptz(3)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  group       MentoringGroup       @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  createdBy   User                 @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  attendances WorkshopAttendance[]
+
+  @@index([groupId, startsAt])
+  @@index([createdById, startsAt])
+  @@map("group_workshops")
+}
+
+/// Réponse d'un membre du groupe (« je participe » ou non) : une par personne et par atelier.
+model WorkshopAttendance {
+  workshopId  String           @map("workshop_id")
+  userId      String           @map("user_id")
+  response    WorkshopResponse
+  respondedAt DateTime         @default(now()) @map("responded_at") @db.Timestamptz(3)
+
+  workshop GroupWorkshop @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([workshopId, userId])
+  @@index([userId])
+  @@map("workshop_attendances")
+}
+
+// ─── Vérification des profils ───────────────────────────────────────────────
+
+/// Demande examinée par l'équipe : justificatifs privés (la personne et les administrateurs seulement).
+model VerificationRequest {
+  id           String                    @id @default(cuid())
+  userId       String                    @map("user_id")
+  kind         VerificationKind
+  status       VerificationRequestStatus @default(PENDING)
+  /// Présentation du parcours ou motivation (candidature).
+  message      String                    @db.VarChar(2000)
+  /// Profil professionnel public (LinkedIn ou équivalent), facultatif.
+  profileUrl   String?                   @map("profile_url") @db.VarChar(300)
+  /// Motif de la décision (obligatoire en cas de refus), communiqué à la personne.
+  decisionNote String?                   @map("decision_note") @db.VarChar(1000)
+  decidedById  String?                   @map("decided_by_id")
+  decidedAt    DateTime?                 @map("decided_at") @db.Timestamptz(3)
+  createdAt    DateTime                  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user      User                   @relation("VerificationApplicant", fields: [userId], references: [id], onDelete: Cascade)
+  decidedBy User?                  @relation("VerificationReviewer", fields: [decidedById], references: [id], onDelete: SetNull)
+  documents VerificationDocument[]
+
+  @@index([status, createdAt])
+  @@index([userId, createdAt])
+  @@map("verification_requests")
+}
+
+/// Justificatif (diplôme, attestation, certificat) : PDF ou image, 10 Mo au plus, 3 par demande.
+model VerificationDocument {
+  id        String   @id @default(cuid())
+  requestId String   @map("request_id")
+  fileName  String   @map("file_name") @db.VarChar(200)
+  mimeType  String   @map("mime_type") @db.VarChar(120)
+  size      Int
+  data      Bytes
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  request VerificationRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
+  @@map("verification_documents")
 }
 
 // ─── Objectifs & progression ────────────────────────────────────────────────

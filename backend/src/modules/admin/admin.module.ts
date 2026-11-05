@@ -1,11 +1,12 @@
 import { Body, Controller, Get, Injectable, Module, Param, Patch, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { IsBoolean, IsEnum, IsOptional } from 'class-validator';
+import { IsBoolean, IsEnum, IsIn, IsOptional } from 'class-validator';
 import { PrismaService } from '../../database/prisma.service.js';
 import { CurrentUser, Roles } from '../../common/auth/decorators.js';
 import type { AuthUser } from '../../common/auth/auth-user.js';
-import { forbidden, notFound } from '../../common/errors.js';
+import { conflict, forbidden, notFound } from '../../common/errors.js';
 import { Role, UserStatus, VerificationStatus } from '../../generated/prisma/enums.js';
+import { recordAudit } from '../../common/audit.js';
 import { AdminDomainsController, AdminDomainsService } from './admin-domains.js';
 
 export class AdminUsersQuery {
@@ -15,8 +16,9 @@ export class AdminUsersQuery {
 }
 
 export class UpdateUserStatusDto {
-  @IsEnum(UserStatus)
-  status!: UserStatus;
+  /** DELETED n'est pas attribuable ici : seule la personne peut supprimer son compte. */
+  @IsIn(['ACTIVE', 'SUSPENDED'], { message: 'Statut attendu : ACTIVE ou SUSPENDED.' })
+  status!: Extract<UserStatus, 'ACTIVE' | 'SUSPENDED'>;
 }
 
 /**
@@ -43,9 +45,8 @@ export class AdminService {
         this.prisma.user.count(),
         this.prisma.user.count({ where: { role: 'MENTOR' } }),
         this.prisma.user.count({ where: { role: 'MENTEE' } }),
-        this.prisma.mentorProfile.count({
-          where: { verificationStatus: { in: ['UNVERIFIED', 'PENDING'] } },
-        }),
+        // Demandes de vérification et candidatures de mentor en attente de décision.
+        this.prisma.verificationRequest.count({ where: { status: 'PENDING' } }),
         this.prisma.mentorshipRequest.groupBy({ by: ['status'], _count: { _all: true } }),
         this.prisma.mentorship.count({ where: { status: 'ACTIVE' } }),
         this.prisma.mentoringSession.groupBy({ by: ['status'], _count: { _all: true } }),
@@ -71,6 +72,7 @@ export class AdminService {
         email: true,
         firstName: true,
         lastName: true,
+        avatarUpdatedAt: true,
         role: true,
         status: true,
         createdAt: true,
@@ -85,9 +87,24 @@ export class AdminService {
   async updateStatus(admin: AuthUser, userId: string, dto: UpdateUserStatusDto) {
     if (userId === admin.id)
       throw forbidden('SELF_MODERATION', 'Vous ne pouvez pas modifier votre propre statut.');
-    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, status: true, role: true, firstName: true, lastName: true },
+    });
     if (!user) throw notFound('USER_NOT_FOUND', 'Utilisateur introuvable.');
+    if (user.status === 'DELETED') {
+      throw conflict(
+        'ACCOUNT_DELETED',
+        'Ce compte a été supprimé par son titulaire : il ne peut pas être réactivé.',
+      );
+    }
     const updated = await this.prisma.$transaction(async (tx) => {
+      await recordAudit(tx, admin, {
+        action: dto.status === 'SUSPENDED' ? 'USER_SUSPENDED' : 'USER_REACTIVATED',
+        targetType: 'USER',
+        targetId: userId,
+        summary: `${user.firstName} ${user.lastName} : compte ${dto.status === 'SUSPENDED' ? 'suspendu' : 'réactivé'}`,
+      });
       const u = await tx.user.update({
         where: { id: userId },
         data: { status: dto.status },
@@ -105,12 +122,22 @@ export class AdminService {
     return updated;
   }
 
-  async moderateMentor(userId: string, dto: UpdateMentorModerationDto) {
+  async moderateMentor(admin: AuthUser, userId: string, dto: UpdateMentorModerationDto) {
     const profile = await this.prisma.mentorProfile.findUnique({
       where: { userId },
-      select: { id: true },
+      select: { id: true, user: { select: { firstName: true, lastName: true } } },
     });
     if (!profile) throw notFound('MENTOR_NOT_FOUND', 'Profil mentor introuvable.');
+    const changes = [
+      dto.verificationStatus && `vérification : ${dto.verificationStatus}`,
+      dto.isPublished !== undefined && (dto.isPublished ? 'publié' : 'retiré de l’annuaire'),
+    ].filter(Boolean);
+    await recordAudit(this.prisma, admin, {
+      action: 'MENTOR_MODERATED',
+      targetType: 'MENTOR',
+      targetId: userId,
+      summary: `${profile.user.firstName} ${profile.user.lastName} : ${changes.join(', ') || 'aucun changement'}`,
+    });
     return this.prisma.mentorProfile.update({
       where: { userId },
       data: { verificationStatus: dto.verificationStatus, isPublished: dto.isPublished },
@@ -145,8 +172,12 @@ export class AdminController {
   }
 
   @Patch('mentors/:id')
-  moderateMentor(@Param('id') id: string, @Body() dto: UpdateMentorModerationDto) {
-    return this.admin.moderateMentor(id, dto);
+  moderateMentor(
+    @CurrentUser() admin: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: UpdateMentorModerationDto,
+  ) {
+    return this.admin.moderateMentor(admin, id, dto);
   }
 }
 

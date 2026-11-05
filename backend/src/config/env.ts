@@ -11,6 +11,30 @@ export interface AppEnv {
   SESSION_TTL_HOURS: number;
   SESSION_SECRET: string;
   SWAGGER_ENABLED: boolean;
+  /**
+   * Proxys de confiance pour retrouver l'IP réelle (limites de débit) : `loopback` quand seul
+   * Next.js est devant l'API, un nombre de sauts derrière un hébergeur (Render : 1).
+   */
+  TRUST_PROXY: string | number;
+  /** Base des liens de visio générés à la confirmation (vide = désactivé). */
+  MEETING_BASE_URL: string;
+  /** Serveurs STUN pour les appels WebRTC (vide : candidats locaux seulement, suffisant sur un même réseau). */
+  STUN_URLS: string[];
+  /** Serveurs TURN (relais coturn) : indispensables derrière les NAT des réseaux mobiles. */
+  TURN_URLS: string[];
+  /** Secret partagé avec coturn (use-auth-secret) : identifiants TURN temporaires par utilisateur. */
+  TURN_SECRET: string;
+  /** Clé OpenAI (vide : l'assistance par IA est désactivée, tout le reste fonctionne). */
+  OPENAI_API_KEY: string;
+  OPENAI_MODEL: string;
+  OPENAI_BASE_URL: string;
+  /** Effort de raisonnement des modèles GPT-5 (ignoré par les autres modèles). */
+  OPENAI_REASONING_EFFORT: string;
+  /** Garde-fous de coût : nombre d'appels par personne et au total, par jour. */
+  AI_USER_DAILY_LIMIT: number;
+  AI_GLOBAL_DAILY_LIMIT: number;
+  /** Questions à l'assistant par personne et par jour. */
+  AI_ASSISTANT_DAILY_LIMIT: number;
 }
 
 export function validateEnv(raw: Record<string, unknown>): AppEnv {
@@ -46,6 +70,46 @@ export function validateEnv(raw: Record<string, unknown>): AppEnv {
     .map((o) => o.trim())
     .filter(Boolean);
 
+  const meetingBase = (
+    typeof raw.MEETING_BASE_URL === 'string' ? raw.MEETING_BASE_URL : 'https://meet.jit.si'
+  )
+    .trim()
+    .replace(/\/+$/, '');
+  if (meetingBase && !/^https:\/\/[^\s/]+/.test(meetingBase)) {
+    errors.push('MEETING_BASE_URL doit être une URL https (ou vide pour désactiver)');
+  }
+
+  const list = (key: string) =>
+    (typeof raw[key] === 'string' ? (raw[key] as string) : '')
+      .split(',')
+      .map((v) => v.trim())
+      .filter(Boolean);
+  const stunUrls = list('STUN_URLS');
+  const turnUrls = list('TURN_URLS');
+  for (const url of stunUrls) {
+    if (!/^stuns?:/.test(url))
+      errors.push(`STUN_URLS : « ${url} » doit commencer par stun: ou stuns:`);
+  }
+  for (const url of turnUrls) {
+    if (!/^turns?:/.test(url))
+      errors.push(`TURN_URLS : « ${url} » doit commencer par turn: ou turns:`);
+  }
+  const turnSecret = typeof raw.TURN_SECRET === 'string' ? raw.TURN_SECRET.trim() : '';
+  if (turnUrls.length > 0 && turnSecret.length < 16) {
+    errors.push('TURN_SECRET (16 caractères au moins) est obligatoire avec TURN_URLS');
+  }
+
+  const positive = (key: string, fallback: number) => {
+    const value = Number(raw[key] ?? fallback);
+    if (!Number.isInteger(value) || value <= 0) errors.push(`${key} doit être un entier positif`);
+    return value;
+  };
+  const trustRaw = str('TRUST_PROXY', 'loopback');
+  const trustProxy = /^\d+$/.test(trustRaw) ? Number(trustRaw) : trustRaw;
+
+  const openAiBase = str('OPENAI_BASE_URL', 'https://api.openai.com/v1').replace(/\/+$/, '');
+  if (!/^https?:\/\//.test(openAiBase)) errors.push('OPENAI_BASE_URL doit être une URL');
+
   const env: AppEnv = {
     NODE_ENV: nodeEnv as AppEnv['NODE_ENV'],
     PORT: port,
@@ -55,6 +119,18 @@ export function validateEnv(raw: Record<string, unknown>): AppEnv {
     SESSION_TTL_HOURS: ttl,
     SESSION_SECRET: secret,
     SWAGGER_ENABLED: str('SWAGGER_ENABLED', nodeEnv === 'production' ? 'false' : 'true') === 'true',
+    TRUST_PROXY: trustProxy,
+    MEETING_BASE_URL: meetingBase,
+    STUN_URLS: stunUrls,
+    TURN_URLS: turnUrls,
+    TURN_SECRET: turnSecret,
+    OPENAI_API_KEY: typeof raw.OPENAI_API_KEY === 'string' ? raw.OPENAI_API_KEY.trim() : '',
+    OPENAI_MODEL: str('OPENAI_MODEL', 'gpt-5.4-mini'),
+    OPENAI_BASE_URL: openAiBase,
+    OPENAI_REASONING_EFFORT: str('OPENAI_REASONING_EFFORT', 'low'),
+    AI_USER_DAILY_LIMIT: positive('AI_USER_DAILY_LIMIT', 30),
+    AI_GLOBAL_DAILY_LIMIT: positive('AI_GLOBAL_DAILY_LIMIT', 1000),
+    AI_ASSISTANT_DAILY_LIMIT: positive('AI_ASSISTANT_DAILY_LIMIT', 60),
   };
 
   if (errors.length > 0) {

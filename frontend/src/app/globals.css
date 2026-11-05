@@ -1,26 +1,338 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/*
+ * Système de design — Talents Connectés
+ * Direction « Le rapport imprimé » : un catalogue éditorial (le programme est né au Salon du livre
+ * de jeunesse de Conakry). Une famille (Schibsted Grotesk), encre bleue, papier, aplats turquoise.
+ * Règles : pas de dégradés, pas d'ombres au repos, pas de verre, formes nettes (rayon 2–4 px),
+ * séparation des surfaces par un pas de ton plutôt que par des filets.
+ */
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+@theme {
+  /* Palette « forêt et latérite » : vert profond, terre cuite, safran, ivoire (contrastes AA vérifiés) */
+  /* Les noms historiques sont conservés : ink = vert forêt, teal = terre cuite, amber = safran. */
+  --color-ink-950: #0b201a;
+  --color-ink-900: #12342a;
+  --color-ink-800: #1a4335;
+  --color-ink-700: #245343;
+  --color-ink-100: #dbe7e1;
+  --color-ink-50: #edf3ef;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  --color-teal-800: #8a3418;
+  --color-teal-700: #a8401d;
+  --color-teal-600: #c0502a;
+  --color-teal-500: #d8683d;
+  --color-teal-200: #f0c4af;
+  --color-teal-100: #f7dccf;
+  --color-teal-50: #fcefe8;
+
+  --color-amber-500: #d4922a;
+  --color-amber-400: #e9ae48;
+  --color-amber-100: #f8e5c0;
+  --color-amber-50: #fcf4e1;
+
+  --color-success-700: #15803d;
+  --color-success-50: #ecf8f0;
+  --color-warning-700: #b45309;
+  --color-warning-50: #fef5e7;
+  --color-danger-700: #b91c1c;
+  --color-danger-50: #fdeeee;
+
+  /* Tokens sémantiques */
+  --color-background: #f7f3ec; /* ivoire */
+  --color-surface: #ffffff;
+  --color-surface-muted: #f0eae0;
+  --color-border: #e7dfd2;
+  --color-border-strong: #d2c7b6;
+  --color-foreground: #13251f;
+  --color-muted-foreground: #5b675f;
+  --color-primary: var(--color-ink-900);
+  --color-primary-hover: var(--color-ink-700);
+  --color-primary-foreground: #ffffff;
+  --color-accent: var(--color-teal-700);
+  --color-accent-hover: var(--color-teal-800);
+  --color-accent-foreground: #ffffff;
+  --color-accent-soft: var(--color-teal-50);
+  --color-highlight: var(--color-amber-400);
+  --color-highlight-foreground: #13251f;
+  --color-ring: var(--color-teal-600);
+  --color-destructive: var(--color-danger-700);
+
+  /* Typographie : Lexend pour les titres, Schibsted Grotesk pour le texte */
+  --font-sans: var(--font-schibsted), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-lexend), var(--font-schibsted), ui-sans-serif, sans-serif;
+
+  /* Rayons : doux et généreux */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-2xl: 24px;
+
+  /* Ombres : seulement ce qui flotte réellement (menus, dialogues) */
+  --shadow-card: 0 1px 2px rgb(11 32 26 / 0.04), 0 4px 16px rgb(11 32 26 / 0.04);
+  --shadow-raised: 0 14px 36px rgb(11 32 26 / 0.14);
+  --shadow-focus: 0 0 0 3px rgb(192 80 42 / 0.22);
+
+  /* Mouvement */
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out-quart: cubic-bezier(0.76, 0, 0.24, 1);
+  --ease-photo: cubic-bezier(0.33, 1, 0.68, 1);
+
+  --animate-fade-in: fade-in 180ms var(--ease-out-soft);
+  --animate-scale-in: scale-in 180ms var(--ease-out-soft);
+  --animate-slide-up: slide-up 220ms var(--ease-out-soft);
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes scale-in {
+    from {
+      opacity: 0;
+      transform: scale(0.97);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  @keyframes slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+:root {
+  /* Échelle typographique éditoriale (cinq pas) */
+  --step-small: clamp(0.8125rem, 0.79rem + 0.1vw, 0.875rem);
+  --step-body: clamp(1.0625rem, 1rem + 0.25vw, 1.1875rem);
+  --step-lead: clamp(1.25rem, 1.1rem + 0.7vw, 1.625rem);
+  --step-head: clamp(2.25rem, 1.3rem + 3.4vw, 4.25rem);
+  --step-display: clamp(3.5rem, 1rem + 8.4vw, 9rem);
+  /* Marges de page et axe éditorial à 42 % */
+  --page-x: clamp(1.25rem, 4vw, 3rem);
+  --axis: 42%;
+  --t-press: 140ms;
+  --t-hover: 180ms;
+  --t-ui: 240ms;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+  body {
+    background: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    letter-spacing: -0.01em;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    text-wrap: balance;
+    letter-spacing: -0.03em;
+  }
+  p {
+    text-wrap: pretty;
+  }
+  :where(.grid) > * {
+    min-width: 0;
+  }
+  ::selection {
+    background: var(--color-teal-200);
+    color: var(--color-ink-950);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']),
+  a[href],
+  label[for],
+  select {
+    cursor: pointer;
+  }
+}
+
+@layer components {
+  /* Cadre de page : une paire de marges identique partout */
+  .page-frame {
+    padding-inline: var(--page-x);
+  }
+
+  /* Traitement photo unique : noir et blanc contrasté, comme un catalogue imprimé */
+  .photo {
+    filter: contrast(1.04) saturate(1.05);
+  }
+  .photo-mono {
+    filter: grayscale(1) contrast(1.08);
+  }
+
+  /* Bouton à coin coupé (signature visuelle des actions principales) */
+  .notch {
+    clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%);
+  }
+  /* Panneau incrusté à bord oblique (recherche du hero) */
+  .cut-panel {
+    clip-path: polygon(56px 0, 100% 0, 100% 100%, 0 100%);
+  }
+  @media (max-width: 1023px) {
+    .cut-panel {
+      clip-path: none;
+    }
+  }
+
+  /* Titre à lignes masquées (signature) */
+  .lines .line {
+    display: block;
+    overflow: hidden;
+    padding-bottom: 0.1em;
+    margin-bottom: -0.1em;
+  }
+  .lines [data-line] {
+    display: block;
+  }
+
+  /* Lien éditorial : soulignement qui apparaît au survol */
+  .ed-link {
+    text-decoration: underline;
+    text-decoration-color: transparent;
+    text-underline-offset: 0.22em;
+    text-decoration-thickness: 0.08em;
+    transition: text-decoration-color var(--t-hover) ease;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .ed-link:hover {
+      text-decoration-color: currentColor;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .js .lines [data-line] {
+    transform: translateY(108%);
+    animation: line-up 900ms var(--ease-expo) forwards;
+    animation-delay: calc(var(--i, 0) * 110ms + 120ms);
+  }
+  .js [data-after-lines] {
+    opacity: 0;
+    transform: translateY(14px);
+    animation: rise-in 700ms var(--ease-expo) 520ms forwards;
+  }
+
+  /* Entrée des éléments d'une section, une fois, en cascade */
+  .js [data-reveal] {
+    opacity: 0;
+    transform: translateY(24px);
+    transition:
+      opacity 700ms var(--ease-expo),
+      transform 900ms var(--ease-expo);
+    transition-delay: calc(var(--d, 0) * 80ms);
+  }
+  .js [data-reveal].is-in {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* Ouverture d'une image (volet) */
+  .js .shutter {
+    clip-path: inset(0 0 100% 0);
+    transition: clip-path 1100ms var(--ease-in-out-quart);
+  }
+  .js .shutter img {
+    transform: scale(1.12);
+    transition: transform 1600ms var(--ease-photo);
+  }
+  .js .shutter.is-in {
+    clip-path: inset(0);
+  }
+  .js .shutter.is-in img {
+    transform: none;
+  }
+
+  /* Image qui dérive lentement (photo vivante) */
+  .drift {
+    animation: drift 22s var(--ease-photo) infinite alternate;
+  }
+}
+
+@keyframes slide-progress {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+@keyframes line-up {
+  to {
+    transform: none;
+  }
+}
+@keyframes rise-in {
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes drift {
+  from {
+    transform: scale(1.04) translate3d(0, 0, 0);
+  }
+  to {
+    transform: scale(1.12) translate3d(-1.5%, -1%, 0);
+  }
+}
+
+@layer utilities {
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border-strong) transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@layer components {
+  /* Motif de losanges, en surimpression sur les aplats vert forêt. */
+  .pattern-kente {
+    background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'48'%20height%3D'48'%20fill%3D'none'%20stroke%3D'white'%20stroke-width%3D'1.5'%3E%3Cpath%20d%3D'M24%204%2044%2024%2024%2044%204%2024Z'%2F%3E%3Cpath%20d%3D'M24%2014%2034%2024%2024%2034%2014%2024Z'%2F%3E%3Cpath%20d%3D'M0%200h6M42%200h6M0%2048h6M42%2048h6'%2F%3E%3C%2Fsvg%3E");
+    background-size: 48px 48px;
+  }
+}
+
+/* Économie de données : les photos décoratives ne sont pas chargées, leur fond reste. */
+html[data-saver] img.photo {
+  display: none;
 }

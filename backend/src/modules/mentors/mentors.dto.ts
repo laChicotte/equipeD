@@ -6,7 +6,9 @@ import {
   IsOptional,
   IsString,
   MaxLength,
+  IsIn,
 } from 'class-validator';
+import { MENTOR_SORTS, type MentorSort } from './ranking.js';
 import { Modality } from '../../generated/prisma/enums.js';
 import { PaginationQuery } from '../../common/pagination.js';
 
@@ -40,6 +42,11 @@ export class ListMentorsQuery extends PaginationQuery {
   @IsOptional()
   @IsBooleanString()
   available?: string;
+
+  /** Ordre : pertinence (défaut), expérience, disponibilité ou note. Voir ranking.ts. */
+  @IsOptional()
+  @IsIn(MENTOR_SORTS, { message: 'Tri attendu : relevance, experience, availability ou rating.' })
+  sort: MentorSort = 'relevance';
 }
 
 export class AvailabilityRangeQuery {

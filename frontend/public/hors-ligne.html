@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#12342a" />
+    <title>Hors ligne · Talents Connectés</title>
+    <style>
+      :root { color-scheme: light; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: #ffffff;
+        color: #12342a;
+        font: 16px/1.5 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      }
+      main { max-width: 26rem; padding: 2rem; text-align: center; }
+      img { width: 64px; height: 64px; }
+      h1 { font-size: 1.5rem; margin: 1.25rem 0 0.5rem; }
+      p { color: #3d5a4f; margin: 0 0 1.5rem; }
+      button {
+        min-height: 44px;
+        padding: 0 1.25rem;
+        border: 0;
+        border-radius: 999px;
+        background: #12342a;
+        color: #fff;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button:focus-visible { outline: 2px solid #a8401d; outline-offset: 2px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img src="/icons/icon-192.png" alt="" />
+      <h1>Vous êtes hors ligne</h1>
+      <p>
+        Cette page n’est pas disponible sans réseau. Vos messages et vos séances déjà consultés
+        restent lisibles : <a href="/messages">ouvrir la messagerie</a> ou
+        <a href="/seances">mes séances</a>.
+      </p>
+      <button type="button" onclick="location.reload()">Réessayer</button>
+    </main>
+  </body>
+</html>

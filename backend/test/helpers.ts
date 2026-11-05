@@ -88,10 +88,7 @@ export async function createMentee(
 }
 
 /** Nouveau mentor inscrit via l'API, avec profil publié. */
-export async function createMentor(
-  app: INestApplication,
-  opts: { maxMentees?: number } = {},
-): Promise<TestUser> {
+export async function createMentor(app: INestApplication): Promise<TestUser> {
   const email = uniqueEmail('mentor');
   const agent = request.agent(app.getHttpServer());
   await agent
@@ -109,7 +106,6 @@ export async function createMentor(
       modalities: ['REMOTE'],
       domainIds: await domainIds(app, ['numerique-technologies']),
       sessionDurationMin: 60,
-      maxMentees: opts.maxMentees ?? 5,
     })
     .expect(200);
   const me = await agent.get(`${API}/auth/me`).expect(200);

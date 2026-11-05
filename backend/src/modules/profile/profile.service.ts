@@ -46,6 +46,7 @@ export class ProfileService {
         email: true,
         firstName: true,
         lastName: true,
+        avatarUpdatedAt: true,
         role: true,
         timezone: true,
         onboardedAt: true,
@@ -92,7 +93,7 @@ export class ProfileService {
     const updated = await this.prisma.user.update({
       where: { id: user.id },
       data: { firstName: dto.firstName, lastName: dto.lastName, timezone: dto.timezone },
-      select: { firstName: true, lastName: true },
+      select: { firstName: true, lastName: true, avatarUpdatedAt: true },
     });
     // Le nom fait partie du texte de recherche de l'annuaire : on le recalcule pour un mentor.
     const profile = await this.prisma.mentorProfile.findUnique({
@@ -155,7 +156,6 @@ export class ProfileService {
       modalities,
       city: dto.city ?? null,
       sessionDurationMin: dto.sessionDurationMin,
-      maxMentees: dto.maxMentees,
       searchText,
     };
 

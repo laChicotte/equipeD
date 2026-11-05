@@ -29,14 +29,14 @@ pnpm dev:frontend                      # http://localhost:3000
 ```
 
 Comptes fictifs (développement uniquement), mot de passe `Mentorat2026!` :
-`aminata@demo.talents-connectes.test` (mentorée), `fatoumata@demo.talents-connectes.test` (mentore), `admin@demo.talents-connectes.test`.
+`aminata@demo.talents-connectes.test` (mentorée), `fatoumata@demo.talents-connectes.test` (mentore), `admin@demo.talents-connectes.test`, `superadmin@demo.talents-connectes.test` (pilotage, équipe, journal d'audit, certificats).
 
 ## Tests
 
 ```bash
 pnpm --filter backend test        # tests unitaires
 cp backend/.env.test.example backend/.env.test
-pnpm --filter backend test:e2e    # 89 tests de bout en bout sur une base PostgreSQL de test (recréée)
+pnpm --filter backend test:e2e    # 100 tests de bout en bout sur une base PostgreSQL de test (recréée)
 ```
 
 ## API conteneurisée (optionnel)
@@ -52,6 +52,10 @@ docker compose -f backend/docker-compose.yml --profile app up -d --build
 En HTTP local, définir `API_NODE_ENV=development` : en production, le cookie de session est `Secure` et exige HTTPS.
 
 ## Documentation
+
+- `docs/architecture/overview.md` : composants, flux d'une requête, sécurité, invariants en base.
+- `docs/product/mvp.md` : profils, parcours, priorités, critères d'acceptation.
+- `docs/design/design-system.md` : palette, typographie, composants, responsive, accessibilité.
 
 - `CLAUDE.md` : décisions, structure, commandes, état.
 - `docs/HANDOFF_FRONTEND.md` : contrat d'API, plan frontend, système de design.

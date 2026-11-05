@@ -157,6 +157,101 @@ describe('Ressources et notifications', () => {
         .expect(200);
       await intruder.agent.delete(`${API}/resources/${list.body[0].id}`).expect(403);
     });
+
+    it('partage un document joint, téléchargeable par les seuls participants', async () => {
+      const pdf = Buffer.from('%PDF-1.7\nGuide de préparation\n%%EOF\n', 'utf8');
+      const shared = await mentor.agent
+        .post(`${API}/mentorships/${mentorshipId}/resources/upload`)
+        .field('title', 'Guide d’entretien')
+        .field('kind', 'TEMPLATE')
+        .attach('file', pdf, { filename: 'Guide d’entretien.pdf', contentType: 'application/pdf' })
+        .expect(201);
+      expect(shared.body.file).toEqual({
+        fileName: 'Guide d’entretien.pdf',
+        mimeType: 'application/pdf',
+        size: pdf.length,
+      });
+      expect(shared.body.url).toBeNull();
+
+      const file = await mentee.agent
+        .get(`${API}/resources/${shared.body.id}/file`)
+        .buffer(true)
+        .parse((res, done) => {
+          const chunks: Buffer[] = [];
+          res.on('data', (c: Buffer) => chunks.push(c));
+          res.on('end', () => done(null, Buffer.concat(chunks)));
+        })
+        .expect(200);
+      expect(file.headers['content-type']).toContain('application/pdf');
+      expect(file.headers['content-disposition']).toMatch(/^attachment;/);
+      expect(file.headers['cache-control']).toBe('private, no-store');
+      expect(Buffer.compare(file.body as Buffer, pdf)).toBe(0);
+
+      // Un tiers ou un visiteur ne peut ni télécharger ni deviner l'existence du document.
+      await intruder.agent.get(`${API}/resources/${shared.body.id}/file`).expect(404);
+      await request(app.getHttpServer()).get(`${API}/resources/${shared.body.id}/file`).expect(404);
+    });
+
+    it('refuse un document au format interdit ou au contenu falsifié', async () => {
+      const html = await mentor.agent
+        .post(`${API}/mentorships/${mentorshipId}/resources/upload`)
+        .field('title', 'Page piégée')
+        .attach('file', Buffer.from('<script>alert(1)</script>'), 'page.html')
+        .expect(422);
+      expect(html.body.code).toBe('FILE_INVALID_TYPE');
+      // Un exécutable renommé en .pdf est refusé : la signature ne correspond pas.
+      await mentor.agent
+        .post(`${API}/mentorships/${mentorshipId}/resources/upload`)
+        .field('title', 'Faux PDF')
+        .attach('file', Buffer.from('MZ\x90\x00binaire'), 'faux.pdf')
+        .expect(422);
+      // Au-delà de 10 Mo : 413.
+      await mentor.agent
+        .post(`${API}/mentorships/${mentorshipId}/resources/upload`)
+        .field('title', 'Trop lourd')
+        .attach(
+          'file',
+          Buffer.concat([Buffer.from('%PDF-'), Buffer.alloc(10 * 1024 * 1024)]),
+          'gros.pdf',
+        )
+        .expect(413);
+      // Sans document, sans lien ni description : refusé.
+      const empty = await mentor.agent
+        .post(`${API}/mentorships/${mentorshipId}/resources/upload`)
+        .field('title', 'Vide')
+        .expect(422);
+      expect(empty.body.code).toBe('RESOURCE_EMPTY');
+    });
+  });
+
+  describe('bibliothèque : document joint', () => {
+    it('est publié par un mentor et téléchargeable sans connexion', async () => {
+      const mentor = await createMentor(app);
+      const res = await mentor.agent
+        .post(`${API}/resources/upload`)
+        .field('title', 'Modèle de business plan')
+        .field('description', 'À compléter avant votre premier rendez-vous bancaire.')
+        .attach(
+          'file',
+          Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x14, 0x00, 0x06, 0x00]),
+          'business-plan.xlsx',
+        )
+        .expect(201);
+      expect(res.body.file.mimeType).toBe(
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      );
+      const download = await request(app.getHttpServer())
+        .get(`${API}/resources/${res.body.id}/file`)
+        .expect(200);
+      expect(download.headers['cache-control']).toBe('public, max-age=300');
+
+      const mentee = await createMentee(app);
+      await mentee.agent
+        .post(`${API}/resources/upload`)
+        .field('title', 'Interdit aux mentorés')
+        .attach('file', Buffer.from('%PDF-1.4'), 'doc.pdf')
+        .expect(403);
+    });
   });
 
   describe('notifications', () => {

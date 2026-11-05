@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service.js';
 import { conflict, forbidden, isConstraintViolation, notFound } from '../../common/errors.js';
@@ -11,10 +12,11 @@ import type {
   SessionFeedbackDto,
 } from './scheduling.dto.js';
 import { NotificationsService } from '../notifications/notifications.module.js';
+import { AppConfigService } from '../../config/app-config.service.js';
 
 const sessionInclude = {
-  mentor: { select: { id: true, firstName: true, lastName: true } },
-  mentee: { select: { id: true, firstName: true, lastName: true } },
+  mentor: { select: { id: true, firstName: true, lastName: true, avatarUpdatedAt: true } },
+  mentee: { select: { id: true, firstName: true, lastName: true, avatarUpdatedAt: true } },
   feedbacks: {
     select: { id: true, authorId: true, rating: true, comment: true, createdAt: true },
     orderBy: { createdAt: 'asc' },
@@ -42,6 +44,7 @@ export class SessionsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
+    private readonly config: AppConfigService,
   ) {}
 
   /**
@@ -143,12 +146,20 @@ export class SessionsService {
     if (session.status !== 'REQUESTED') {
       throw conflict('INVALID_TRANSITION', `Cette séance est ${STATUS_LABELS[session.status]}.`);
     }
+    // Séance à distance ou hybride sans lien fourni : génération d'une salle de visio externe
+    // (Jitsi par défaut) au nom imprévisible. Pas de visio développée par la plateforme.
+    const base = this.config.get('MEETING_BASE_URL');
+    const meetingUrl =
+      dto.meetingUrl ??
+      (base && session.modality !== 'IN_PERSON'
+        ? `${base}/TalentsConnectes-${randomBytes(12).toString('base64url')}`
+        : null);
     const updated = await this.prisma.mentoringSession.updateMany({
       where: { id, status: 'REQUESTED' },
       data: {
         status: 'CONFIRMED',
         confirmedAt: new Date(),
-        meetingUrl: dto.meetingUrl ?? null,
+        meetingUrl,
         location: dto.location ?? null,
       },
     });
@@ -251,6 +262,7 @@ export class SessionsService {
         status: true,
         startsAt: true,
         endsAt: true,
+        modality: true,
       },
     });
     if (!session) throw notFound('SESSION_NOT_FOUND', 'Séance introuvable.');

@@ -1,4 +1,4 @@
-# Checklist de livraison — état réel au 4 novembre 2026
+# Checklist de livraison — état réel au 5 novembre 2026
 
 > Document honnête : il ne décrit comme opérationnel que ce qui a été **exécuté et vérifié**.
 > À mettre à jour par l'équipe frontend au fur et à mesure (section « Frontend »).
@@ -7,7 +7,7 @@
 
 | Livrable | État | Fichier |
 |---|---|---|
-| Prototype fonctionnel ou démontrable | Backend ✅ · Frontend 🚧 en cours (autre poste) | `backend/`, `frontend/` |
+| Prototype fonctionnel ou démontrable | ✅ Backend et frontend | `backend/`, `frontend/` |
 | Présentation du projet | ✅ | `docs/jury/presentation-projet.md` |
 | Démonstration du parcours utilisateur | ✅ scénario écrit · à répéter avec le frontend | `docs/jury/scenario-demo.md` |
 | Note de pérennisation | ✅ | `docs/jury/note-perennisation.md` |
@@ -33,23 +33,40 @@
 - [x] Évaluation des séances (1–5 et commentaire), note moyenne sur la fiche mentor
 - [x] Administration : vue d’ensemble, comptes, suspension (révoque les sessions), vérification et publication des mentors, gestion des domaines
 - [x] Compte : modification du nom et du fuseau, changement de mot de passe (révoque les autres sessions), déconnexion de tous les appareils
-- [x] Clôture d’un mentorat avec bilan (séances futures annulées, capacité libérée, lecture seule)
+- [x] Clôture d’un mentorat avec bilan (séances futures annulées, lecture seule)
+- [x] Certificat d’accompagnement délivré au mentor à la clôture (au moins une séance réalisée) : chiffres figés, code vérifiable publiquement (`/certificats/<code>`), imprimable en PDF, révoqué si le compte du mentor est supprimé
+- [x] Pas de plafond de mentorés : la fiche affiche les personnes réellement accompagnées (tous domaines) et les certificats
 - [x] Ressources : bibliothèque publique (mentors et admins) et partage privé dans un mentorat (liens https ou conseils rédigés)
 - [x] Notifications in-app (demande reçue, acceptée ou refusée ; séance demandée, confirmée ou annulée ; retour sur objectif ; ressource partagée)
 
 ### P2
-- [x] Suggestions par score déterministe et explicable (pas d'IA)
-- [ ] Visio intégrée (remplacée par un lien externe, présenté comme tel)
-- [ ] Opportunités, emails, PWA
+- [x] Suggestions par score déterministe et explicable ; IA facultative en assistance (orientation, explication, proposition de parcours validée)
+- [x] Visio : salle Jitsi Meet générée automatiquement à la confirmation (service externe, présenté comme tel ; pas de WebRTC maison)
+- [x] Espace d’opportunités (stages, emplois, appels à projets, bourses, formations, événements), avec archivage et échéances
+- [x] Confidentialité : export JSON de ses données, suppression du compte par anonymisation (l’historique de l’autre participant est préservé)
+- [x] Parcours guidés par domaine (dont Campus France : projet d’études, dossier, entretien, démarches)
+- [x] Ateliers thématiques de groupe (planification, réponses des membres, salle de visio, notifications)
+- [x] Rapport d’impact exportable (CSV) et imprimable depuis le pilotage
+- [x] Réinitialisation du mot de passe par lien à usage unique remis par l’équipe
+- [x] PWA installable (manifeste, icônes), relecture sans réseau, messages différés, économie de données
+- [ ] Emails transactionnels
 
-## Frontend (à compléter par l'équipe frontend)
-- [ ] Landing, connexion et inscription, onboarding
-- [ ] Annuaire, fiche mentor, demande
-- [ ] Demandes reçues et envoyées, tableau de bord
-- [ ] Disponibilités, réservation, séances
-- [ ] Conversation, objectifs, évaluation
-- [ ] Admin
-- [ ] Responsive vérifié à 375 px et à 1440 px
+## Frontend
+- [x] Accueil : hero plein écran (diaporama), recherche de mentors en direct, chiffres réels, domaines, parcours, mentors, confiance
+- [x] Connexion, inscription, onboarding différencié mentor et mentoré
+- [x] Annuaire « Trouver un mentor » : filtres rapides par domaine, modalité, langue, disponibilité, recommandations expliquées
+- [x] Fiche mentor, demande motivée, demandes reçues et envoyées, tableau de bord par rôle
+- [x] Disponibilités, réservation, confirmation avec salle de visio, annulation, évaluation des séances (1 à 5 et commentaire)
+- [x] Espace de mentorat : conversation, objectifs et jalons, séances, ressources partagées, clôture avec bilan
+- [x] Bibliothèque de ressources (/ressources) et opportunités (/opportunites), publication par les mentors
+- [x] Cloche de notifications in-app
+- [x] Messagerie dédiée (/messages) : toutes les conversations, non-lus, recherche, conversation ouverte ; vue mobile en deux temps
+- [x] Administration (rôle unique) : pilotage chiffré (indicateurs et activité sur 30 jours), équipe (nommer ou retirer un administrateur), journal d’audit, révocation motivée des certificats, modération des contenus
+- [x] Photo de profil : ajout, recadrage dans le navigateur, retrait ; visibilité limitée (publique pour un mentor publié, sinon aux personnes liées)
+- [x] Mon compte : informations, mot de passe, déconnexion de tous les appareils, export JSON, suppression
+- [x] Administration : vue d’ensemble, comptes, mentors, domaines
+- [x] Build de production : 22 routes, typecheck et lint sans erreur
+- [ ] Revue responsive écran par écran à 375 px (accueil et annuaire vérifiés)
 
 ## Tests exécutés
 
@@ -58,8 +75,9 @@
 | Typecheck backend | ✅ | `pnpm --filter backend typecheck` |
 | Lint (oxlint) | ✅ 0 avertissement | `pnpm --filter backend lint` |
 | Format (Prettier) | ✅ | `npx prettier --check "backend/{src,test,prisma}/**/*.ts"` |
-| Tests unitaires | ✅ 8/8 | `pnpm --filter backend test` |
-| Tests e2e sur un vrai PostgreSQL | ✅ **89/89** (8 fichiers, environ 35 s) | `pnpm --filter backend test:e2e` |
+| Tests unitaires | ✅ 15/15 | `pnpm --filter backend test` |
+| Tests e2e sur un vrai PostgreSQL | ✅ **138/138** (environ 100 s) | `pnpm --filter backend test:e2e` |
+| Scénario de démo dans un navigateur (Playwright) | ✅ 1/1, deux navigateurs, environ 15 s | `pnpm --filter frontend test:e2e` |
 | Build | ✅ | `pnpm --filter backend build` |
 | CI GitHub Actions | ⏳ configurée (`.github/workflows/ci.yml`), à confirmer au premier push | |
 
@@ -77,8 +95,7 @@ Les tests e2e couvrent notamment :
 ## Bugs connus et limites honnêtes
 
 - **Avertissement `pg` « client.query() already executing »** pendant les tests : il est émis à l'intérieur de `@prisma/adapter-pg` 7.10.1 lors de certaines transactions. Il est sans effet fonctionnel (les requêtes sont mises en file), mais à revoir lors d'une montée de version de Prisma.
-- La messagerie fonctionne par **rafraîchissement périodique** (pas de WebSocket) : quelques secondes de latence.
-- Aucun email n'est envoyé (réinitialisation de mot de passe non disponible).
-- Pas de visio native : lien de réunion externe saisi par le mentor.
+- Aucun email n'est envoyé : la réinitialisation du mot de passe passe par un lien remis par l'équipe.
+- Appels audio et vidéo WebRTC dans l'application : état des appels en mémoire (une seule instance de l'API), HTTPS obligatoire hors localhost, relais TURN nécessaire entre réseaux mobiles.
 - Pas de revue de conformité juridique (données personnelles) : à mener avant toute mise en production.
 - Les comptes de démonstration (`@demo.talents-connectes.test`, mot de passe commun) ne doivent **jamais** être chargés en production. La seed les refuse si `NODE_ENV=production`, sauf `SEED_DEMO=true` explicite.

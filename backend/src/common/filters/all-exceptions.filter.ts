@@ -35,6 +35,7 @@ const DEFAULT_MESSAGES: Record<number, string> = {
   401: 'Authentification requise.',
   403: 'Accès refusé.',
   404: 'Ressource introuvable.',
+  413: 'Le fichier envoyé est trop volumineux.',
   429: 'Trop de tentatives. Réessayez dans quelques instants.',
   500: 'Une erreur inattendue est survenue.',
 };
@@ -70,7 +71,12 @@ export class AllExceptionsFilter implements ExceptionFilter {
         else if (Array.isArray(b.message)) message = b.message.join(' ');
         details = b.details;
       }
-      if (!message || /^(Unauthorized|Forbidden|Not Found|Forbidden resource)/i.test(message)) {
+      if (
+        !message ||
+        /^(Unauthorized|Forbidden|Not Found|Forbidden resource|File too large|Payload Too Large)/i.test(
+          message,
+        )
+      ) {
         message = DEFAULT_MESSAGES[status] ?? message;
       }
     } else {

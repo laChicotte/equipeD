@@ -34,6 +34,35 @@ export class MentorshipAccessService {
     return { ...m, isMentor, counterpartId: isMentor ? m.menteeId : m.mentorId };
   }
 
+  /**
+   * La conversation survit à la clôture : mentor et mentoré restent en contact après un
+   * mentorat terminé. Seul un mentorat annulé ferme la messagerie.
+   */
+  async assertMessagingParticipant(
+    user: AuthUser,
+    mentorshipId: string,
+  ): Promise<MentorshipAccess> {
+    const access = await this.assertParticipant(user, mentorshipId);
+    if (access.status === 'CANCELLED') {
+      throw conflict(
+        'MENTORSHIP_CANCELLED',
+        'Ce mentorat a été annulé : la conversation est fermée.',
+      );
+    }
+    // Plus de nouveaux messages vers un compte supprimé ou suspendu (l'historique reste lisible).
+    const counterpart = await this.prisma.user.findUnique({
+      where: { id: access.counterpartId },
+      select: { status: true },
+    });
+    if (counterpart?.status !== 'ACTIVE') {
+      throw conflict(
+        'COUNTERPART_UNAVAILABLE',
+        'Cette personne n’est plus joignable sur la plateforme.',
+      );
+    }
+    return access;
+  }
+
   async assertActiveParticipant(user: AuthUser, mentorshipId: string): Promise<MentorshipAccess> {
     const access = await this.assertParticipant(user, mentorshipId);
     if (access.status !== 'ACTIVE') {

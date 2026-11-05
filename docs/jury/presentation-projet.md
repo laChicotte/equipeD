@@ -31,7 +31,7 @@ Une plateforme web responsive (mobile, tablette, ordinateur) qui couvre **tout l
 
 1. **Se découvrir** : profils mentors et mentorés guidés, annuaire filtrable (domaine, compétence, modalité, langue, disponibilité), recherche insensible aux accents.
 2. **Être orienté** : suggestions de mentors **expliquées** (« domaine correspondant », « compétences recherchées couvertes », « créneaux disponibles »…), calculées par un score transparent et non par une boîte noire.
-3. **Entrer en relation** : demande motivée avec un objectif explicite ; le mentor accepte ou refuse. Il garde la maîtrise de sa capacité d'accompagnement.
+3. **Entrer en relation** : demande motivée avec un objectif explicite ; le mentor accepte ou refuse. Il accompagne autant de personnes qu'il le souhaite et reste maître de ses créneaux.
 4. **Planifier** : le mentor publie ses créneaux, le mentoré réserve, le mentor confirme, avec un lien de réunion externe en attendant une visio intégrée. **La double réservation est impossible**, même en cas de clics simultanés.
 5. **Échanger** : conversation privée, accessible aux seuls deux participants du mentorat.
 6. **Progresser** : objectifs découpés en jalons, progression calculée, retour écrit du mentor.
@@ -42,7 +42,7 @@ Une plateforme web responsive (mobile, tablette, ordinateur) qui couvre **tout l
 
 - **Un parcours complet et réellement fonctionnel**, de la recherche au suivi d'objectifs, avec des données persistées dans PostgreSQL : pas une maquette.
 - **La confiance d'abord** : vérification des mentors par l'équipe (jamais automatique), informations de contact privées non exposées, règles d'accès contrôlées côté serveur à chaque requête.
-- **Des recommandations explicables** plutôt qu'une « IA » opaque : le mentoré comprend pourquoi un mentor lui est proposé.
+- **Des recommandations explicables** : le score suit des règles transparentes, l'IA ne fait que les expliquer et le mentoré comprend pourquoi un mentor lui est proposé.
 - **Le contexte local** : fuseau Africa/Conakry, langues nationales (soussou, pular, malinké) dans les profils, accompagnement en présentiel, hybride ou à distance, domaine Campus France avec une mention honnête de son périmètre.
 - **Une fondation durable** : architecture modulaire, tests automatisés (unitaires et de bout en bout), migrations versionnées, déploiement auto-hébergeable.
 
@@ -54,15 +54,15 @@ Une plateforme web responsive (mobile, tablette, ordinateur) qui couvre **tout l
 | Recherche et mise en relation selon compétences et besoins | ✅ (avec suggestions expliquées) |
 | Catalogue des domaines d'expertise | ✅ (7 domaines des TDR) |
 | Prise de rendez-vous et planification des séances | ✅ (sans double réservation) |
-| Espace d'échange et de communication | ✅ chat privé · visio : lien externe |
+| Espace d’échange et de communication | ✅ chat privé · visio : salle Jitsi générée automatiquement (service externe) |
 | Suivi des objectifs et de la progression | ✅ (objectifs, jalons, retour du mentor) |
 | Évaluation des séances | ✅ |
 | Bibliothèque de ressources | ✅ (bibliothèque publique et partage privé dans un mentorat) |
-| Partage d'opportunités | ⏳ prévu |
-| IA de recommandation | ⏳ envisagée après mesure ; score explicable en place |
+| Partage d'opportunités | ✅ (stages, emplois, appels à projets, bourses, formations, événements) |
+| IA en assistance | ✅ orientation, explication du score, proposition de parcours validée (facultative, sans donnée nominative) ; le score reste calculé par des règles |
 
 ## 6. Proposition de valeur
 
 - **Pour le mentoré :** trouver la bonne personne, être accompagné sur un objectif concret et voir ses progrès.
-- **Pour le mentor :** transmettre sans être débordé (capacité maîtrisée, créneaux choisis, demandes motivées).
+- **Pour le mentor :** transmettre sans être débordé (créneaux choisis, demandes motivées) et faire reconnaître son engagement : chaque mentorat mené à terme lui vaut un certificat vérifiable.
 - **Pour les organisateurs et partenaires :** un réseau durable de mentors et de mentorés, des parcours structurés, et des indicateurs d'activité réels (demandes, séances, objectifs) plutôt que déclaratifs.
