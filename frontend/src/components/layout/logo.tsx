@@ -1,43 +1,53 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
-/** Monogramme « TC » pour les espaces réduits (barre latérale de l'application). */
+/** Symbole seul, pour les petits espaces (mobile, certificat, page introuvable). */
 export function LogoMark({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 32 32" className={cn('size-8', className)} aria-hidden>
-      <rect width="32" height="32" rx="3" className="fill-ink-900" />
-      <rect x="18" y="18" width="14" height="14" className="fill-teal-600" />
-      <text x="5" y="21" className="fill-white" style={{ font: '800 14px var(--font-schibsted)' }}>
-        TC
-      </text>
-    </svg>
+    <Image
+      src="/logo-mark.png"
+      alt=""
+      width={271}
+      height={228}
+      priority
+      className={cn('size-8 object-contain', className)}
+    />
   );
 }
 
-/** Marque provisoire « Talents Connectés » (nom remplaçable, non déposé). Sur mobile, le monogramme seul. */
+/** Logo de la plateforme. Sur mobile, le symbole seul lorsque la place manque. */
 export function Logo({
   href = '/',
-  inverted = false,
   className,
   compactOnMobile = true,
+  onDark = false,
 }: {
   href?: string;
-  inverted?: boolean;
   className?: string;
   compactOnMobile?: boolean;
+  /** Sur fond sombre : pastille blanche, le bleu marine du logo y serait illisible. */
+  onDark?: boolean;
 }) {
   return (
     <Link
       href={href}
       className={cn(
-        'inline-flex shrink-0 items-center gap-2 text-[18px] leading-none font-extrabold tracking-[-0.04em] whitespace-nowrap focus-visible:outline-offset-4',
-        inverted ? 'text-white' : 'text-current',
+        'inline-flex shrink-0 items-center focus-visible:outline-offset-4',
+        onDark && 'rounded-md bg-white px-2 py-1',
         className,
       )}
       aria-label="Talents Connectés, accueil"
     >
-      <LogoMark className="size-8" />
-      <span className={cn(compactOnMobile && 'hidden sm:inline')}>Talents Connectés</span>
+      <LogoMark className={cn('size-9', compactOnMobile ? 'sm:hidden' : 'hidden')} />
+      <Image
+        src="/logo.png"
+        alt=""
+        width={1032}
+        height={228}
+        priority
+        className={cn('h-9 w-auto', compactOnMobile && 'hidden sm:block')}
+      />
     </Link>
   );
 }

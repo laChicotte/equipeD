@@ -48,7 +48,7 @@ export function PublicHeader() {
       )}
     >
       <div className="page-frame grid h-16 grid-cols-[1fr_auto] items-center gap-4 lg:grid-cols-[var(--axis)_1fr_auto]">
-        <Logo />
+        <Logo onDark={pathname === '/'} />
         <nav aria-label="Navigation principale" className="hidden items-center gap-6 lg:flex">
           {links.map((l) => (
             <Link

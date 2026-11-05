@@ -171,7 +171,9 @@ export function CertificateView({ code }: { code: string }) {
           </div>
           <div className="-mt-4 flex items-center justify-between gap-6 sm:-mt-6">
             <div className="flex items-center gap-2.5 text-white">
-              <LogoMark className="size-10" />
+              <span className="inline-flex rounded-md bg-white p-1">
+                <LogoMark className="size-9" />
+              </span>
               <span className="font-display text-[17px] font-bold tracking-[-0.02em]">
                 Talents Connectés
               </span>
