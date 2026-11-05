@@ -182,6 +182,7 @@ const opportunitySelect = {
       id: true,
       firstName: true,
       lastName: true,
+      avatarUpdatedAt: true,
       role: true,
       mentorProfile: { select: { headline: true } },
     },

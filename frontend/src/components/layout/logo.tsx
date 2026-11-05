@@ -14,19 +14,30 @@ export function LogoMark({ className }: { className?: string }) {
   );
 }
 
-/** Marque provisoire « Talents Connectés » (nom remplaçable, non déposé) : un mot, une famille. */
-export function Logo({ href = '/', inverted = false }: { href?: string; inverted?: boolean }) {
+/** Marque provisoire « Talents Connectés » (nom remplaçable, non déposé). Sur mobile, le monogramme seul. */
+export function Logo({
+  href = '/',
+  inverted = false,
+  className,
+  compactOnMobile = true,
+}: {
+  href?: string;
+  inverted?: boolean;
+  className?: string;
+  compactOnMobile?: boolean;
+}) {
   return (
     <Link
       href={href}
       className={cn(
-        'inline-flex items-baseline text-[17px] leading-none font-extrabold tracking-[-0.04em] whitespace-nowrap focus-visible:outline-offset-4 sm:text-[19px]',
+        'inline-flex shrink-0 items-center gap-2 text-[18px] leading-none font-extrabold tracking-[-0.04em] whitespace-nowrap focus-visible:outline-offset-4',
         inverted ? 'text-white' : 'text-current',
+        className,
       )}
       aria-label="Talents Connectés, accueil"
     >
-      Talents Connectés
-      <span className={cn('ml-0.5 size-1.5 self-end', inverted ? 'bg-teal-200' : 'bg-teal-600')} aria-hidden />
+      <LogoMark className="size-8" />
+      <span className={cn(compactOnMobile && 'hidden sm:inline')}>Talents Connectés</span>
     </Link>
   );
 }

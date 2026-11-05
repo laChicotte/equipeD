@@ -28,7 +28,8 @@
 | Où est l'IA ? | Les TDR la rendent facultative. Nous avons préféré un score transparent : le mentoré voit *pourquoi* un mentor est proposé. L'IA viendra si les données montrent un gain réel. |
 | Comment garantir la qualité des mentors ? | Vérification humaine (entretien, références), badge attribué par l'équipe, évaluations après les séances, suspension possible. Pas de fausse validation automatique de diplômes. |
 | Et la confidentialité ? | Mots de passe hachés (Argon2id), sessions révocables en cookie sécurisé, aucun contact privé public, conversation réservée aux deux participants et vérifiée côté serveur à chaque requête. Une revue juridique est prévue avant la production. |
-| Et si un mentor est débordé ? | Il fixe sa capacité maximale et ses créneaux ; au-delà, l'acceptation est bloquée. |
+| Et si un mentor est débordé ? | Il reste maître de ses créneaux et accepte ou refuse chaque demande motivée : il n'y a pas de plafond imposé, c'est lui qui décide. |
+| Comment savoir qu'un mentor est sérieux ? | Sa fiche affiche les personnes réellement accompagnées et ses certificats d'accompagnement, délivrés par la plateforme après des séances réalisées et vérifiables par un code. |
 | Que se passe-t-il si deux personnes réservent le même créneau ? | La base de données l'empêche : une seule réservation réussit, l'autre reçoit un message clair. C'est testé automatiquement. |
 | Accès sans bonne connexion ? | Interface légère et responsive ; le mode faible connectivité et la PWA sont dans la feuille de route. |
 | Combien ça coûte ? | Technologies open source, auto-hébergeables ; le principal coût est l'animation et la modération. Le chiffrage se fera avec les partenaires. |

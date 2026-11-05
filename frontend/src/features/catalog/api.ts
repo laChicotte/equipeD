@@ -96,7 +96,6 @@ export interface MentorProfileInput {
   city?: string;
   domainIds: string[];
   sessionDurationMin: 30 | 45 | 60 | 90;
-  maxMentees: number;
 }
 
 export interface MenteeProfileInput {

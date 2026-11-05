@@ -19,6 +19,7 @@ import type {
 } from '../src/generated/prisma/enums.js';
 import { hashPassword } from '../src/modules/auth/password.js';
 import { normalizeSearch } from '../src/common/text.js';
+import { issueCertificateIfEligible } from '../src/modules/certificates/certificates.module.js';
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }),
@@ -146,7 +147,6 @@ interface DemoMentor {
   city: string;
   domains: DomainSlug[];
   verificationStatus: VerificationStatus;
-  maxMentees: number;
 }
 
 const MENTORS: DemoMentor[] = [
@@ -172,7 +172,6 @@ const MENTORS: DemoMentor[] = [
     city: 'Conakry',
     domains: ['numerique-technologies', 'orientation-insertion'],
     verificationStatus: 'VERIFIED',
-    maxMentees: 5,
   },
   {
     key: 'thierno',
@@ -195,7 +194,6 @@ const MENTORS: DemoMentor[] = [
     city: 'Conakry',
     domains: ['entrepreneuriat', 'gestion-finance-administration'],
     verificationStatus: 'VERIFIED',
-    maxMentees: 4,
   },
   {
     key: 'mariama',
@@ -212,7 +210,6 @@ const MENTORS: DemoMentor[] = [
     city: 'Conakry',
     domains: ['campus-france', 'orientation-insertion'],
     verificationStatus: 'VERIFIED',
-    maxMentees: 6,
   },
   {
     key: 'sekou',
@@ -235,7 +232,6 @@ const MENTORS: DemoMentor[] = [
     city: 'Kankan',
     domains: ['numerique-technologies'],
     verificationStatus: 'PENDING',
-    maxMentees: 3,
   },
   {
     key: 'aissatou',
@@ -252,7 +248,6 @@ const MENTORS: DemoMentor[] = [
     city: 'Conakry',
     domains: ['culture-industries-creatives', 'developpement-personnel-leadership'],
     verificationStatus: 'VERIFIED',
-    maxMentees: 4,
   },
   {
     key: 'lansana',
@@ -275,7 +270,6 @@ const MENTORS: DemoMentor[] = [
     city: 'Conakry',
     domains: ['developpement-personnel-leadership', 'gestion-finance-administration'],
     verificationStatus: 'UNVERIFIED',
-    maxMentees: 5,
   },
 ];
 
@@ -462,7 +456,6 @@ async function main() {
       modalities: m.modalities,
       city: m.city,
       verificationStatus: m.verificationStatus,
-      maxMentees: m.maxMentees,
       sessionDurationMin: 60,
       searchText,
     };
@@ -558,6 +551,118 @@ async function main() {
       },
     });
   }
+  // Un mentorat déjà mené à terme (Mohamed ↔ Fatoumata, le mois dernier) : trois séances réalisées
+  // et évaluées, un objectif atteint, puis la clôture qui délivre le certificat d'accompagnement.
+  // Données fictives, comme le reste de la seed ; le certificat est produit par le code de l'application.
+  const fatoumataId = mentorIds.get('fatoumata')!;
+  const pastRequestId = 'seed_request_mohamed_fatoumata';
+  const daysAgo = (d: number, hourUtc = 15) => {
+    const t = new Date();
+    t.setUTCDate(t.getUTCDate() - d);
+    t.setUTCHours(hourUtc, 0, 0, 0);
+    return t;
+  };
+  await prisma.mentorshipRequest.upsert({
+    where: { id: pastRequestId },
+    create: {
+      id: pastRequestId,
+      menteeId: mohamedId,
+      mentorId: fatoumataId,
+      domainId: domainIds.get('numerique-technologies')!,
+      goal: 'Mettre en ligne le site vitrine de mon projet',
+      message:
+        'Bonjour, je voudrais apprendre à créer moi-même un site simple pour présenter mon projet de livraison et recevoir des commandes.',
+      status: 'ACCEPTED',
+      createdAt: daysAgo(48),
+      respondedAt: daysAgo(47),
+    },
+    update: {},
+  });
+  const pastMentorship = await prisma.mentorship.upsert({
+    where: { requestId: pastRequestId },
+    create: {
+      requestId: pastRequestId,
+      mentorId: fatoumataId,
+      menteeId: mohamedId,
+      startedAt: daysAgo(47),
+    },
+    update: {},
+    select: { id: true, status: true },
+  });
+  const pastTopics = [
+    {
+      id: 'seed_session_mohamed_fatoumata_1',
+      days: 40,
+      topic: 'Définir les pages et le contenu du site',
+      rating: 5,
+    },
+    {
+      id: 'seed_session_mohamed_fatoumata_2',
+      days: 30,
+      topic: 'Construire la page d’accueil et le formulaire de commande',
+      rating: 5,
+    },
+    {
+      id: 'seed_session_mohamed_fatoumata_3',
+      days: 19,
+      topic: 'Mise en ligne et premiers retours clients',
+      rating: 4,
+    },
+  ];
+  for (const p of pastTopics) {
+    const startsAt = daysAgo(p.days);
+    await prisma.mentoringSession.upsert({
+      where: { id: p.id },
+      create: {
+        id: p.id,
+        mentorshipId: pastMentorship.id,
+        mentorId: fatoumataId,
+        menteeId: mohamedId,
+        startsAt,
+        endsAt: new Date(startsAt.getTime() + 60 * 60_000),
+        status: 'COMPLETED',
+        topic: p.topic,
+        modality: 'REMOTE',
+        confirmedAt: new Date(startsAt.getTime() - 86_400_000),
+      },
+      update: {},
+    });
+    await prisma.sessionFeedback.upsert({
+      where: { sessionId_authorId: { sessionId: p.id, authorId: mohamedId } },
+      create: { sessionId: p.id, authorId: mohamedId, rating: p.rating },
+      update: {},
+    });
+  }
+  if ((await prisma.goal.count({ where: { mentorshipId: pastMentorship.id } })) === 0) {
+    await prisma.goal.create({
+      data: {
+        mentorshipId: pastMentorship.id,
+        createdById: mohamedId,
+        title: 'Publier le site vitrine',
+        description: 'Trois pages en ligne et un formulaire de commande qui fonctionne.',
+        status: 'COMPLETED',
+        progress: 100,
+        completedAt: daysAgo(19),
+      },
+    });
+  }
+  if (pastMentorship.status === 'ACTIVE') {
+    const endedAt = daysAgo(18, 10);
+    await prisma.$transaction(async (tx) => {
+      await tx.mentorship.update({
+        where: { id: pastMentorship.id },
+        data: {
+          status: 'COMPLETED',
+          endedAt,
+          endedById: fatoumataId,
+          endNote:
+            'Site en ligne et premières commandes reçues : objectif atteint. Bravo Mohamed !',
+        },
+      });
+      await issueCertificateIfEligible(tx, pastMentorship.id, endedAt);
+    });
+  }
+
   // Bibliothèque publique : quelques ressources publiées par les mentors fictifs.
   // Les seuls liens externes pointent vers des sites officiels de référence.
   const libraryResources = [

@@ -36,7 +36,8 @@ function CreateGoalDialog({
 
   const submit = () => {
     const t = title.trim();
-    if (t.length < 3 || t.length > 160) return setError('Le titre doit contenir entre 3 et 160 caractères.');
+    if (t.length < 3 || t.length > 160)
+      return setError('Le titre doit contenir entre 3 et 160 caractères.');
     setError(undefined);
     create.mutate(
       {
@@ -61,7 +62,10 @@ function CreateGoalDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent title="Nouvel objectif" description="Un objectif précis, découpé en jalons concrets.">
+      <DialogContent
+        title="Nouvel objectif"
+        description="Un objectif précis, découpé en jalons concrets."
+      >
         <div className="grid gap-5">
           <Field label="Objectif" error={error} counter={{ value: title.length, min: 3, max: 160 }}>
             <Input
@@ -71,23 +75,32 @@ function CreateGoalDialog({
             />
           </Field>
           <Field label="Description" optional>
-            <Textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
+            <Textarea
+              rows={3}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
           </Field>
           <Field label="Échéance" optional>
             <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
           </Field>
           <fieldset>
             <legend className="mb-2 text-sm font-semibold">
-              Jalons <span className="font-normal text-muted-foreground">(facultatif, 12 au maximum)</span>
+              Jalons{' '}
+              <span className="font-normal text-muted-foreground">(facultatif, 12 au maximum)</span>
             </legend>
             <ol className="grid gap-2">
               {milestones.map((m, i) => (
                 <li key={i} className="flex items-center gap-2">
-                  <span className="w-5 text-right text-xs font-semibold text-muted-foreground tabular-nums">{i + 1}.</span>
+                  <span className="w-5 text-right text-xs font-semibold text-muted-foreground tabular-nums">
+                    {i + 1}.
+                  </span>
                   <Input
                     value={m}
                     aria-label={`Jalon ${i + 1}`}
-                    onChange={(e) => setMilestones((all) => all.map((x, j) => (j === i ? e.target.value : x)))}
+                    onChange={(e) =>
+                      setMilestones((all) => all.map((x, j) => (j === i ? e.target.value : x)))
+                    }
                     placeholder={i === 0 ? 'Ex. : Choisir 3 projets à présenter' : 'Jalon suivant'}
                   />
                   {milestones.length > 1 && (
@@ -104,7 +117,12 @@ function CreateGoalDialog({
               ))}
             </ol>
             {milestones.length < 12 && (
-              <Button variant="link" size="sm" className="mt-2" onClick={() => setMilestones((a) => [...a, ''])}>
+              <Button
+                variant="link"
+                size="sm"
+                className="mt-2"
+                onClick={() => setMilestones((a) => [...a, ''])}
+              >
                 <Plus aria-hidden />
                 Ajouter un jalon
               </Button>
@@ -124,7 +142,17 @@ function CreateGoalDialog({
   );
 }
 
-function GoalCard({ goal, me, mentorshipId, readOnly }: { goal: Goal; me: Me; mentorshipId: string; readOnly: boolean }) {
+function GoalCard({
+  goal,
+  me,
+  mentorshipId,
+  readOnly,
+}: {
+  goal: Goal;
+  me: Me;
+  mentorshipId: string;
+  readOnly: boolean;
+}) {
   const m = useGoalMutations(mentorshipId);
   const [newMilestone, setNewMilestone] = useState('');
   const [feedback, setFeedback] = useState(goal.mentorFeedback ?? '');
@@ -146,7 +174,9 @@ function GoalCard({ goal, me, mentorshipId, readOnly }: { goal: Goal; me: Me; me
             <StatusBadge kind="goal" status={goal.status} />
           </div>
           <p className="mt-1 flex flex-wrap gap-x-3 text-xs text-muted-foreground">
-            <span>Proposé par {goal.createdById === me.id ? 'vous' : fullName(goal.createdBy)}</span>
+            <span>
+              Proposé par {goal.createdById === me.id ? 'vous' : fullName(goal.createdBy)}
+            </span>
             {goal.dueDate && (
               <span className="inline-flex items-center gap-1">
                 <CalendarClock className="size-3.5" aria-hidden />
@@ -162,7 +192,10 @@ function GoalCard({ goal, me, mentorshipId, readOnly }: { goal: Goal; me: Me; me
               className="h-9 w-auto py-0 text-sm"
               value={goal.status}
               onChange={(e) =>
-                m.update.mutate({ id: goal.id, patch: { status: e.target.value as GoalStatus } }, { onError })
+                m.update.mutate(
+                  { id: goal.id, patch: { status: e.target.value as GoalStatus } },
+                  { onError },
+                )
               }
             >
               {(Object.keys(goalStatusLabels) as GoalStatus[]).map((s) => (
@@ -178,7 +211,10 @@ function GoalCard({ goal, me, mentorshipId, readOnly }: { goal: Goal; me: Me; me
                 aria-label="Supprimer l’objectif"
                 onClick={() => {
                   if (confirm('Supprimer cet objectif et ses jalons ?'))
-                    m.remove.mutate(goal.id, { onSuccess: () => toast.success('Objectif supprimé.'), onError });
+                    m.remove.mutate(goal.id, {
+                      onSuccess: () => toast.success('Objectif supprimé.'),
+                      onError,
+                    });
                 }}
               >
                 <Trash2 aria-hidden />
@@ -189,13 +225,17 @@ function GoalCard({ goal, me, mentorshipId, readOnly }: { goal: Goal; me: Me; me
       </div>
 
       {goal.description && (
-        <p className="mt-3 max-w-[70ch] text-sm leading-relaxed text-foreground/85">{goal.description}</p>
+        <p className="mt-3 max-w-[70ch] text-sm leading-relaxed text-foreground/85">
+          {goal.description}
+        </p>
       )}
 
       <div className="mt-4">
         <div className="mb-1.5 flex items-center justify-between text-xs font-semibold">
           <span className="text-muted-foreground">
-            {hasMilestones ? `${done} jalon${done > 1 ? 's' : ''} sur ${goal.milestones.length}` : 'Progression'}
+            {hasMilestones
+              ? `${done} jalon${done > 1 ? 's' : ''} sur ${goal.milestones.length}`
+              : 'Progression'}
           </span>
           <span className="text-teal-800 tabular-nums">{Math.round(shownProgress)} %</span>
         </div>
@@ -208,7 +248,9 @@ function GoalCard({ goal, me, mentorshipId, readOnly }: { goal: Goal; me: Me; me
             max={100}
             step={5}
             onValueChange={([v]) => setProgress(v)}
-            onValueCommit={([v]) => m.update.mutate({ id: goal.id, patch: { progress: v } }, { onError })}
+            onValueCommit={([v]) =>
+              m.update.mutate({ id: goal.id, patch: { progress: v } }, { onError })
+            }
             aria-label={`Progression : ${goal.title}`}
           />
         )}
@@ -220,16 +262,24 @@ function GoalCard({ goal, me, mentorshipId, readOnly }: { goal: Goal; me: Me; me
             .slice()
             .sort((a, b) => a.sortOrder - b.sortOrder)
             .map((ms) => (
-              <li key={ms.id} className="group flex min-h-10 items-center gap-3 rounded-md px-2 -mx-2 hover:bg-surface-muted">
+              <li
+                key={ms.id}
+                className="group flex min-h-10 items-center gap-3 rounded-md px-2 -mx-2 hover:bg-surface-muted"
+              >
                 <Checkbox
                   id={`ms-${ms.id}`}
                   checked={ms.isDone}
                   disabled={readOnly}
-                  onCheckedChange={(v) => m.toggleMilestone.mutate({ id: ms.id, isDone: v === true }, { onError })}
+                  onCheckedChange={(v) =>
+                    m.toggleMilestone.mutate({ id: ms.id, isDone: v === true }, { onError })
+                  }
                 />
                 <label
                   htmlFor={`ms-${ms.id}`}
-                  className={cn('flex-1 text-sm', ms.isDone && 'text-muted-foreground line-through')}
+                  className={cn(
+                    'flex-1 text-sm',
+                    ms.isDone && 'text-muted-foreground line-through',
+                  )}
                 >
                   {ms.title}
                 </label>
@@ -253,7 +303,10 @@ function GoalCard({ goal, me, mentorshipId, readOnly }: { goal: Goal; me: Me; me
                   e.preventDefault();
                   const t = newMilestone.trim();
                   if (!t) return;
-                  m.addMilestone.mutate({ goalId: goal.id, title: t }, { onSuccess: () => setNewMilestone(''), onError });
+                  m.addMilestone.mutate(
+                    { goalId: goal.id, title: t },
+                    { onSuccess: () => setNewMilestone(''), onError },
+                  );
                 }}
               >
                 <Input
@@ -263,7 +316,13 @@ function GoalCard({ goal, me, mentorshipId, readOnly }: { goal: Goal; me: Me; me
                   placeholder="Ajouter un jalon…"
                   aria-label="Nouveau jalon"
                 />
-                <Button type="submit" variant="secondary" size="sm" disabled={!newMilestone.trim()} loading={m.addMilestone.isPending}>
+                <Button
+                  type="submit"
+                  variant="secondary"
+                  size="sm"
+                  disabled={!newMilestone.trim()}
+                  loading={m.addMilestone.isPending}
+                >
                   Ajouter
                 </Button>
               </form>
@@ -279,7 +338,12 @@ function GoalCard({ goal, me, mentorshipId, readOnly }: { goal: Goal; me: Me; me
         </p>
         {isMentor && !readOnly && editingFeedback ? (
           <div className="mt-3 grid gap-2">
-            <Textarea rows={3} value={feedback} onChange={(e) => setFeedback(e.target.value)} aria-label="Retour du mentor" />
+            <Textarea
+              rows={3}
+              value={feedback}
+              onChange={(e) => setFeedback(e.target.value)}
+              aria-label="Retour du mentor"
+            />
             <div className="flex justify-end gap-2">
               <Button variant="ghost" size="sm" onClick={() => setEditingFeedback(false)}>
                 Annuler
@@ -306,8 +370,14 @@ function GoalCard({ goal, me, mentorshipId, readOnly }: { goal: Goal; me: Me; me
           </div>
         ) : (
           <div className="mt-2 flex items-start justify-between gap-3">
-            <p className={cn('text-sm leading-relaxed', !goal.mentorFeedback && 'text-muted-foreground')}>
-              {goal.mentorFeedback ?? (isMentor ? 'Partagez un conseil ou un encouragement.' : 'Pas encore de retour.')}
+            <p
+              className={cn(
+                'text-sm leading-relaxed',
+                !goal.mentorFeedback && 'text-muted-foreground',
+              )}
+            >
+              {goal.mentorFeedback ??
+                (isMentor ? 'Partagez un conseil ou un encouragement.' : 'Pas encore de retour.')}
             </p>
             {isMentor && !readOnly && (
               <Button variant="secondary" size="sm" onClick={() => setEditingFeedback(true)}>
@@ -351,7 +421,9 @@ export function GoalsPanel({ mentorship, me }: { mentorship: MentorshipSummary; 
           description="Définissez ensemble un premier objectif, découpé en jalons. Point de départ suggéré :"
           action={
             <div className="grid justify-items-center gap-3">
-              <p className="max-w-md rounded-md bg-teal-50 px-3 py-2 text-sm text-teal-800">« {mentorship.initialGoal} »</p>
+              <p className="max-w-md rounded-md bg-teal-50 px-3 py-2 text-sm text-teal-800">
+                « {mentorship.initialGoal} »
+              </p>
               {!readOnly && (
                 <Button onClick={() => setCreating(true)}>
                   <Plus aria-hidden />
@@ -362,7 +434,9 @@ export function GoalsPanel({ mentorship, me }: { mentorship: MentorshipSummary; 
           }
         />
       ) : (
-        goals.data.map((g) => <GoalCard key={g.id} goal={g} me={me} mentorshipId={mentorship.id} readOnly={readOnly} />)
+        goals.data.map((g) => (
+          <GoalCard key={g.id} goal={g} me={me} mentorshipId={mentorship.id} readOnly={readOnly} />
+        ))
       )}
       <CreateGoalDialog mentorshipId={mentorship.id} open={creating} onOpenChange={setCreating} />
     </div>

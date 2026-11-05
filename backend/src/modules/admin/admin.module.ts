@@ -72,6 +72,7 @@ export class AdminService {
         email: true,
         firstName: true,
         lastName: true,
+        avatarUpdatedAt: true,
         role: true,
         status: true,
         createdAt: true,

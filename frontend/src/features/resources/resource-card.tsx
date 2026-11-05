@@ -1,6 +1,16 @@
 'use client';
 
-import { ArrowUpRight, FileText, Lightbulb, PlayCircle, Trash2, Wrench, LayoutTemplate, Shapes, type LucideIcon } from 'lucide-react';
+import {
+  ArrowUpRight,
+  FileText,
+  Lightbulb,
+  PlayCircle,
+  Trash2,
+  Wrench,
+  LayoutTemplate,
+  Shapes,
+  type LucideIcon,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { ConfirmButton } from '@/components/ui/confirm';
@@ -22,10 +32,11 @@ const KIND_ICONS: Record<ResourceKind, LucideIcon> = {
 export function ResourceCard({ resource, me }: { resource: Resource; me?: Me | null }) {
   const remove = useDeleteResource();
   const Icon = KIND_ICONS[resource.kind];
-  const canDelete = !!me && (me.id === resource.author.id || (me.role === 'ADMIN' && !resource.mentorshipId));
+  const canDelete =
+    !!me && (me.id === resource.author.id || (me.role === 'ADMIN' && !resource.mentorshipId));
 
   return (
-    <article className="flex h-full flex-col bg-surface p-6 ring-1 ring-border transition-shadow duration-300 hover:shadow-raised">
+    <article className="flex h-full flex-col rounded-lg bg-surface p-5 ring-1 ring-border transition-shadow duration-300 hover:shadow-raised">
       <div className="flex items-center justify-between gap-3">
         <span className="inline-flex items-center gap-2 text-[13px] font-semibold text-teal-800">
           <span className="inline-flex size-9 items-center justify-center bg-ink-900 text-amber-400">
@@ -33,15 +44,24 @@ export function ResourceCard({ resource, me }: { resource: Resource; me?: Me | n
           </span>
           {resourceKindLabels[resource.kind]}
         </span>
-        {resource.domain && <Badge tone="teal" className="max-w-[55%] truncate">{resource.domain.name}</Badge>}
+        {resource.domain && (
+          <Badge tone="teal" className="max-w-[55%] truncate">
+            {resource.domain.name}
+          </Badge>
+        )}
       </div>
-      <h3 className="mt-5 font-display text-[19px] leading-snug font-semibold tracking-[-0.02em] text-ink-900">{resource.title}</h3>
+      <h3 className="mt-5 font-display text-[19px] leading-snug font-semibold tracking-[-0.02em] text-ink-900">
+        {resource.title}
+      </h3>
       {resource.description && (
-        <p className="mt-2 line-clamp-4 text-[15px] leading-relaxed whitespace-pre-line text-foreground">{resource.description}</p>
+        <p className="mt-2 line-clamp-4 text-[15px] leading-relaxed whitespace-pre-line text-foreground">
+          {resource.description}
+        </p>
       )}
       <div className="mt-auto pt-6">
         <p className="text-[13px] text-muted-foreground">
-          Par <span className="font-semibold text-ink-900">{fullName(resource.author)}</span> · {formatDate(resource.createdAt)}
+          Par <span className="font-semibold text-ink-900">{fullName(resource.author)}</span> ·{' '}
+          {formatDate(resource.createdAt)}
         </p>
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           {resource.url ? (

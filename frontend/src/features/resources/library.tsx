@@ -40,19 +40,23 @@ export function Library() {
         photo={photos.eleves}
         actions={
           canPublish ? (
-            <Button onClick={() => setPublishing(true)} className="notch rounded-none bg-teal-600 hover:bg-teal-700">
+            <Button onClick={() => setPublishing(true)}>
               <Plus aria-hidden />
               Publier une ressource
             </Button>
           ) : undefined
         }
       >
-        <div className="flex items-stretch bg-white text-ink-900">
+        <div className="flex max-w-2xl items-stretch rounded-lg bg-surface text-ink-900 shadow-raised focus-within:ring-3 focus-within:ring-amber-400/60">
           <label htmlFor="recherche-ressource" className="sr-only">
             Rechercher une ressource
           </label>
-          <span className="flex items-center pl-4 text-muted-foreground" aria-hidden>
-            {lib.isFetching && q ? <LoaderCircle className="size-5 animate-spin" /> : <Search className="size-5" />}
+          <span className="flex items-center pl-3 text-muted-foreground" aria-hidden>
+            {lib.isFetching && q ? (
+              <LoaderCircle className="size-5 animate-spin" />
+            ) : (
+              <Search className="size-4" />
+            )}
           </span>
           <input
             id="recherche-ressource"
@@ -63,19 +67,37 @@ export function Library() {
               setPage(1);
             }}
             placeholder="Portfolio, entretien, pitch, Campus France…"
-            className="h-14 min-w-0 flex-1 bg-transparent px-3 text-[16px] outline-none placeholder:text-muted-foreground"
+            className="h-13 min-w-0 flex-1 bg-transparent px-3 text-[16px] outline-none placeholder:text-muted-foreground"
           />
         </div>
-        <ul className="scrollbar-thin -mx-1 mt-5 flex gap-2 overflow-x-auto px-1 pb-2" aria-label="Filtrer par domaine">
+        <ul
+          className="scrollbar-thin -mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-2"
+          aria-label="Filtrer par domaine"
+        >
           <li>
-            <BandChip active={!domain} onClick={() => { setDomain(''); setPage(1); }}>
+            <BandChip
+              active={!domain}
+              onClick={() => {
+                setDomain('');
+                setPage(1);
+              }}
+            >
               Tous les domaines
             </BandChip>
           </li>
           {domains.data?.map((d) => (
             <li key={d.id}>
-              <BandChip active={domain === d.slug} onClick={() => { setDomain(domain === d.slug ? '' : d.slug); setPage(1); }}>
-                <DomainIcon name={d.icon} className={cn('size-4', domain === d.slug ? 'text-white' : 'text-amber-400')} />
+              <BandChip
+                active={domain === d.slug}
+                onClick={() => {
+                  setDomain(domain === d.slug ? '' : d.slug);
+                  setPage(1);
+                }}
+              >
+                <DomainIcon
+                  name={d.icon}
+                  className={cn('size-4', domain === d.slug ? 'text-ink-950' : 'text-amber-400')}
+                />
                 {d.name}
               </BandChip>
             </li>
@@ -83,16 +105,23 @@ export function Library() {
         </ul>
       </PageBand>
 
-      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-        <div className="inline-flex flex-wrap bg-surface p-1 ring-1 ring-border" role="group" aria-label="Type de ressource">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
+        <div
+          className="inline-flex flex-wrap rounded-full bg-surface p-1 ring-1 ring-border"
+          role="group"
+          aria-label="Type de ressource"
+        >
           {KINDS.map((k) => (
             <button
               key={k || 'all'}
               type="button"
-              onClick={() => { setKind(k); setPage(1); }}
+              onClick={() => {
+                setKind(k);
+                setPage(1);
+              }}
               aria-pressed={kind === k}
               className={cn(
-                'h-9 px-3.5 text-[14px] font-semibold transition-colors',
+                'h-8 rounded-full px-3.5 text-[14px] font-semibold transition-colors',
                 kind === k ? 'bg-ink-900 text-white' : 'text-muted-foreground hover:text-ink-900',
               )}
             >
@@ -103,7 +132,8 @@ export function Library() {
         <p className="text-[14px] text-muted-foreground" aria-live="polite">
           {lib.data ? (
             <>
-              <span className="font-semibold text-ink-900">{lib.data.total}</span> ressource{lib.data.total > 1 ? 's' : ''}
+              <span className="font-semibold text-ink-900">{lib.data.total}</span> ressource
+              {lib.data.total > 1 ? 's' : ''}
             </>
           ) : (
             'Chargement…'
@@ -124,7 +154,11 @@ export function Library() {
       ) : lib.data.items.length === 0 ? (
         <EmptyState
           icon={query || domain || kind ? SearchX : BookOpen}
-          title={query || domain || kind ? 'Aucune ressource ne correspond' : 'La bibliothèque est encore vide'}
+          title={
+            query || domain || kind
+              ? 'Aucune ressource ne correspond'
+              : 'La bibliothèque est encore vide'
+          }
           description={
             canPublish
               ? 'Partagez une fiche pratique, un modèle ou un lien utile avec tous les mentorés.'
@@ -141,7 +175,12 @@ export function Library() {
         />
       ) : (
         <>
-          <ul className={cn('grid gap-6 md:grid-cols-2 xl:grid-cols-3', lib.isPlaceholderData && 'opacity-60')}>
+          <ul
+            className={cn(
+              'grid gap-6 md:grid-cols-2 xl:grid-cols-3',
+              lib.isPlaceholderData && 'opacity-60',
+            )}
+          >
             {lib.data.items.map((r) => (
               <li key={r.id} className="animate-slide-up">
                 <ResourceCard resource={r} me={me} />
@@ -150,13 +189,23 @@ export function Library() {
           </ul>
           {lib.data.totalPages > 1 && (
             <nav aria-label="Pagination" className="mt-10 flex items-center justify-center gap-3">
-              <Button variant="secondary" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={page <= 1}
+                onClick={() => setPage(page - 1)}
+              >
                 Précédent
               </Button>
               <span className="text-sm text-muted-foreground tabular-nums">
                 Page {lib.data.page} sur {lib.data.totalPages}
               </span>
-              <Button variant="secondary" size="sm" disabled={page >= lib.data.totalPages} onClick={() => setPage(page + 1)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={page >= lib.data.totalPages}
+                onClick={() => setPage(page + 1)}
+              >
                 Suivant
               </Button>
             </nav>

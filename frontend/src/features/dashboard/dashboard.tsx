@@ -2,21 +2,24 @@
 
 import {
   ArrowRight,
+  Award,
+  BookOpen,
   CalendarClock,
   CalendarDays,
   CalendarPlus,
   ExternalLink,
   Inbox,
   MessageSquare,
-  Search,
   Send,
   Target,
+  UserSearch,
   Users,
-  type LucideIcon,
 } from 'lucide-react';
 import Link from 'next/link';
-import type { ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { EmptyState, ErrorState } from '@/components/feedback/states';
+import { NOTIFICATION_ICONS } from '@/components/layout/notification-bell';
 import { StatusBadge } from '@/components/feedback/status-badge';
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -24,51 +27,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Progress, Skeleton } from '@/components/ui/misc';
 import { useMe } from '@/features/auth/api';
 import { useDashboard, useMentorships } from '@/features/mentorships/api';
+import { useNotifications } from '@/features/notifications/api';
 import { formatRelative, formatShortDate, formatTime, fullName } from '@/lib/format';
 import type { Dashboard as DashboardData, Me, MentorshipSummary, Session } from '@/lib/types';
 import { cn } from '@/lib/utils';
-
-function StatTile({
-  label,
-  value,
-  hint,
-  icon: Icon,
-  href,
-  emphasis = false,
-}: {
-  label: string;
-  value: ReactNode;
-  hint?: ReactNode;
-  icon: LucideIcon;
-  href?: string;
-  emphasis?: boolean;
-}) {
-  const body = (
-    <>
-      <div className="flex items-center justify-between gap-3">
-        <span className={cn('text-[13px] leading-snug font-medium sm:text-sm', 'text-muted-foreground')}>{label}</span>
-        <Icon className="hidden size-4 shrink-0 text-muted-foreground sm:block" aria-hidden />
-      </div>
-      <p className={cn('mt-2 text-3xl font-semibold tracking-tight tabular-nums sm:mt-3 sm:text-4xl', emphasis ? 'text-teal-700' : 'text-foreground')}>
-        {value}
-      </p>
-      {hint && (
-        <p className={cn('mt-1 text-xs', 'text-muted-foreground')}>{hint}</p>
-      )}
-    </>
-  );
-  const cls = cn(
-    'block rounded-lg border border-border bg-surface p-4 transition-colors duration-150 sm:p-5',
-    href && 'hover:border-ink-900',
-  );
-  return href ? (
-    <Link href={href} className={cls}>
-      {body}
-    </Link>
-  ) : (
-    <div className={cls}>{body}</div>
-  );
-}
 
 function SessionRow({ session, me }: { session: Session & { mentorshipId: string }; me: Me }) {
   const other = me.role === 'MENTOR' ? session.mentee : session.mentor;
@@ -79,13 +41,16 @@ function SessionRow({ session, me }: { session: Session & { mentorshipId: string
           {formatShortDate(session.startsAt, me.timezone).split(' ')[0]}
         </span>
         <span className="text-lg leading-tight font-semibold">
-          {new Intl.DateTimeFormat('fr-FR', { day: 'numeric', timeZone: me.timezone }).format(new Date(session.startsAt))}
+          {new Intl.DateTimeFormat('fr-FR', { day: 'numeric', timeZone: me.timezone }).format(
+            new Date(session.startsAt),
+          )}
         </span>
       </div>
       <div className="min-w-0 flex-1">
         <p className="line-clamp-2 text-sm font-semibold">{session.topic}</p>
         <p className="text-xs text-muted-foreground">
-          {formatTime(session.startsAt, me.timezone)} – {formatTime(session.endsAt, me.timezone)} · avec {fullName(other)}
+          {formatTime(session.startsAt, me.timezone)} – {formatTime(session.endsAt, me.timezone)} ·
+          avec {fullName(other)}
         </p>
         <StatusBadge kind="session" status={session.status} className="mt-1.5" />
       </div>
@@ -121,14 +86,21 @@ function MentorshipRow({ m }: { m: MentorshipSummary }) {
             )}
           </div>
           <p className="truncate text-xs text-muted-foreground">
-            {m.lastMessage ? `${m.lastMessage.content} · ${formatRelative(m.lastMessage.createdAt)}` : m.initialGoal}
+            {m.lastMessage
+              ? `${m.lastMessage.content} · ${formatRelative(m.lastMessage.createdAt)}`
+              : m.initialGoal}
           </p>
         </div>
         <div className="hidden w-24 shrink-0 sm:block">
           {m.averageProgress !== null ? (
             <>
-              <p className="mb-1 text-right text-xs font-semibold text-muted-foreground">{Math.round(m.averageProgress)} %</p>
-              <Progress value={m.averageProgress} label={`Progression des objectifs avec ${m.counterpart.firstName}`} />
+              <p className="mb-1 text-right text-xs font-semibold text-muted-foreground">
+                {Math.round(m.averageProgress)} %
+              </p>
+              <Progress
+                value={m.averageProgress}
+                label={`Progression des objectifs avec ${m.counterpart.firstName}`}
+              />
             </>
           ) : (
             <p className="text-right text-xs text-muted-foreground">Aucun objectif</p>
@@ -139,89 +111,234 @@ function MentorshipRow({ m }: { m: MentorshipSummary }) {
   );
 }
 
-function Tiles({ data, me }: { data: DashboardData; me: Me }) {
-  const goalsHint =
-    data.goals.total === 0
-      ? 'Aucun objectif défini'
-      : `${data.goals.completed} atteint${data.goals.completed > 1 ? 's' : ''} sur ${data.goals.total}`;
+/* ── Boîte d'action (en tête du fil) ──────────────────────────────────────── */
 
-  if (me.role === 'MENTOR') {
-    return (
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
-        <StatTile
-          emphasis
-          label="Demandes à traiter"
-          value={data.pendingRequests}
-          hint={data.pendingRequests ? 'Des mentorés attendent votre réponse' : 'Vous êtes à jour'}
-          icon={Inbox}
-          href="/demandes"
-        />
-        <StatTile
-          label="Mentorés accompagnés"
-          value={data.mentor ? `${data.activeMentorships}/${data.mentor.maxMentees}` : data.activeMentorships}
-          hint="Capacité que vous avez fixée"
-          icon={Users}
-          href="/mentorats"
-        />
-        <StatTile
-          label="Séances à confirmer"
-          value={data.sessionsAwaitingConfirmation}
-          hint="Demandées par vos mentorés"
-          icon={CalendarClock}
-          href="/seances"
-        />
-        <StatTile
-          label="Créneaux libres à venir"
-          value={data.mentor?.freeUpcomingSlots ?? 0}
-          hint={data.mentor?.freeUpcomingSlots ? 'Visibles sur votre fiche' : 'Publiez des créneaux'}
-          icon={CalendarPlus}
-          href="/disponibilites"
-        />
-      </div>
-    );
-  }
+function Composer({ me }: { me: Me }) {
+  const router = useRouter();
+  const [q, setQ] = useState('');
+  const actions =
+    me.role === 'MENTOR'
+      ? [
+          {
+            href: '/disponibilites',
+            label: 'Ajouter des créneaux',
+            icon: CalendarPlus,
+            tone: 'text-teal-600',
+          },
+          { href: '/demandes', label: 'Demandes reçues', icon: Inbox, tone: 'text-amber-500' },
+          {
+            href: '/ressources',
+            label: 'Publier une ressource',
+            icon: BookOpen,
+            tone: 'text-ink-700',
+          },
+        ]
+      : [
+          { href: '/mentors', label: 'Trouver un mentor', icon: UserSearch, tone: 'text-teal-600' },
+          { href: '/seances', label: 'Mes séances', icon: CalendarDays, tone: 'text-amber-500' },
+          { href: '/ressources', label: 'Ressources', icon: BookOpen, tone: 'text-ink-700' },
+        ];
   return (
-    <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
-      <StatTile
-        emphasis
-        label="Mentorats en cours"
-        value={data.activeMentorships}
-        hint={data.activeMentorships ? 'Accédez à vos espaces de mentorat' : 'Trouvez votre premier mentor'}
-        icon={Users}
-        href={data.activeMentorships ? '/mentorats' : '/mentors'}
-      />
-      <StatTile
-        label="Demandes en attente"
-        value={data.pendingRequests}
-        hint="En attente de réponse du mentor"
-        icon={Send}
-        href="/demandes"
-      />
-      <StatTile
-        label="Messages non lus"
-        value={data.unreadMessages}
-        hint="Dans vos conversations"
-        icon={MessageSquare}
-        href="/mentorats"
-      />
-      <div className="rounded-lg border border-border bg-surface p-4 sm:p-5">
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-[13px] leading-snug font-medium text-muted-foreground sm:text-sm">Progression des objectifs</span>
-          <span className="hidden sm:inline-flex items-center justify-center text-muted-foreground">
-            <Target className="size-4" aria-hidden />
-          </span>
-        </div>
-        <p className="mt-2 text-2xl font-semibold tracking-tight sm:mt-3 sm:text-3xl">
-          {data.goals.averageProgress === null ? '—' : `${Math.round(data.goals.averageProgress)} %`}
-        </p>
-        {data.goals.averageProgress !== null && (
-          <Progress value={data.goals.averageProgress} className="mt-2" label="Progression moyenne des objectifs" />
-        )}
-        <p className="mt-2 text-xs text-muted-foreground">{goalsHint}</p>
+    <section className={feedCard} aria-label="Actions rapides">
+      <div className="flex items-center gap-3 px-4 pt-4">
+        <Avatar person={me} size="lg" className="size-12" />
+        <form
+          role="search"
+          className="min-w-0 flex-1"
+          onSubmit={(e) => {
+            e.preventDefault();
+            router.push(q.trim() ? `/mentors?q=${encodeURIComponent(q.trim())}` : '/mentors');
+          }}
+        >
+          <label htmlFor="recherche-fil" className="sr-only">
+            Rechercher un mentor
+          </label>
+          <input
+            id="recherche-fil"
+            type="search"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder={`${me.firstName}, quelle compétence voulez-vous développer ?`}
+            className="h-12 w-full rounded-full border border-border-strong bg-surface px-5 text-[14px] font-medium text-ink-900 outline-none placeholder:text-muted-foreground hover:bg-background focus:border-teal-600 focus:ring-3 focus:ring-teal-600/15"
+          />
+        </form>
       </div>
-    </div>
+      <div className="mt-2 grid grid-cols-3 px-2 pb-1.5">
+        {actions.map(({ href, label, icon: Icon, tone }) => (
+          <Link
+            key={href}
+            href={href}
+            className="flex h-12 items-center justify-center gap-2 rounded-md px-2 text-[14px] font-semibold text-muted-foreground transition-colors hover:bg-background hover:text-ink-900"
+          >
+            <Icon className={cn('size-5 shrink-0', tone)} aria-hidden />
+            <span className="truncate">{label}</span>
+          </Link>
+        ))}
+      </div>
+    </section>
   );
 }
+
+/* ── Chiffres compacts, en une carte ──────────────────────────────────────── */
+
+function StatsCard({ data, me }: { data: DashboardData; me: Me }) {
+  const items =
+    me.role === 'MENTOR'
+      ? [
+          {
+            label: 'Demandes à traiter',
+            value: data.pendingRequests,
+            href: '/demandes',
+            icon: Inbox,
+          },
+          {
+            label: 'Mentorés en cours',
+            value: data.activeMentorships,
+            href: '/mentorats',
+            icon: Users,
+          },
+          {
+            label: 'Séances à confirmer',
+            value: data.sessionsAwaitingConfirmation,
+            href: '/seances',
+            icon: CalendarClock,
+          },
+          {
+            label: 'Certificats obtenus',
+            value: data.mentor?.certificates ?? 0,
+            href: `/mentors/${me.id}#certificats`,
+            icon: Award,
+          },
+        ]
+      : [
+          {
+            label: 'Mentorats en cours',
+            value: data.activeMentorships,
+            href: '/mentorats',
+            icon: Users,
+          },
+          {
+            label: 'Demandes en attente',
+            value: data.pendingRequests,
+            href: '/demandes',
+            icon: Send,
+          },
+          {
+            label: 'Messages non lus',
+            value: data.unreadMessages,
+            href: '/mentorats',
+            icon: MessageSquare,
+          },
+          {
+            label: 'Objectifs atteints',
+            value:
+              data.goals.averageProgress === null
+                ? '—'
+                : `${Math.round(data.goals.averageProgress)} %`,
+            href: '/mentorats',
+            icon: Target,
+          },
+        ];
+  return (
+    <section className={feedCard} aria-labelledby="titre-activite">
+      <div className="flex items-baseline justify-between px-4 pt-4">
+        <h2 id="titre-activite" className="font-display text-[17px] font-semibold text-ink-900">
+          Votre activité
+        </h2>
+        <span className="text-[12px] text-muted-foreground">Données en temps réel</span>
+      </div>
+      <ul className="mt-2 grid grid-cols-2 sm:grid-cols-4">
+        {items.map(({ label, value, href, icon: Icon }, i) => (
+          <li
+            key={label}
+            className={cn(
+              'border-border/70',
+              i > 0 && 'sm:border-l',
+              i % 2 === 1 && 'border-l',
+              i >= 2 && 'border-t sm:border-t-0',
+            )}
+          >
+            <Link href={href} className="block px-4 py-3.5 transition-colors hover:bg-background">
+              <Icon className="size-4 text-teal-700" aria-hidden />
+              <span className="mt-2 block font-display text-[26px] leading-none font-semibold text-ink-900 tabular-nums">
+                {value}
+              </span>
+              <span className="mt-1 block text-[12px] leading-snug text-muted-foreground">
+                {label}
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/* ── Fil d'activité (notifications réelles) ───────────────────────────────── */
+
+function ActivityFeed() {
+  const list = useNotifications(true);
+  const items = list.data?.slice(0, 6) ?? [];
+  if (list.isPending) return <Skeleton className="h-40" />;
+  if (items.length === 0) return null;
+  return (
+    <>
+      <div className="flex items-center gap-3 px-1" aria-hidden>
+        <span className="h-px flex-1 bg-border-strong/70" />
+        <span className="text-[12px] font-medium text-muted-foreground">
+          Fil d’activité · le plus récent
+        </span>
+      </div>
+      <ul className="grid gap-2">
+        {items.map((n) => {
+          const Icon = NOTIFICATION_ICONS[n.type];
+          return (
+            <li key={n.id} className={feedCard}>
+              <article className="px-4 py-3.5">
+                <div className="flex items-start gap-3">
+                  <span
+                    className={cn(
+                      'inline-flex size-11 shrink-0 items-center justify-center rounded-[30%]',
+                      n.readAt ? 'bg-surface-muted text-ink-800' : 'bg-teal-50 text-teal-700',
+                    )}
+                    aria-hidden
+                  >
+                    <Icon className="size-5" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[14px] leading-snug font-semibold text-ink-900">{n.title}</p>
+                    <p className="text-[12px] text-muted-foreground">
+                      {formatRelative(n.createdAt)}
+                      {!n.readAt && (
+                        <span className="ml-1.5 font-semibold text-teal-700">· nouveau</span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+                {n.body && (
+                  <p className="mt-2.5 text-[14px] leading-relaxed text-foreground">{n.body}</p>
+                )}
+                {n.link && (
+                  <div className="mt-2 -mb-1 border-t border-border/70 pt-1">
+                    <Link
+                      href={n.link}
+                      className="inline-flex h-9 items-center gap-1.5 rounded-md px-2 text-[13px] font-semibold text-muted-foreground transition-colors hover:bg-background hover:text-ink-900"
+                    >
+                      <ArrowRight className="size-4" aria-hidden />
+                      Ouvrir
+                    </Link>
+                  </div>
+                )}
+              </article>
+            </li>
+          );
+        })}
+      </ul>
+    </>
+  );
+}
+
+const feedCard = 'overflow-hidden rounded-lg bg-surface shadow-card ring-1 ring-border/70';
 
 export function Dashboard() {
   const { data: me } = useMe();
@@ -231,52 +348,15 @@ export function Dashboard() {
   if (!me) return null;
   if (dash.isError) return <ErrorState error={dash.error} onRetry={() => void dash.refetch()} />;
 
-  const today = new Intl.DateTimeFormat('fr-FR', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    timeZone: me.timezone,
-  }).format(new Date());
   const active = mentorships.data?.filter((m) => m.status === 'ACTIVE') ?? [];
 
   return (
-    <div className="grid gap-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-sm font-medium text-muted-foreground first-letter:uppercase">{today}</p>
-          <h1 className="mt-1 text-3xl font-display font-semibold tracking-[-0.03em] text-ink-900 sm:text-4xl">Bonjour {me.firstName}</h1>
-          <p className="mt-1 text-[15px] text-muted-foreground">
-            {me.role === 'MENTOR'
-              ? 'Voici l’essentiel de votre activité de mentor.'
-              : 'Voici où en est votre accompagnement.'}
-          </p>
-        </div>
-        <Button asChild variant={me.role === 'MENTOR' ? 'secondary' : 'primary'}>
-          {me.role === 'MENTOR' ? (
-            <Link href="/disponibilites">
-              <CalendarPlus aria-hidden />
-              Ajouter des créneaux
-            </Link>
-          ) : (
-            <Link href="/mentors">
-              <Search aria-hidden />
-              Trouver un mentor
-            </Link>
-          )}
-        </Button>
-      </div>
+    <div className="grid gap-3">
+      <h1 className="sr-only">Accueil de {me.firstName}</h1>
+      <Composer me={me} />
+      {dash.isPending ? <Skeleton className="h-[128px]" /> : <StatsCard data={dash.data} me={me} />}
 
-      {dash.isPending ? (
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-[136px]" />
-          ))}
-        </div>
-      ) : (
-        <Tiles data={dash.data} me={me} />
-      )}
-
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+      <div className="grid gap-3">
         <Card>
           <CardHeader>
             <div>
@@ -304,7 +384,9 @@ export function Dashboard() {
               <EmptyState
                 className="border-none p-6"
                 icon={Users}
-                title={me.role === 'MENTOR' ? 'Aucun mentoré pour l’instant' : 'Aucun mentorat en cours'}
+                title={
+                  me.role === 'MENTOR' ? 'Aucun mentoré pour l’instant' : 'Aucun mentorat en cours'
+                }
                 description={
                   me.role === 'MENTOR'
                     ? 'Acceptez une demande pour démarrer un accompagnement.'
@@ -368,6 +450,7 @@ export function Dashboard() {
           </CardContent>
         </Card>
       </div>
+      <ActivityFeed />
     </div>
   );
 }

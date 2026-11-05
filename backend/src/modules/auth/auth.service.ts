@@ -126,6 +126,7 @@ export class AuthService {
         email: true,
         firstName: true,
         lastName: true,
+        avatarUpdatedAt: true,
         role: true,
         timezone: true,
         onboardedAt: true,

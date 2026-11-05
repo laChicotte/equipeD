@@ -1,6 +1,8 @@
 'use client';
 
 import {
+  House,
+  UserSearch,
   BookOpen,
   Briefcase,
   CalendarDays,
@@ -17,7 +19,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Skeleton } from '@/components/ui/misc';
 import { useMe } from '@/features/auth/api';
 import { useDashboard } from '@/features/mentorships/api';
@@ -43,33 +45,93 @@ interface NavItem {
 function navFor(me: Me): NavItem[] {
   if (me.role === 'ADMIN') {
     return [
-      { href: '/admin', label: 'Vue d’ensemble', short: 'Synthèse', icon: LayoutDashboard, exact: true },
+      {
+        href: '/admin',
+        label: 'Vue d’ensemble',
+        short: 'Synthèse',
+        icon: LayoutDashboard,
+        exact: true,
+      },
       { href: '/admin/comptes', label: 'Comptes', short: 'Comptes', icon: UserCog },
       { href: '/admin/mentors', label: 'Mentors', short: 'Mentors', icon: ShieldCheck },
       { href: '/admin/domaines', label: 'Domaines', short: 'Domaines', icon: Shapes },
-      { href: '/ressources', label: 'Ressources', short: 'Ressources', icon: BookOpen, desktopOnly: true },
-      { href: '/opportunites', label: 'Opportunités', short: 'Opportunités', icon: Briefcase, desktopOnly: true },
+      {
+        href: '/ressources',
+        label: 'Ressources',
+        short: 'Ressources',
+        icon: BookOpen,
+        desktopOnly: true,
+      },
+      {
+        href: '/opportunites',
+        label: 'Opportunités',
+        short: 'Opportunités',
+        icon: Briefcase,
+        desktopOnly: true,
+      },
     ];
   }
   if (me.role === 'MENTOR') {
     return [
-      { href: '/tableau-de-bord', label: 'Tableau de bord', short: 'Accueil', icon: LayoutDashboard },
-      { href: '/demandes', label: 'Demandes reçues', short: 'Demandes', icon: Inbox, badge: 'requests' },
-      { href: '/mentorats', label: 'Mes mentorés', short: 'Mentorés', icon: Users, badge: 'messages' },
+      { href: '/tableau-de-bord', label: 'Tableau de bord', short: 'Accueil', icon: House },
+      {
+        href: '/demandes',
+        label: 'Demandes reçues',
+        short: 'Demandes',
+        icon: Inbox,
+        badge: 'requests',
+      },
+      {
+        href: '/mentorats',
+        label: 'Mes mentorés',
+        short: 'Mentorés',
+        icon: Users,
+        badge: 'messages',
+      },
       { href: '/disponibilites', label: 'Disponibilités', short: 'Créneaux', icon: CalendarPlus },
       { href: '/seances', label: 'Séances', short: 'Séances', icon: CalendarDays },
-      { href: '/ressources', label: 'Ressources', short: 'Ressources', icon: BookOpen, desktopOnly: true },
-      { href: '/opportunites', label: 'Opportunités', short: 'Opportunités', icon: Briefcase, desktopOnly: true },
+      {
+        href: '/ressources',
+        label: 'Ressources',
+        short: 'Ressources',
+        icon: BookOpen,
+        desktopOnly: true,
+      },
+      {
+        href: '/opportunites',
+        label: 'Opportunités',
+        short: 'Opportunités',
+        icon: Briefcase,
+        desktopOnly: true,
+      },
     ];
   }
   return [
-    { href: '/tableau-de-bord', label: 'Tableau de bord', short: 'Accueil', icon: LayoutDashboard },
-    { href: '/mentors', label: 'Trouver un mentor', short: 'Mentors', icon: Search },
+    { href: '/tableau-de-bord', label: 'Tableau de bord', short: 'Accueil', icon: House },
+    { href: '/mentors', label: 'Trouver un mentor', short: 'Mentors', icon: UserSearch },
     { href: '/demandes', label: 'Mes demandes', short: 'Demandes', icon: Send },
-    { href: '/mentorats', label: 'Mes mentorats', short: 'Mentorats', icon: Users, badge: 'messages' },
+    {
+      href: '/mentorats',
+      label: 'Mes mentorats',
+      short: 'Mentorats',
+      icon: Users,
+      badge: 'messages',
+    },
     { href: '/seances', label: 'Séances', short: 'Séances', icon: CalendarDays },
-    { href: '/ressources', label: 'Ressources', short: 'Ressources', icon: BookOpen, desktopOnly: true },
-    { href: '/opportunites', label: 'Opportunités', short: 'Opportunités', icon: Briefcase, desktopOnly: true },
+    {
+      href: '/ressources',
+      label: 'Ressources',
+      short: 'Ressources',
+      icon: BookOpen,
+      desktopOnly: true,
+    },
+    {
+      href: '/opportunites',
+      label: 'Opportunités',
+      short: 'Opportunités',
+      icon: Briefcase,
+      desktopOnly: true,
+    },
   ];
 }
 
@@ -87,73 +149,91 @@ function useBadgeCounts(enabled: boolean) {
   };
 }
 
-function CountBadge({ value, className }: { value: number; className?: string }) {
-  if (!value) return null;
-  return (
-    <span
-      className={cn(
-        'inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-teal-700 px-1.5 text-[11px] font-semibold tabular-nums text-white',
-        className,
-      )}
-    >
-      {value > 99 ? '99+' : value}
-      <span className="sr-only"> nouveau(x)</span>
-    </span>
-  );
-}
-
-function Sidebar({ me, items, counts }: { me: Me; items: NavItem[]; counts: Record<string, number> }) {
+function TopNav({
+  me,
+  items,
+  counts,
+}: {
+  me: Me;
+  items: NavItem[];
+  counts: Record<string, number>;
+}) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [q, setQ] = useState('');
   return (
-    <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r border-border bg-surface lg:flex">
-      <div className="flex h-16 items-center px-5">
-        <Logo href={me.role === 'ADMIN' ? '/admin' : '/tableau-de-bord'} />
+    <header className="sticky top-0 z-30 border-b border-border/70 print:hidden bg-surface/90 backdrop-blur-md">
+      <div className="mx-auto flex h-16 max-w-[1240px] items-center gap-3 px-4 sm:px-6">
+        <Logo href={me.role === 'ADMIN' ? '/admin' : '/tableau-de-bord'} className="text-ink-900" />
+
+        {/* Navigation centrale en pastilles */}
+        <nav aria-label="Navigation de l’espace" className="mx-auto hidden min-w-0 lg:block">
+          <ul className="scrollbar-none flex items-center gap-1 overflow-x-auto rounded-lg bg-surface-muted/70 p-1">
+            {items.map((item) => {
+              const active = isActive(pathname, item);
+              const Icon = item.icon;
+              const count = item.badge ? (counts[item.badge] ?? 0) : 0;
+              return (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    aria-current={active ? 'page' : undefined}
+                    aria-label={item.label}
+                    title={item.label}
+                    className={cn(
+                      'relative inline-flex h-10 items-center gap-2 rounded-md px-3 text-[14px] font-semibold whitespace-nowrap transition-colors',
+                      active
+                        ? 'bg-ink-900 text-white shadow-card'
+                        : 'text-muted-foreground hover:bg-surface hover:text-ink-900',
+                    )}
+                  >
+                    <Icon
+                      className={cn('size-[18px] shrink-0', active && 'text-amber-400')}
+                      aria-hidden
+                    />
+                    {active && <span>{item.short}</span>}
+                    {count > 0 && (
+                      <span className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-teal-600 px-1 text-[10px] font-semibold text-white tabular-nums">
+                        {count > 9 ? '9+' : count}
+                      </span>
+                    )}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+
+        {/* Recherche à droite */}
+        <form
+          role="search"
+          className="relative ml-auto min-w-0 flex-1 lg:ml-0 lg:w-[220px] lg:flex-none xl:w-[260px]"
+          onSubmit={(e) => {
+            e.preventDefault();
+            router.push(q.trim() ? `/mentors?q=${encodeURIComponent(q.trim())}` : '/mentors');
+          }}
+        >
+          <Search
+            className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden
+          />
+          <label htmlFor="recherche-globale" className="sr-only">
+            Rechercher un mentor
+          </label>
+          <input
+            id="recherche-globale"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Rechercher un mentor…"
+            className="h-10 w-full rounded-md border border-border bg-background pr-3 pl-9 text-[14px] text-ink-900 outline-none placeholder:text-muted-foreground focus:border-teal-600 focus:bg-surface focus:ring-3 focus:ring-teal-600/15"
+          />
+        </form>
+        <div className="flex shrink-0 items-center gap-0.5">
+          {me.role !== 'ADMIN' && <NotificationBell />}
+          <UserMenu me={me} compact />
+        </div>
       </div>
-      <nav aria-label="Navigation de l’espace" className="flex flex-1 flex-col gap-0.5 px-3 py-4">
-        <p className="px-3 pb-2 text-sm font-semibold text-foreground">
-          {me.role === 'ADMIN' ? 'Administration' : me.role === 'MENTOR' ? 'Espace mentor' : 'Mon parcours'}
-        </p>
-        {items.map((item) => {
-          const active = isActive(pathname, item);
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              aria-current={active ? 'page' : undefined}
-              className={cn(
-                'group relative flex h-10 items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors duration-150',
-                active
-                  ? 'bg-surface-muted font-semibold text-ink-900'
-                  : 'text-muted-foreground hover:bg-surface-muted hover:text-foreground',
-              )}
-            >
-              <Icon
-                className={cn('size-[18px] shrink-0', active ? 'text-ink-900' : 'text-muted-foreground group-hover:text-foreground')}
-                aria-hidden
-              />
-              <span className="flex-1 truncate">{item.label}</span>
-              {item.badge && (
-                <CountBadge
-                  value={counts[item.badge] ?? 0}
-                  className={undefined}
-                />
-              )}
-            </Link>
-          );
-        })}
-      </nav>
-      <div className="m-3 bg-background p-4">
-        <p className="text-xs font-semibold text-foreground">Besoin d’un repère ?</p>
-        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-          {me.role === 'MENTOR'
-            ? 'Publiez des créneaux pour que vos mentorés puissent réserver une séance.'
-            : me.role === 'MENTEE'
-              ? 'Un objectif clair dans votre demande augmente vos chances d’être accompagné·e.'
-              : 'Vérifiez les profils mentors avant leur mise en avant.'}
-        </p>
-      </div>
-    </aside>
+    </header>
   );
 }
 
@@ -162,37 +242,43 @@ function MobileTabBar({ items, counts }: { items: NavItem[]; counts: Record<stri
   return (
     <nav
       aria-label="Navigation de l’espace"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-border/70 print:hidden bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden"
     >
       <ul className="mx-auto flex max-w-lg items-stretch justify-around">
-        {items.filter((i) => !i.desktopOnly).map((item) => {
-          const active = isActive(pathname, item);
-          const Icon = item.icon;
-          const count = item.badge ? (counts[item.badge] ?? 0) : 0;
-          return (
-            <li key={item.href} className="flex-1">
-              <Link
-                href={item.href}
-                aria-current={active ? 'page' : undefined}
-                className={cn(
-                  'relative flex h-16 flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors',
-                  active ? 'text-ink-900' : 'text-muted-foreground',
-                )}
-              >
-                {active && <span className="absolute top-0 h-0.5 w-8 rounded-full bg-teal-600" aria-hidden />}
-                <span className="relative">
-                  <Icon className={cn('size-5', active && 'text-teal-700')} aria-hidden />
-                  {count > 0 && (
-                    <span className="absolute -top-1.5 -right-2.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-teal-700 px-1 text-[10px] text-white">
-                      {count > 9 ? '9+' : count}
-                    </span>
+        {items
+          .filter((i) => !i.desktopOnly)
+          .map((item) => {
+            const active = isActive(pathname, item);
+            const Icon = item.icon;
+            const count = item.badge ? (counts[item.badge] ?? 0) : 0;
+            return (
+              <li key={item.href} className="flex-1">
+                <Link
+                  href={item.href}
+                  aria-current={active ? 'page' : undefined}
+                  className={cn(
+                    'relative flex h-16 flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors',
+                    active ? 'text-ink-900' : 'text-muted-foreground',
                   )}
-                </span>
-                {item.short}
-              </Link>
-            </li>
-          );
-        })}
+                >
+                  <span
+                    className={cn(
+                      'relative inline-flex h-7 w-12 items-center justify-center rounded-md transition-colors',
+                      active && 'bg-ink-900 text-amber-400',
+                    )}
+                  >
+                    <Icon className="size-[18px]" aria-hidden />
+                    {count > 0 && (
+                      <span className="absolute -top-1 -right-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-teal-600 px-1 text-[10px] text-white ring-2 ring-surface">
+                        {count > 9 ? '9+' : count}
+                      </span>
+                    )}
+                  </span>
+                  {item.short}
+                </Link>
+              </li>
+            );
+          })}
       </ul>
     </nav>
   );
@@ -200,9 +286,9 @@ function MobileTabBar({ items, counts }: { items: NavItem[]; counts: Record<stri
 
 export function ShellSkeleton() {
   return (
-    <div className="flex min-h-dvh">
-      <div className="hidden w-60 border-r border-border bg-surface lg:block" />
-      <div className="flex-1 p-4 sm:p-8">
+    <div className="min-h-dvh bg-background">
+      <div className="h-16 border-b border-border/70 bg-surface" />
+      <div className="mx-auto max-w-[1240px] p-4 sm:p-8">
         <Skeleton className="mb-3 h-8 w-64" />
         <Skeleton className="mb-8 h-4 w-96 max-w-full" />
         <div className="grid gap-4 sm:grid-cols-3">
@@ -219,28 +305,15 @@ function AuthenticatedLayout({ me, children }: { me: Me; children: ReactNode }) 
   const items = navFor(me);
   const counts = useBadgeCounts(me.role !== 'ADMIN' && me.hasProfile);
   return (
-    <div className="flex min-h-dvh flex-col">
+    <div className="flex min-h-dvh flex-col bg-background">
       <DemoBanner />
-      <div className="flex flex-1">
-        <Sidebar me={me} items={items} counts={counts} />
-        <div className="flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-border bg-surface px-4 sm:px-8">
-            <div className="lg:hidden">
-              <Logo href={me.role === 'ADMIN' ? '/admin' : '/tableau-de-bord'} />
-            </div>
-            <p className="hidden text-sm text-muted-foreground lg:block">
-              {me.role === 'ADMIN' ? 'Administration' : me.role === 'MENTOR' ? 'Espace mentor' : 'Espace mentoré'} · Talents Connectés
-            </p>
-            <div className="flex items-center gap-1">
-              {me.role !== 'ADMIN' && <NotificationBell />}
-              <UserMenu me={me} />
-            </div>
-          </header>
-          <main id="contenu" className="mx-auto w-full max-w-6xl flex-1 px-4 pt-6 pb-28 sm:px-8 sm:pt-8 lg:pb-12">
-            {children}
-          </main>
-        </div>
-      </div>
+      <TopNav me={me} items={items} counts={counts} />
+      <main
+        id="contenu"
+        className="mx-auto w-full max-w-[1240px] flex-1 px-4 pt-6 pb-28 sm:px-6 lg:pb-12"
+      >
+        {children}
+      </main>
       <MobileTabBar items={items} counts={counts} />
     </div>
   );
@@ -252,7 +325,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const { data: me, isPending, isError } = useMe();
 
-  const needsOnboarding = !!me && me.role !== 'ADMIN' && !me.hasProfile && pathname !== '/onboarding';
+  const needsOnboarding =
+    !!me && me.role !== 'ADMIN' && !me.hasProfile && pathname !== '/onboarding';
 
   useEffect(() => {
     if (isPending) return;
@@ -300,7 +374,10 @@ export function AdaptiveShell({ children }: { children: ReactNode }) {
     <div className="flex min-h-dvh flex-col">
       <DemoBanner />
       <PublicHeader />
-      <main id="contenu" className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-8 sm:py-10">
+      <main
+        id="contenu"
+        className="mx-auto w-full max-w-[1200px] flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8"
+      >
         {children}
       </main>
       <PublicFooter />

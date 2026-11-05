@@ -20,10 +20,11 @@ import Link from 'next/link';
 import { useDeferredValue, useEffect, useId, useMemo, useState } from 'react';
 import { DomainIcon } from '@/components/domain-icon';
 import { ErrorState } from '@/components/feedback/states';
+import { Avatar } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/misc';
 import { useDomains, useMentors } from '@/features/catalog/api';
 import { useReveal } from '@/hooks/use-reveal';
-import { formatShortDate, fullName, initials, plural } from '@/lib/format';
+import { formatShortDate, fullName, plural } from '@/lib/format';
 import { isCampusFrance } from '@/lib/labels';
 import { photos, type Photo } from '@/lib/photos';
 import { cn } from '@/lib/utils';
@@ -57,7 +58,15 @@ function Shot({
   );
 }
 
-function PrimaryLink({ href, children, className }: { href: string; children: React.ReactNode; className?: string }) {
+function PrimaryLink({
+  href,
+  children,
+  className,
+}: {
+  href: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
     <Link
       href={href}
@@ -67,12 +76,25 @@ function PrimaryLink({ href, children, className }: { href: string; children: Re
       )}
     >
       {children}
-      <ArrowRight className="size-4 transition-transform duration-200 group-hover:translate-x-1" aria-hidden />
+      <ArrowRight
+        className="size-4 transition-transform duration-200 group-hover:translate-x-1"
+        aria-hidden
+      />
     </Link>
   );
 }
 
-function SectionTitle({ id, children, className, light = false }: { id?: string; children: React.ReactNode; className?: string; light?: boolean }) {
+function SectionTitle({
+  id,
+  children,
+  className,
+  light = false,
+}: {
+  id?: string;
+  children: React.ReactNode;
+  className?: string;
+  light?: boolean;
+}) {
   return (
     <h2
       id={id}
@@ -103,7 +125,10 @@ function HeroSearch() {
 
   return (
     <div className="cut-panel relative bg-white px-6 pt-6 pb-6 text-ink-900 sm:px-8 lg:pl-20">
-      <label htmlFor={inputId} className="font-display text-[20px] font-semibold tracking-[-0.02em] text-ink-900">
+      <label
+        htmlFor={inputId}
+        className="font-display text-[20px] font-semibold tracking-[-0.02em] text-ink-900"
+      >
         Que voulez-vous apprendre ?
       </label>
       <form
@@ -117,7 +142,11 @@ function HeroSearch() {
         }}
       >
         <span className="flex items-center bg-amber-50 pl-4 text-muted-foreground" aria-hidden>
-          {isFetching && active ? <LoaderCircle className="size-5 animate-spin" /> : <Search className="size-5" />}
+          {isFetching && active ? (
+            <LoaderCircle className="size-5 animate-spin" />
+          ) : (
+            <Search className="size-5" />
+          )}
         </span>
         <input
           id={inputId}
@@ -156,7 +185,10 @@ function HeroSearch() {
           {results.length === 0 && !isFetching ? (
             <p className="text-[15px] text-muted-foreground">
               Aucun mentor pour « {deferred} » pour l’instant.{' '}
-              <Link href="/mentors" className="font-semibold text-teal-700 underline underline-offset-4">
+              <Link
+                href="/mentors"
+                className="font-semibold text-teal-700 underline underline-offset-4"
+              >
                 Voir tout l’annuaire
               </Link>
             </p>
@@ -168,12 +200,14 @@ function HeroSearch() {
                     href={`/mentors/${m.id}`}
                     className="flex items-center gap-3 px-2 py-2 transition-colors hover:bg-ink-50"
                   >
-                    <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-teal-50 text-[13px] font-semibold text-teal-800">
-                      {initials(m)}
-                    </span>
+                    <Avatar person={m} className="size-9 text-[13px]" />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[15px] font-semibold">{fullName(m)}</span>
-                      <span className="block truncate text-[13px] text-muted-foreground">{m.headline}</span>
+                      <span className="block truncate text-[15px] font-semibold">
+                        {fullName(m)}
+                      </span>
+                      <span className="block truncate text-[13px] text-muted-foreground">
+                        {m.headline}
+                      </span>
                     </span>
                     {m.nextAvailableAt && (
                       <span className="hidden text-[13px] font-semibold whitespace-nowrap text-teal-700 sm:inline">
@@ -186,7 +220,10 @@ function HeroSearch() {
             </ul>
           )}
           {data && data.total > 3 && (
-            <Link href={href} className="mt-2 inline-flex items-center gap-1 text-[14px] font-semibold text-teal-700">
+            <Link
+              href={href}
+              className="mt-2 inline-flex items-center gap-1 text-[14px] font-semibold text-teal-700"
+            >
               Voir les {data.total} mentors <ArrowRight className="size-4" aria-hidden />
             </Link>
           )}
@@ -216,7 +253,10 @@ function Hero() {
   }, [index, paused]);
 
   return (
-    <section aria-labelledby="titre-accueil" className="relative isolate -mt-16 min-h-[calc(100svh-2rem)] overflow-hidden bg-ink-950 text-white">
+    <section
+      aria-labelledby="titre-accueil"
+      className="relative isolate -mt-16 min-h-[calc(100svh-2rem)] overflow-hidden bg-ink-950 text-white"
+    >
       {/* Diaporama */}
       {SLIDES.map((s, i) => (
         <div
@@ -239,23 +279,37 @@ function Hero() {
       ))}
       {/* Voile neutre sous le texte (lisibilité) */}
       <div className="absolute inset-0 -z-10 bg-ink-950/55" aria-hidden />
-      <div className="absolute inset-y-0 left-0 -z-10 w-full bg-[linear-gradient(90deg,rgb(14_27_48/0.85),rgb(14_27_48/0.35)_60%,transparent)] lg:w-3/4" aria-hidden />
+      <div
+        className="absolute inset-y-0 left-0 -z-10 w-full bg-[linear-gradient(90deg,rgb(11_32_26/0.85),rgb(11_32_26/0.35)_60%,transparent)] lg:w-3/4"
+        aria-hidden
+      />
 
       <div className="page-frame flex min-h-[calc(100svh-2rem)] flex-col justify-end pt-28 pb-0 lg:pt-32">
         <div className="max-w-[60rem] pb-10 lg:pb-12">
           <h1 id="titre-accueil" className="lines font-display font-semibold tracking-[-0.04em]">
             <span className="line">
-              <span data-line style={{ ['--i' as string]: 0 }} className="text-[clamp(1.5rem,1rem+2vw,2.75rem)] leading-[1.1] text-white/90">
+              <span
+                data-line
+                style={{ ['--i' as string]: 0 }}
+                className="text-[clamp(1.5rem,1rem+2vw,2.75rem)] leading-[1.1] text-white/90"
+              >
                 Le mentorat à l’ère du numérique :
               </span>
             </span>
             <span className="line">
-              <span data-line style={{ ['--i' as string]: 1 }} className="text-[clamp(3.25rem,1.2rem+7vw,7.5rem)] leading-[0.95]">
+              <span
+                data-line
+                style={{ ['--i' as string]: 1 }}
+                className="text-[clamp(3.25rem,1.2rem+7vw,7.5rem)] leading-[0.95]"
+              >
                 trouvez votre mentor.
               </span>
             </span>
           </h1>
-          <p data-after-lines className="mt-6 max-w-[46ch] text-[clamp(1.0625rem,1rem+0.4vw,1.3rem)] leading-relaxed text-white/90">
+          <p
+            data-after-lines
+            className="mt-6 max-w-[46ch] text-[clamp(1.0625rem,1rem+0.4vw,1.3rem)] leading-relaxed text-white/90"
+          >
             Étudiants, jeunes diplômés, porteurs de projets : avancez avec des professionnels de
             Guinée qui ont déjà fait le chemin, de la première demande jusqu’à l’objectif atteint.
           </p>
@@ -297,18 +351,28 @@ function Hero() {
                       className="absolute inset-y-0 left-0 bg-amber-400"
                       style={{
                         width: paused ? '100%' : undefined,
-                        animation: paused ? undefined : `slide-progress ${SLIDE_MS}ms linear forwards`,
+                        animation: paused
+                          ? undefined
+                          : `slide-progress ${SLIDE_MS}ms linear forwards`,
                       }}
                     />
                   )}
                 </span>
-                <span className={cn('mt-3 block text-[14px] font-semibold transition-colors', i === index ? 'text-white' : 'text-white/60 group-hover:text-white')}>
+                <span
+                  className={cn(
+                    'mt-3 block text-[14px] font-semibold transition-colors',
+                    i === index ? 'text-white' : 'text-white/60 group-hover:text-white',
+                  )}
+                >
                   {s.label}
                 </span>
               </button>
             ))}
           </div>
-          <div data-after-lines className="-mx-[var(--page-x)] lg:mx-0 lg:mr-[calc(var(--page-x)*-1)]">
+          <div
+            data-after-lines
+            className="-mx-[var(--page-x)] lg:mx-0 lg:mr-[calc(var(--page-x)*-1)]"
+          >
             <HeroSearch />
           </div>
         </div>
@@ -346,32 +410,55 @@ function Overview() {
           <SectionTitle id="titre-espace" className="lg:col-span-6">
             Un seul espace pour avancer
           </SectionTitle>
-          <div data-reveal style={{ ['--d' as string]: 1 }} className="lg:col-span-5 lg:col-start-8 lg:pt-3">
+          <div
+            data-reveal
+            style={{ ['--d' as string]: 1 }}
+            className="lg:col-span-5 lg:col-start-8 lg:pt-3"
+          >
             <p className="text-[clamp(1.0625rem,1rem+0.3vw,1.25rem)] leading-relaxed text-foreground">
               Beaucoup de jeunes ont des idées et de l’ambition, mais pas encore le réseau ni les
-              conseils pour les concrétiser. Talents Connectés réunit tout l’accompagnement : trouver
-              le bon mentor, échanger en privé, planifier les séances et suivre ses objectifs.
+              conseils pour les concrétiser. Talents Connectés réunit tout l’accompagnement :
+              trouver le bon mentor, échanger en privé, planifier les séances et suivre ses
+              objectifs.
             </p>
-            <Link href="#domaines" className="mt-6 inline-flex items-center gap-2 text-[16px] font-semibold text-teal-700 hover:text-teal-800">
+            <Link
+              href="#domaines"
+              className="mt-6 inline-flex items-center gap-2 text-[16px] font-semibold text-teal-700 hover:text-teal-800"
+            >
               Découvrir les domaines <ArrowRight className="size-4" aria-hidden />
             </Link>
           </div>
         </div>
 
         <div className="mt-14 grid gap-4 sm:grid-cols-[1.4fr_1fr] lg:mt-20">
-          <Shot photo={photos.conakryCentre} sizes="(min-width: 640px) 58vw, 100vw" className="aspect-[16/10]" />
-          <Shot photo={photos.eleves} sizes="(min-width: 640px) 40vw, 100vw" className="aspect-[16/10] sm:aspect-auto" />
+          <Shot
+            photo={photos.conakryCentre}
+            sizes="(min-width: 640px) 58vw, 100vw"
+            className="aspect-[16/10]"
+          />
+          <Shot
+            photo={photos.eleves}
+            sizes="(min-width: 640px) 40vw, 100vw"
+            className="aspect-[16/10] sm:aspect-auto"
+          />
         </div>
 
         <dl className="mt-14 grid grid-cols-2 gap-x-6 gap-y-10 lg:mt-20 lg:grid-cols-4">
           {figures.map((f, i) => (
-            <div key={f.label} data-reveal style={{ ['--d' as string]: i }} className="border-l-2 border-teal-600 pl-5">
+            <div
+              key={f.label}
+              data-reveal
+              style={{ ['--d' as string]: i }}
+              className="border-l-2 border-teal-600 pl-5"
+            >
               <dt className="sr-only">{f.label}</dt>
               <dd>
                 <span className="block font-display text-[clamp(3rem,2rem+3vw,5rem)] leading-none font-semibold tracking-[-0.04em] text-ink-900 tabular-nums">
                   {f.value ?? <Skeleton className="h-14 w-20" />}
                 </span>
-                <span className="mt-3 block max-w-[22ch] text-[15px] leading-snug text-muted-foreground">{f.label}</span>
+                <span className="mt-3 block max-w-[22ch] text-[15px] leading-snug text-muted-foreground">
+                  {f.label}
+                </span>
               </dd>
             </div>
           ))}
@@ -388,16 +475,33 @@ function Domains() {
   useReveal([data]);
 
   return (
-    <section id="domaines" aria-labelledby="titre-domaines" className="scroll-mt-20 bg-white py-24 lg:py-32">
+    <section
+      id="domaines"
+      aria-labelledby="titre-domaines"
+      className="scroll-mt-20 bg-white py-24 lg:py-32"
+    >
       <div className="page-frame grid gap-12 lg:grid-cols-12 lg:gap-x-10">
         <div className="lg:col-span-5">
           <div className="lg:sticky lg:top-28">
-            <SectionTitle id="titre-domaines" className="text-[clamp(2.25rem,1.2rem+2.6vw,3.75rem)]">Sept domaines pour avancer</SectionTitle>
-            <p data-reveal className="mt-6 max-w-[42ch] text-[17px] leading-relaxed text-foreground">
+            <SectionTitle
+              id="titre-domaines"
+              className="text-[clamp(2.25rem,1.2rem+2.6vw,3.75rem)]"
+            >
+              Sept domaines pour avancer
+            </SectionTitle>
+            <p
+              data-reveal
+              className="mt-6 max-w-[42ch] text-[17px] leading-relaxed text-foreground"
+            >
               Les domaines du programme « Talents connectés », de l’orientation à l’entrepreneuriat.
-              Chaque mentor indique ses spécialités : vous trouvez la bonne personne pour votre objectif.
+              Chaque mentor indique ses spécialités : vous trouvez la bonne personne pour votre
+              objectif.
             </p>
-            <Shot photo={photos.mentor} sizes="(min-width: 1024px) 36vw, 100vw" className="mt-10 aspect-[4/3]" />
+            <Shot
+              photo={photos.mentor}
+              sizes="(min-width: 1024px) 36vw, 100vw"
+              className="mt-10 aspect-[4/3]"
+            />
             <p className="mt-3 text-[13px] text-muted-foreground">{photos.mentor.caption}</p>
           </div>
         </div>
@@ -437,7 +541,10 @@ function Domains() {
                         </span>
                         <span className="mt-1 flex items-center gap-2 text-[15px] font-semibold whitespace-nowrap text-teal-700">
                           {d.mentorCount === 0 ? 'Bientôt' : plural(d.mentorCount, 'mentor')}
-                          <ArrowRight className="size-4 transition-transform duration-200 group-hover:translate-x-1" aria-hidden />
+                          <ArrowRight
+                            className="size-4 transition-transform duration-200 group-hover:translate-x-1"
+                            aria-hidden
+                          />
                         </span>
                       </Link>
                     </li>
@@ -453,21 +560,44 @@ function Domains() {
 /* ── Le parcours, de la demande à la séance ───────────────────────────────── */
 
 const STEPS = [
-  { photo: photos.eleves, title: 'Votre objectif', text: 'Décrivez votre situation, vos domaines et ce que vous voulez apprendre. Deux minutes.' },
-  { photo: photos.lyceennes, title: 'Le bon mentor', text: 'Recherche, filtres et suggestions expliquées : vous savez pourquoi un profil vous correspond.' },
-  { photo: photos.mentor, title: 'Une demande acceptée', text: 'Votre message motivé arrive au mentor, qui décide. La conversation privée s’ouvre.' },
-  { photo: photos.communaute, title: 'Des séances et des objectifs', text: 'Créneaux réservés sans conflit, salle de visio, jalons suivis à deux jusqu’au résultat.' },
+  {
+    photo: photos.eleves,
+    title: 'Votre objectif',
+    text: 'Décrivez votre situation, vos domaines et ce que vous voulez apprendre. Deux minutes.',
+  },
+  {
+    photo: photos.lyceennes,
+    title: 'Le bon mentor',
+    text: 'Recherche, filtres et suggestions expliquées : vous savez pourquoi un profil vous correspond.',
+  },
+  {
+    photo: photos.mentor,
+    title: 'Une demande acceptée',
+    text: 'Votre message motivé arrive au mentor, qui décide. La conversation privée s’ouvre.',
+  },
+  {
+    photo: photos.communaute,
+    title: 'Des séances et des objectifs',
+    text: 'Créneaux réservés sans conflit, salle de visio, jalons suivis à deux jusqu’au résultat.',
+  },
 ];
 
 function Journey() {
   return (
-    <section id="fonctionnement" aria-labelledby="titre-parcours" className="scroll-mt-20 bg-ink-900 py-24 text-white lg:py-32">
+    <section
+      id="fonctionnement"
+      aria-labelledby="titre-parcours"
+      className="scroll-mt-20 bg-ink-900 py-24 text-white lg:py-32"
+    >
       <div className="page-frame">
         <div className="grid gap-8 lg:grid-cols-12 lg:items-end">
           <SectionTitle id="titre-parcours" light className="lg:col-span-7">
             De la demande à la première séance
           </SectionTitle>
-          <p data-reveal className="max-w-[44ch] text-[17px] leading-relaxed text-ink-100 lg:col-span-4 lg:col-start-9">
+          <p
+            data-reveal
+            className="max-w-[44ch] text-[17px] leading-relaxed text-ink-100 lg:col-span-4 lg:col-start-9"
+          >
             Chaque étape est enregistrée : mentoré et mentor savent toujours où en est
             l’accompagnement.
           </p>
@@ -475,9 +605,17 @@ function Journey() {
         <ol className="mt-14 grid gap-6 sm:grid-cols-2 lg:mt-20 lg:grid-cols-4">
           {STEPS.map((s, i) => (
             <li key={s.title} data-reveal style={{ ['--d' as string]: i }} className="group">
-              <Shot photo={s.photo} sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw" className="aspect-[4/5]" imgClassName="transition-transform duration-700 ease-out group-hover:scale-105" />
+              <Shot
+                photo={s.photo}
+                sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
+                className="aspect-[4/5]"
+                imgClassName="transition-transform duration-700 ease-out group-hover:scale-105"
+              />
               <div className="mt-5 flex items-start gap-4">
-                <span className="font-display text-[44px] leading-none font-semibold text-amber-400 tabular-nums" aria-hidden>
+                <span
+                  className="font-display text-[44px] leading-none font-semibold text-amber-400 tabular-nums"
+                  aria-hidden
+                >
                   {i + 1}
                 </span>
                 <div>
@@ -498,7 +636,12 @@ function Journey() {
 
 /* ── Les mentors (profils réels de la base de démonstration) ──────────────── */
 
-const AVATAR_TINTS = ['bg-teal-100 text-teal-800', 'bg-amber-100 text-[#7a4a0f]', 'bg-ink-100 text-ink-900', 'bg-[#f3e1e1] text-[#7a1f1f]'];
+const AVATAR_TINTS = [
+  'bg-teal-100 text-teal-800',
+  'bg-amber-100 text-[#7a4a0f]',
+  'bg-ink-100 text-ink-900',
+  'bg-[#f3e1e1] text-[#7a1f1f]',
+];
 
 function Mentors() {
   const { data, isPending } = useMentors({});
@@ -510,7 +653,10 @@ function Mentors() {
       <div className="page-frame">
         <div className="flex flex-wrap items-end justify-between gap-6">
           <SectionTitle id="titre-mentors">Ils transmettent</SectionTitle>
-          <Link href="/mentors" className="inline-flex items-center gap-2 text-[16px] font-semibold text-teal-700 hover:text-teal-800">
+          <Link
+            href="/mentors"
+            className="inline-flex items-center gap-2 text-[16px] font-semibold text-teal-700 hover:text-teal-800"
+          >
             Voir tout l’annuaire <ArrowRight className="size-4" aria-hidden />
           </Link>
         </div>
@@ -531,23 +677,34 @@ function Mentors() {
                     className="group flex h-full flex-col bg-white p-6 transition-[transform,box-shadow] duration-300 hover:-translate-y-1 hover:shadow-raised"
                   >
                     <div className="flex items-center justify-between">
-                      <span className={cn('inline-flex size-16 items-center justify-center rounded-full font-display text-[20px] font-semibold', AVATAR_TINTS[i % AVATAR_TINTS.length])}>
-                        {initials(m)}
-                      </span>
+                      <Avatar
+                        person={m}
+                        className={cn(
+                          'size-16 text-[20px] ring-0',
+                          !m.avatarUpdatedAt && AVATAR_TINTS[i % AVATAR_TINTS.length],
+                        )}
+                      />
                       {m.verificationStatus === 'VERIFIED' && (
                         <span className="inline-flex items-center gap-1 text-[13px] font-semibold text-[#8a5410]">
                           <BadgeCheck className="size-4 text-amber-500" aria-hidden /> Vérifié
                         </span>
                       )}
                     </div>
-                    <p className="mt-5 font-display text-[20px] leading-tight font-semibold tracking-[-0.02em] text-ink-900">{fullName(m)}</p>
-                    <p className="mt-2 line-clamp-3 text-[15px] leading-snug text-foreground">{m.headline}</p>
+                    <p className="mt-5 font-display text-[20px] leading-tight font-semibold tracking-[-0.02em] text-ink-900">
+                      {fullName(m)}
+                    </p>
+                    <p className="mt-2 line-clamp-3 text-[15px] leading-snug text-foreground">
+                      {m.headline}
+                    </p>
                     <p className="mt-4 text-[13px] text-muted-foreground">
                       {m.yearsExperience} ans d’expérience · {m.city ?? 'À distance'}
                     </p>
                     <span className="mt-auto inline-flex items-center gap-2 pt-6 text-[15px] font-semibold text-teal-700">
                       Voir le profil
-                      <ArrowRight className="size-4 transition-transform duration-200 group-hover:translate-x-1" aria-hidden />
+                      <ArrowRight
+                        className="size-4 transition-transform duration-200 group-hover:translate-x-1"
+                        aria-hidden
+                      />
                     </span>
                   </Link>
                 </li>
@@ -561,12 +718,36 @@ function Mentors() {
 /* ── Un cadre de confiance ────────────────────────────────────────────────── */
 
 const GUARANTEES = [
-  { icon: ShieldCheck, title: 'Mentors vérifiés', text: 'Profils examinés par l’équipe, jamais de validation automatique de diplômes.' },
-  { icon: Lock, title: 'Échanges privés', text: 'La conversation s’ouvre après acceptation, visible des deux seuls participants.' },
-  { icon: CalendarCheck2, title: 'Zéro double réservation', text: 'Un créneau ne peut être pris qu’une fois, même en cas de clics simultanés.' },
-  { icon: Video, title: 'Salle de visio', text: 'Un lien Jitsi Meet privé est créé à chaque séance confirmée à distance.' },
-  { icon: Target, title: 'Objectifs suivis', text: 'Jalons, progression, retours écrits du mentor et évaluation des séances.' },
-  { icon: MessagesSquare, title: 'Vos données, vos choix', text: 'Coordonnées jamais publiques, export et suppression du compte à tout moment.' },
+  {
+    icon: ShieldCheck,
+    title: 'Mentors vérifiés',
+    text: 'Profils examinés par l’équipe, jamais de validation automatique de diplômes.',
+  },
+  {
+    icon: Lock,
+    title: 'Échanges privés',
+    text: 'La conversation s’ouvre après acceptation, visible des deux seuls participants.',
+  },
+  {
+    icon: CalendarCheck2,
+    title: 'Zéro double réservation',
+    text: 'Un créneau ne peut être pris qu’une fois, même en cas de clics simultanés.',
+  },
+  {
+    icon: Video,
+    title: 'Salle de visio',
+    text: 'Un lien Jitsi Meet privé est créé à chaque séance confirmée à distance.',
+  },
+  {
+    icon: Target,
+    title: 'Objectifs suivis',
+    text: 'Jalons, progression, retours écrits du mentor et évaluation des séances.',
+  },
+  {
+    icon: MessagesSquare,
+    title: 'Vos données, vos choix',
+    text: 'Coordonnées jamais publiques, export et suppression du compte à tout moment.',
+  },
 ];
 
 function Trust() {
@@ -578,9 +759,16 @@ function Trust() {
         </SectionTitle>
         <ul className="mt-14 grid gap-px bg-border sm:grid-cols-2 lg:mt-20 lg:grid-cols-3">
           {GUARANTEES.map(({ icon: Icon, title, text }, i) => (
-            <li key={title} data-reveal style={{ ['--d' as string]: i % 3 }} className="bg-white p-8 transition-colors duration-300 hover:bg-background">
+            <li
+              key={title}
+              data-reveal
+              style={{ ['--d' as string]: i % 3 }}
+              className="bg-white p-8 transition-colors duration-300 hover:bg-background"
+            >
               <Icon className="size-7 text-teal-600" aria-hidden />
-              <h3 className="mt-6 font-display text-[20px] font-semibold tracking-[-0.02em] text-ink-900">{title}</h3>
+              <h3 className="mt-6 font-display text-[20px] font-semibold tracking-[-0.02em] text-ink-900">
+                {title}
+              </h3>
               <p className="mt-2 text-[15px] leading-relaxed text-foreground">{text}</p>
             </li>
           ))}
@@ -598,13 +786,20 @@ function Trust() {
 
 function Closing() {
   return (
-    <section aria-labelledby="titre-mentor" className="relative isolate overflow-hidden bg-teal-700 text-white">
+    <section
+      aria-labelledby="titre-mentor"
+      className="relative isolate overflow-hidden bg-teal-700 text-white"
+    >
       <div className="absolute inset-y-0 right-0 -z-10 hidden w-1/2 lg:block">
-        <Image src={photos.loos.src} alt={photos.loos.alt} fill sizes="50vw" className="photo object-cover object-[50%_55%]" />
+        <Image
+          src={photos.loos.src}
+          alt={photos.loos.alt}
+          fill
+          sizes="50vw"
+          className="photo object-cover object-[50%_55%]"
+        />
       </div>
-      <div
-        className="relative bg-teal-700 py-24 lg:w-[62%] lg:py-32 lg:[clip-path:polygon(0_0,100%_0,82%_100%,0_100%)]"
-      >
+      <div className="relative bg-teal-700 py-24 lg:w-[62%] lg:py-32 lg:[clip-path:polygon(0_0,100%_0,82%_100%,0_100%)]">
         <div className="page-frame lg:pr-[14%]">
           <SectionTitle id="titre-mentor" light>
             Votre expérience peut changer un parcours.
@@ -621,13 +816,21 @@ function Closing() {
               Devenir mentor
               <ArrowUpRight className="size-4" aria-hidden />
             </Link>
-            <Link href="/inscription" className="inline-flex h-13 items-center border-2 border-white/80 px-6 text-[16px] font-semibold text-white transition-colors hover:bg-white hover:text-ink-900">
+            <Link
+              href="/inscription"
+              className="inline-flex h-13 items-center border-2 border-white/80 px-6 text-[16px] font-semibold text-white transition-colors hover:bg-white hover:text-ink-900"
+            >
               Je cherche un mentor
             </Link>
           </div>
         </div>
       </div>
-      <Shot photo={photos.loos} sizes="100vw" className="aspect-[16/10] lg:hidden" imgClassName="object-[50%_60%]" />
+      <Shot
+        photo={photos.loos}
+        sizes="100vw"
+        className="aspect-[16/10] lg:hidden"
+        imgClassName="object-[50%_60%]"
+      />
     </section>
   );
 }

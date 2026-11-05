@@ -16,8 +16,16 @@ import type { MentorCard } from '@/lib/types';
 
 const schema = z.object({
   domainId: z.string().optional(),
-  goal: z.string().trim().min(10, '10 caractères au minimum.').max(200, '200 caractères au maximum.'),
-  message: z.string().trim().min(40, '40 caractères au minimum.').max(2000, '2 000 caractères au maximum.'),
+  goal: z
+    .string()
+    .trim()
+    .min(10, '10 caractères au minimum.')
+    .max(200, '200 caractères au maximum.'),
+  message: z
+    .string()
+    .trim()
+    .min(40, '40 caractères au minimum.')
+    .max(2000, '2 000 caractères au maximum.'),
 });
 type Values = z.infer<typeof schema>;
 
@@ -78,7 +86,10 @@ export function RequestDialog({
             counter={{ value: goalLen, min: 10, max: 200 }}
             hint="En une phrase : ce que vous voulez avoir accompli."
           >
-            <Input placeholder="Ex. : Construire mon premier portfolio de développeuse web" {...register('goal')} />
+            <Input
+              placeholder="Ex. : Construire mon premier portfolio de développeuse web"
+              {...register('goal')}
+            />
           </Field>
           <Field
             label="Votre message"

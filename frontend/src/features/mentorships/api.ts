@@ -47,7 +47,8 @@ export function useMessages(mentorshipId: string) {
   const visible = usePageVisible();
   return useQuery({
     queryKey: ['mentorships', mentorshipId, 'messages'],
-    queryFn: () => api<Message[]>(`/mentorships/${mentorshipId}/messages`, { query: { limit: 100 } }),
+    queryFn: () =>
+      api<Message[]>(`/mentorships/${mentorshipId}/messages`, { query: { limit: 100 } }),
     refetchInterval: visible ? 4_000 : false,
     refetchIntervalInBackground: false,
   });
@@ -72,7 +73,10 @@ export function useMarkRead(mentorshipId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () =>
-      api<{ updated: number }>(`/mentorships/${mentorshipId}/messages/read`, { method: 'POST', body: {} }),
+      api<{ updated: number }>(`/mentorships/${mentorshipId}/messages/read`, {
+        method: 'POST',
+        body: {},
+      }),
     onSuccess: (res) => {
       if (res.updated > 0) {
         void qc.invalidateQueries({ queryKey: ['mentorships'] });
@@ -118,8 +122,12 @@ export function useGoalMutations(mentorshipId: string) {
 
   return {
     create: useMutation({
-      mutationFn: (input: { title: string; description?: string; dueDate?: string; milestones?: string[] }) =>
-        api<Goal>(`/mentorships/${mentorshipId}/goals`, { method: 'POST', body: input }),
+      mutationFn: (input: {
+        title: string;
+        description?: string;
+        dueDate?: string;
+        milestones?: string[];
+      }) => api<Goal>(`/mentorships/${mentorshipId}/goals`, { method: 'POST', body: input }),
       onSuccess: refetch,
     }),
     update: useMutation({
@@ -152,7 +160,10 @@ export function useCompleteMentorship(mentorshipId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (note?: string) =>
-      api<MentorshipSummary>(`/mentorships/${mentorshipId}/complete`, { method: 'POST', body: { note } }),
+      api<MentorshipSummary>(`/mentorships/${mentorshipId}/complete`, {
+        method: 'POST',
+        body: { note },
+      }),
     onSuccess: (data) => {
       qc.setQueryData(['mentorships', mentorshipId], data);
       void qc.invalidateQueries({ queryKey: ['mentorships'] });

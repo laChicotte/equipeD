@@ -25,6 +25,7 @@ const mentorCardSelect = {
   id: true,
   firstName: true,
   lastName: true,
+  avatarUpdatedAt: true,
   mentorProfile: {
     select: {
       headline: true,
@@ -37,7 +38,6 @@ const mentorCardSelect = {
       modalities: true,
       city: true,
       sessionDurationMin: true,
-      maxMentees: true,
       verificationStatus: true,
       domains: { select: { domain: { select: { id: true, slug: true, name: true } } } },
     },
@@ -156,7 +156,6 @@ export class MentorsService {
               card.nextAvailableAt && card.nextAvailableAt <= horizon,
             ),
             isVerified: card.verificationStatus === 'VERIFIED',
-            hasCapacity: card.acceptingMentees,
           },
         );
         return { mentor: card, ...match };
@@ -237,7 +236,7 @@ export class MentorsService {
   private async extras(mentorIds: string[], now: Date): Promise<Map<string, MentorExtras>> {
     const result = new Map<string, MentorExtras>();
     if (mentorIds.length === 0) return result;
-    const [slots, feedbacks] = await Promise.all([
+    const [slots, feedbacks, pairs, certificates] = await Promise.all([
       this.prisma.availabilitySlot.groupBy({
         by: ['mentorId'],
         where: { mentorId: { in: mentorIds }, ...freeSlotWhere(now) },
@@ -247,9 +246,26 @@ export class MentorsService {
         where: { session: { mentorId: { in: mentorIds } }, author: { role: 'MENTEE' } },
         select: { rating: true, session: { select: { mentorId: true } } },
       }),
+      this.prisma.mentorship.groupBy({
+        by: ['mentorId', 'menteeId'],
+        where: { mentorId: { in: mentorIds }, status: { in: ['ACTIVE', 'COMPLETED'] } },
+      }),
+      this.prisma.mentorshipCertificate.groupBy({
+        by: ['mentorId'],
+        where: { mentorId: { in: mentorIds }, revokedAt: null },
+        _count: { _all: true },
+      }),
     ]);
     for (const id of mentorIds)
-      result.set(id, { nextAvailableAt: null, ratingSum: 0, ratingCount: 0 });
+      result.set(id, {
+        nextAvailableAt: null,
+        ratingSum: 0,
+        ratingCount: 0,
+        mentoredCount: 0,
+        certificatesCount: 0,
+      });
+    for (const p of pairs) result.get(p.mentorId)!.mentoredCount += 1;
+    for (const c of certificates) result.get(c.mentorId)!.certificatesCount = c._count._all;
     for (const g of slots) result.get(g.mentorId)!.nextAvailableAt = g._min.startsAt ?? null;
     for (const f of feedbacks) {
       const e = result.get(f.session.mentorId)!;
@@ -268,6 +284,7 @@ export class MentorsService {
       id: row.id,
       firstName: row.firstName,
       lastName: row.lastName,
+      avatarUpdatedAt: row.avatarUpdatedAt,
       headline: p.headline,
       bio: excerpt ? truncate(p.bio, 220) : p.bio,
       currentPosition: p.currentPosition,
@@ -281,8 +298,10 @@ export class MentorsService {
       verificationStatus: p.verificationStatus,
       domains: p.domains.map((d) => d.domain),
       activeMentees,
-      maxMentees: p.maxMentees,
-      acceptingMentees: activeMentees < p.maxMentees,
+      /** Personnes distinctes accompagnées (mentorats en cours ou menés à terme), tous domaines. */
+      mentoredCount: extra?.mentoredCount ?? 0,
+      /** Certificats d'accompagnement valides. */
+      certificatesCount: extra?.certificatesCount ?? 0,
       nextAvailableAt,
       rating: {
         average: ratingCount ? Math.round((extra!.ratingSum / ratingCount) * 10) / 10 : null,
@@ -296,6 +315,8 @@ interface MentorExtras {
   nextAvailableAt: Date | null;
   ratingSum: number;
   ratingCount: number;
+  mentoredCount: number;
+  certificatesCount: number;
 }
 
 function addDays(date: Date, days: number): Date {

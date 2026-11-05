@@ -33,7 +33,9 @@
 - [x] Évaluation des séances (1–5 et commentaire), note moyenne sur la fiche mentor
 - [x] Administration : vue d’ensemble, comptes, suspension (révoque les sessions), vérification et publication des mentors, gestion des domaines
 - [x] Compte : modification du nom et du fuseau, changement de mot de passe (révoque les autres sessions), déconnexion de tous les appareils
-- [x] Clôture d’un mentorat avec bilan (séances futures annulées, capacité libérée, lecture seule)
+- [x] Clôture d’un mentorat avec bilan (séances futures annulées, lecture seule)
+- [x] Certificat d’accompagnement délivré au mentor à la clôture (au moins une séance réalisée) : chiffres figés, code vérifiable publiquement (`/certificats/<code>`), imprimable en PDF, révoqué si le compte du mentor est supprimé
+- [x] Pas de plafond de mentorés : la fiche affiche les personnes réellement accompagnées (tous domaines) et les certificats
 - [x] Ressources : bibliothèque publique (mentors et admins) et partage privé dans un mentorat (liens https ou conseils rédigés)
 - [x] Notifications in-app (demande reçue, acceptée ou refusée ; séance demandée, confirmée ou annulée ; retour sur objectif ; ressource partagée)
 
@@ -53,6 +55,7 @@
 - [x] Espace de mentorat : conversation, objectifs et jalons, séances, ressources partagées, clôture avec bilan
 - [x] Bibliothèque de ressources (/ressources) et opportunités (/opportunites), publication par les mentors
 - [x] Cloche de notifications in-app
+- [x] Photo de profil : ajout, recadrage dans le navigateur, retrait ; visibilité limitée (publique pour un mentor publié, sinon aux personnes liées)
 - [x] Mon compte : informations, mot de passe, déconnexion de tous les appareils, export JSON, suppression
 - [x] Administration : vue d’ensemble, comptes, mentors, domaines
 - [x] Build de production : 22 routes, typecheck et lint sans erreur
@@ -66,7 +69,7 @@
 | Lint (oxlint) | ✅ 0 avertissement | `pnpm --filter backend lint` |
 | Format (Prettier) | ✅ | `npx prettier --check "backend/{src,test,prisma}/**/*.ts"` |
 | Tests unitaires | ✅ 8/8 | `pnpm --filter backend test` |
-| Tests e2e sur un vrai PostgreSQL | ✅ **100/100** (10 fichiers, environ 40 s) | `pnpm --filter backend test:e2e` |
+| Tests e2e sur un vrai PostgreSQL | ✅ **108/108** (12 fichiers, environ 40 s) | `pnpm --filter backend test:e2e` |
 | Build | ✅ | `pnpm --filter backend build` |
 | CI GitHub Actions | ⏳ configurée (`.github/workflows/ci.yml`), à confirmer au premier push | |
 

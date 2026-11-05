@@ -17,7 +17,8 @@ export type SessionStatus = 'REQUESTED' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED
 export type GoalStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED';
 export type UserStatus = 'ACTIVE' | 'SUSPENDED' | 'DELETED';
 export type ResourceKind = 'ARTICLE' | 'VIDEO' | 'TEMPLATE' | 'TOOL' | 'ADVICE' | 'OTHER';
-export type OpportunityType = 'INTERNSHIP' | 'JOB' | 'CALL_FOR_PROJECTS' | 'SCHOLARSHIP' | 'TRAINING' | 'EVENT' | 'OTHER';
+export type OpportunityType =
+  'INTERNSHIP' | 'JOB' | 'CALL_FOR_PROJECTS' | 'SCHOLARSHIP' | 'TRAINING' | 'EVENT' | 'OTHER';
 export type NotificationType =
   | 'REQUEST_RECEIVED'
   | 'REQUEST_ACCEPTED'
@@ -27,13 +28,16 @@ export type NotificationType =
   | 'SESSION_CANCELLED'
   | 'GOAL_FEEDBACK'
   | 'RESOURCE_SHARED'
-  | 'MENTORSHIP_COMPLETED';
+  | 'MENTORSHIP_COMPLETED'
+  | 'CERTIFICATE_ISSUED';
 
 export interface Me {
   id: string;
   email: string;
   firstName: string;
   lastName: string;
+  /** Date de la photo de profil (null : initiales). */
+  avatarUpdatedAt?: string | null;
   role: Role;
   timezone: string;
   onboardedAt: string | null;
@@ -70,7 +74,6 @@ export interface MentorProfile {
   modalities: Modality[];
   city: string | null;
   sessionDurationMin: number;
-  maxMentees: number;
   verificationStatus: VerificationStatus;
   isPublished?: boolean;
   domains: DomainRef[];
@@ -96,6 +99,8 @@ export interface MentorCard {
   id: string;
   firstName: string;
   lastName: string;
+  /** Date de la photo de profil (null : initiales). */
+  avatarUpdatedAt?: string | null;
   headline: string;
   bio: string;
   currentPosition: string | null;
@@ -109,8 +114,10 @@ export interface MentorCard {
   verificationStatus: VerificationStatus;
   domains: DomainRef[];
   activeMentees: number;
-  maxMentees: number;
-  acceptingMentees: boolean;
+  /** Personnes distinctes accompagnées (en cours ou mentorat terminé), tous domaines. */
+  mentoredCount: number;
+  /** Certificats d’accompagnement valides. */
+  certificatesCount: number;
   nextAvailableAt: string | null;
   rating?: { average: number | null; count: number };
 }
@@ -159,6 +166,8 @@ export interface MentorshipRequest {
     id: string;
     firstName: string;
     lastName: string;
+    /** Date de la photo de profil (null : initiales). */
+    avatarUpdatedAt?: string | null;
     menteeProfile: {
       situation: MenteeSituation;
       goalsSummary: string;
@@ -167,7 +176,13 @@ export interface MentorshipRequest {
       desiredSkills: string[];
     } | null;
   };
-  mentor: { id: string; firstName: string; lastName: string; mentorProfile: { headline: string } | null };
+  mentor: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    avatarUpdatedAt?: string | null;
+    mentorProfile: { headline: string } | null;
+  };
   domain: DomainRef | null;
   mentorship: { id: string; status: MentorshipStatus } | null;
 }
@@ -176,6 +191,8 @@ export interface Person {
   id: string;
   firstName: string;
   lastName: string;
+  /** Date de la photo de profil (null : initiales). */
+  avatarUpdatedAt?: string | null;
   mentorProfile: { headline: string } | null;
   menteeProfile: { situation: MenteeSituation; goalsSummary: string } | null;
 }
@@ -199,12 +216,15 @@ export interface MentorshipSummary {
   averageProgress: number | null;
   lastMessage: { content: string; createdAt: string; senderId: string } | null;
   unreadCount: number;
+  certificate: { code: string; issuedAt: string } | null;
 }
 
 export interface PersonRef {
   id: string;
   firstName: string;
   lastName: string;
+  /** Date de la photo de profil (null : initiales). */
+  avatarUpdatedAt?: string | null;
 }
 
 export interface Session {
@@ -283,7 +303,7 @@ export interface Dashboard {
   sessionsAwaitingConfirmation: number;
   unreadMessages: number;
   goals: { total: number; completed: number; averageProgress: number | null };
-  mentor: { maxMentees: number; freeUpcomingSlots: number } | null;
+  mentor: { certificates: number; freeUpcomingSlots: number } | null;
 }
 
 export interface ApiErrorBody {
@@ -309,6 +329,8 @@ export interface AuthorRef {
   id: string;
   firstName: string;
   lastName: string;
+  /** Date de la photo de profil (null : initiales). */
+  avatarUpdatedAt?: string | null;
   role: Role;
   mentorProfile: { headline: string } | null;
 }
@@ -352,4 +374,27 @@ export interface AdminDomain {
   sortOrder: number;
   isActive: boolean;
   _count: { mentors: number; mentees: number; resources: number };
+}
+
+/** Certificat d’accompagnement (instantané figé à la clôture du mentorat). */
+export interface Certificate {
+  code: string;
+  mentorId: string;
+  mentorName: string;
+  menteeName: string;
+  domainName: string;
+  startedAt: string;
+  endedAt: string;
+  completedSessions: number;
+  totalMinutes: number;
+  goalsCompleted: number;
+  goalsTotal: number;
+  averageRating: number | null;
+  issuedAt: string;
+}
+
+export interface CertificateVerification extends Omit<Certificate, 'mentorId'> {
+  mentorId: string;
+  valid: boolean;
+  mentor: { id: string | null; headline: string | null; avatarUpdatedAt: string | null };
 }

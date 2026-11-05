@@ -43,7 +43,10 @@ export function TabsTrigger({ className, ...props }: ComponentProps<typeof TabsP
 export function TabsContent({ className, ...props }: ComponentProps<typeof TabsPrimitive.Content>) {
   return (
     <TabsPrimitive.Content
-      className={cn('mt-5 focus-visible:outline-none data-[state=active]:animate-fade-in', className)}
+      className={cn(
+        'mt-5 focus-visible:outline-none data-[state=active]:animate-fade-in',
+        className,
+      )}
       {...props}
     />
   );
@@ -117,7 +120,10 @@ export function Slider({ className, ...props }: ComponentProps<typeof SliderPrim
 export function Separator({ className, ...props }: ComponentProps<typeof SeparatorPrimitive.Root>) {
   return (
     <SeparatorPrimitive.Root
-      className={cn('shrink-0 bg-border data-[orientation=horizontal]:h-px data-[orientation=horizontal]:w-full data-[orientation=vertical]:h-full data-[orientation=vertical]:w-px', className)}
+      className={cn(
+        'shrink-0 bg-border data-[orientation=horizontal]:h-px data-[orientation=horizontal]:w-full data-[orientation=vertical]:h-full data-[orientation=vertical]:w-px',
+        className,
+      )}
       {...props}
     />
   );

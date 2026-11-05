@@ -21,7 +21,11 @@ function Stars({ value, size = 'size-4' }: { value: number; size?: string }) {
   return (
     <span className="inline-flex items-center gap-0.5" role="img" aria-label={`${value} sur 5`}>
       {[1, 2, 3, 4, 5].map((n) => (
-        <Star key={n} className={cn(size, n <= value ? 'fill-amber-400 text-amber-400' : 'text-ink-100')} aria-hidden />
+        <Star
+          key={n}
+          className={cn(size, n <= value ? 'fill-amber-400 text-amber-400' : 'text-ink-100')}
+          aria-hidden
+        />
       ))}
     </span>
   );
@@ -43,7 +47,12 @@ function FeedbackDialog({ session, onClose }: { session: Session; onClose: () =>
           <div>
             <p className="text-sm font-semibold">Votre note</p>
             <div className="mt-2 flex items-center gap-3">
-              <div className="flex gap-1" role="radiogroup" aria-label="Note de 1 à 5" onMouseLeave={() => setHover(0)}>
+              <div
+                className="flex gap-1"
+                role="radiogroup"
+                aria-label="Note de 1 à 5"
+                onMouseLeave={() => setHover(0)}
+              >
                 {[1, 2, 3, 4, 5].map((n) => (
                   <button
                     key={n}
@@ -55,15 +64,28 @@ function FeedbackDialog({ session, onClose }: { session: Session; onClose: () =>
                     onClick={() => setRating(n)}
                     className="rounded-sm p-1 transition-transform hover:scale-110"
                   >
-                    <Star className={cn('size-8', n <= shown ? 'fill-amber-400 text-amber-400' : 'text-ink-100')} aria-hidden />
+                    <Star
+                      className={cn(
+                        'size-8',
+                        n <= shown ? 'fill-amber-400 text-amber-400' : 'text-ink-100',
+                      )}
+                      aria-hidden
+                    />
                   </button>
                 ))}
               </div>
-              <span className="text-sm font-semibold text-muted-foreground">{RATING_LABELS[shown]}</span>
+              <span className="text-sm font-semibold text-muted-foreground">
+                {RATING_LABELS[shown]}
+              </span>
             </div>
           </div>
           <Field label="Commentaire" optional counter={{ value: comment.length, max: 1000 }}>
-            <Textarea value={comment} onChange={(e) => setComment(e.target.value)} maxLength={1000} placeholder="Ce qui vous a aidé, ce qui pourrait être amélioré…" />
+            <Textarea
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              maxLength={1000}
+              placeholder="Ce qui vous a aidé, ce qui pourrait être amélioré…"
+            />
           </Field>
         </div>
         <DialogFooter>
@@ -117,7 +139,9 @@ function ConfirmDialog({ session, onClose }: { session: Session; onClose: () => 
       },
       {
         onSuccess: () => {
-          toast.success('Séance confirmée', { description: `${session.mentee.firstName} est informé·e.` });
+          toast.success('Séance confirmée', {
+            description: `${session.mentee.firstName} est informé·e.`,
+          });
           onClose();
         },
         onError: (e) => {
@@ -156,7 +180,11 @@ function ConfirmDialog({ session, onClose }: { session: Session; onClose: () => 
             />
           </Field>
           <Field label="Lieu" optional error={locError} hint="Pour une séance en présentiel.">
-            <Input placeholder="Ex. : CCFG, Conakry" value={location} onChange={(e) => setLocation(e.target.value)} />
+            <Input
+              placeholder="Ex. : CCFG, Conakry"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+            />
           </Field>
         </div>
         <DialogFooter>
@@ -173,7 +201,15 @@ function ConfirmDialog({ session, onClose }: { session: Session; onClose: () => 
   );
 }
 
-export function SessionCard({ session, me, showMentorshipLink = true }: { session: Session; me: Me; showMentorshipLink?: boolean }) {
+export function SessionCard({
+  session,
+  me,
+  showMentorshipLink = true,
+}: {
+  session: Session;
+  me: Me;
+  showMentorshipLink?: boolean;
+}) {
   const action = useSessionAction();
   const [confirming, setConfirming] = useState(false);
   const [rating, setRating] = useState(false);
@@ -184,7 +220,9 @@ export function SessionCard({ session, me, showMentorshipLink = true }: { sessio
   const started = now > 0 && start.getTime() <= now;
   const active = session.status === 'REQUESTED' || session.status === 'CONFIRMED';
   const tz = me.timezone;
-  const ended = session.status === 'COMPLETED' || (session.status === 'CONFIRMED' && now > 0 && new Date(session.endsAt).getTime() <= now);
+  const ended =
+    session.status === 'COMPLETED' ||
+    (session.status === 'CONFIRMED' && now > 0 && new Date(session.endsAt).getTime() <= now);
   const myFeedback = session.feedbacks?.find((f) => f.authorId === me.id);
   const otherFeedback = session.feedbacks?.find((f) => f.authorId !== me.id);
 
@@ -209,10 +247,17 @@ export function SessionCard({ session, me, showMentorshipLink = true }: { sessio
         <div
           className={cn(
             'flex w-16 shrink-0 flex-col items-center rounded-md py-2 text-center',
-            session.status === 'CONFIRMED' ? 'bg-ink-900 text-white' : 'bg-surface-muted text-foreground',
+            session.status === 'CONFIRMED'
+              ? 'bg-ink-900 text-white'
+              : 'bg-surface-muted text-foreground',
           )}
         >
-          <span className={cn('text-xs font-semibold first-letter:uppercase', session.status === 'CONFIRMED' ? 'text-teal-200' : 'text-muted-foreground')}>
+          <span
+            className={cn(
+              'text-xs font-semibold first-letter:uppercase',
+              session.status === 'CONFIRMED' ? 'text-teal-200' : 'text-muted-foreground',
+            )}
+          >
             {month}
           </span>
           <span className="text-2xl leading-none font-semibold">{day}</span>
@@ -223,7 +268,8 @@ export function SessionCard({ session, me, showMentorshipLink = true }: { sessio
             <StatusBadge kind="session" status={session.status} />
           </div>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            <span className="capitalize">{weekday}</span> · {formatTime(session.startsAt, tz)} – {formatTime(session.endsAt, tz)} · avec{' '}
+            <span className="capitalize">{weekday}</span> · {formatTime(session.startsAt, tz)} –{' '}
+            {formatTime(session.endsAt, tz)} · avec{' '}
             <span className="font-medium text-foreground">{fullName(other)}</span>
           </p>
           <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-muted-foreground">
@@ -257,7 +303,10 @@ export function SessionCard({ session, me, showMentorshipLink = true }: { sessio
               </span>
             )}
             {showMentorshipLink && (
-              <Link href={`/mentorats/${session.mentorshipId}`} className="font-medium text-accent hover:underline">
+              <Link
+                href={`/mentorats/${session.mentorshipId}`}
+                className="font-medium text-accent hover:underline"
+              >
                 Espace de mentorat
               </Link>
             )}
@@ -281,7 +330,12 @@ export function SessionCard({ session, me, showMentorshipLink = true }: { sessio
             </Button>
           )}
           {isMentor && session.status === 'CONFIRMED' && started && (
-            <Button variant="secondary" size="sm" loading={action.isPending} onClick={() => run('complete', 'Séance marquée comme terminée.')}>
+            <Button
+              variant="secondary"
+              size="sm"
+              loading={action.isPending}
+              onClick={() => run('complete', 'Séance marquée comme terminée.')}
+            >
               <CheckCheck aria-hidden />
               Marquer terminée
             </Button>

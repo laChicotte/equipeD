@@ -34,7 +34,9 @@ export class AvailabilityService {
             id: true,
             status: true,
             topic: true,
-            mentee: { select: { id: true, firstName: true, lastName: true } },
+            mentee: {
+              select: { id: true, firstName: true, lastName: true, avatarUpdatedAt: true },
+            },
           },
         },
       },

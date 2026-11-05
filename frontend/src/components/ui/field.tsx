@@ -29,7 +29,9 @@ export function Field({ label, hint, error, optional, counter, className, childr
     : children;
 
   const counterTone =
-    counter && (counter.value > counter.max || (counter.min && counter.value > 0 && counter.value < counter.min))
+    counter &&
+    (counter.value > counter.max ||
+      (counter.min && counter.value > 0 && counter.value < counter.min))
       ? 'text-warning-700'
       : 'text-muted-foreground';
 
@@ -38,12 +40,16 @@ export function Field({ label, hint, error, optional, counter, className, childr
       <div className="flex items-baseline justify-between gap-3">
         <label htmlFor={id} className="text-sm font-semibold text-foreground">
           {label}
-          {optional && <span className="ml-1.5 font-normal text-muted-foreground">(facultatif)</span>}
+          {optional && (
+            <span className="ml-1.5 font-normal text-muted-foreground">(facultatif)</span>
+          )}
         </label>
         {counter && (
           <span className={cn('text-xs tabular-nums', counterTone)} aria-live="polite">
             {counter.value}/{counter.max}
-            {counter.min ? <span className="sr-only"> caractères, minimum {counter.min}</span> : null}
+            {counter.min ? (
+              <span className="sr-only"> caractères, minimum {counter.min}</span>
+            ) : null}
           </span>
         )}
       </div>
@@ -54,7 +60,11 @@ export function Field({ label, hint, error, optional, counter, className, childr
         </p>
       )}
       {error && (
-        <p id={errorId} role="alert" className="text-[13px] font-medium leading-snug text-danger-700">
+        <p
+          id={errorId}
+          role="alert"
+          className="text-[13px] font-medium leading-snug text-danger-700"
+        >
           {error}
         </p>
       )}

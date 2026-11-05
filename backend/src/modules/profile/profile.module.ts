@@ -4,6 +4,7 @@ import { CurrentUser, Roles } from '../../common/auth/decorators.js';
 import type { AuthUser } from '../../common/auth/auth-user.js';
 import { ProfileService } from './profile.service.js';
 import { PrivacyController, PrivacyService } from './privacy.js';
+import { AvatarController, AvatarService } from './avatar.js';
 import { UpdateAccountDto, UpsertMenteeProfileDto, UpsertMentorProfileDto } from './profile.dto.js';
 
 @ApiTags('profile')
@@ -39,7 +40,7 @@ export class ProfileController {
 }
 
 @Module({
-  controllers: [ProfileController, PrivacyController],
-  providers: [ProfileService, PrivacyService],
+  controllers: [ProfileController, PrivacyController, AvatarController],
+  providers: [ProfileService, PrivacyService, AvatarService],
 })
 export class ProfileModule {}

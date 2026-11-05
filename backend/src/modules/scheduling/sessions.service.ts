@@ -15,8 +15,8 @@ import { NotificationsService } from '../notifications/notifications.module.js';
 import { AppConfigService } from '../../config/app-config.service.js';
 
 const sessionInclude = {
-  mentor: { select: { id: true, firstName: true, lastName: true } },
-  mentee: { select: { id: true, firstName: true, lastName: true } },
+  mentor: { select: { id: true, firstName: true, lastName: true, avatarUpdatedAt: true } },
+  mentee: { select: { id: true, firstName: true, lastName: true, avatarUpdatedAt: true } },
   feedbacks: {
     select: { id: true, authorId: true, rating: true, comment: true, createdAt: true },
     orderBy: { createdAt: 'asc' },

@@ -9,26 +9,27 @@
  */
 
 @theme {
-  /* Palette primitive (marque conservée, contrastes WCAG AA vérifiés pour le texte) */
-  --color-ink-950: #0e1b30;
-  --color-ink-900: #172a46;
-  --color-ink-800: #1f3557;
-  --color-ink-700: #2a4166;
-  --color-ink-100: #e3e9f2;
-  --color-ink-50: #eef2f8;
+  /* Palette « forêt et latérite » : vert profond, terre cuite, safran, ivoire (contrastes AA vérifiés) */
+  /* Les noms historiques sont conservés : ink = vert forêt, teal = terre cuite, amber = safran. */
+  --color-ink-950: #0b201a;
+  --color-ink-900: #12342a;
+  --color-ink-800: #1a4335;
+  --color-ink-700: #245343;
+  --color-ink-100: #dbe7e1;
+  --color-ink-50: #edf3ef;
 
-  --color-teal-800: #08605a;
-  --color-teal-700: #0b7a73;
-  --color-teal-600: #0f8b83;
-  --color-teal-500: #2aa59c;
-  --color-teal-200: #b3e0db;
-  --color-teal-100: #d3efeb;
-  --color-teal-50: #e7f5f3;
+  --color-teal-800: #8a3418;
+  --color-teal-700: #a8401d;
+  --color-teal-600: #c0502a;
+  --color-teal-500: #d8683d;
+  --color-teal-200: #f0c4af;
+  --color-teal-100: #f7dccf;
+  --color-teal-50: #fcefe8;
 
-  --color-amber-500: #d99a3e;
-  --color-amber-400: #e8ad58;
-  --color-amber-100: #fbe7c8;
-  --color-amber-50: #fdf4e6;
+  --color-amber-500: #d4922a;
+  --color-amber-400: #e9ae48;
+  --color-amber-100: #f8e5c0;
+  --color-amber-50: #fcf4e1;
 
   --color-success-700: #15803d;
   --color-success-50: #ecf8f0;
@@ -38,13 +39,13 @@
   --color-danger-50: #fdeeee;
 
   /* Tokens sémantiques */
-  --color-background: #f4f6f9; /* papier */
+  --color-background: #f7f3ec; /* ivoire */
   --color-surface: #ffffff;
-  --color-surface-muted: #e9edf3; /* un pas de ton sous le papier */
-  --color-border: #dfe5ee;
-  --color-border-strong: #c6d0dd;
-  --color-foreground: #14223a; /* encre */
-  --color-muted-foreground: #4f5f77;
+  --color-surface-muted: #f0eae0;
+  --color-border: #e7dfd2;
+  --color-border-strong: #d2c7b6;
+  --color-foreground: #13251f;
+  --color-muted-foreground: #5b675f;
   --color-primary: var(--color-ink-900);
   --color-primary-hover: var(--color-ink-700);
   --color-primary-foreground: #ffffff;
@@ -53,26 +54,26 @@
   --color-accent-foreground: #ffffff;
   --color-accent-soft: var(--color-teal-50);
   --color-highlight: var(--color-amber-400);
-  --color-highlight-foreground: #14223a;
-  --color-ring: var(--color-teal-700);
+  --color-highlight-foreground: #13251f;
+  --color-ring: var(--color-teal-600);
   --color-destructive: var(--color-danger-700);
 
-  /* Typographie : une seule famille */
+  /* Typographie : Lexend pour les titres, Schibsted Grotesk pour le texte */
   --font-sans: var(--font-schibsted), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-lexend), var(--font-schibsted), ui-sans-serif, sans-serif;
 
-  /* Rayons : formes nettes, une seule logique sur tout le produit */
-  --radius-xs: 2px;
-  --radius-sm: 2px;
-  --radius-md: 3px;
-  --radius-lg: 4px;
-  --radius-xl: 4px;
-  --radius-2xl: 4px;
+  /* Rayons : doux et généreux */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-2xl: 24px;
 
   /* Ombres : seulement ce qui flotte réellement (menus, dialogues) */
-  --shadow-card: 0 0 #0000;
-  --shadow-raised: 0 12px 32px rgb(14 27 48 / 0.14);
-  --shadow-focus: 0 0 0 3px rgb(11 122 115 / 0.2);
+  --shadow-card: 0 1px 2px rgb(11 32 26 / 0.04), 0 4px 16px rgb(11 32 26 / 0.04);
+  --shadow-raised: 0 14px 36px rgb(11 32 26 / 0.14);
+  --shadow-focus: 0 0 0 3px rgb(192 80 42 / 0.22);
 
   /* Mouvement */
   --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
@@ -303,6 +304,9 @@
 }
 
 @layer utilities {
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
   .scrollbar-thin {
     scrollbar-width: thin;
     scrollbar-color: var(--color-border-strong) transparent;
@@ -317,5 +321,13 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+@layer components {
+  /* Motif de losanges, en surimpression sur les aplats vert forêt. */
+  .pattern-kente {
+    background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'48'%20height%3D'48'%20fill%3D'none'%20stroke%3D'white'%20stroke-width%3D'1.5'%3E%3Cpath%20d%3D'M24%204%2044%2024%2024%2044%204%2024Z'%2F%3E%3Cpath%20d%3D'M24%2014%2034%2024%2024%2034%2014%2024Z'%2F%3E%3Cpath%20d%3D'M0%200h6M42%200h6M0%2048h6M42%2048h6'%2F%3E%3C%2Fsvg%3E");
+    background-size: 48px 48px;
   }
 }

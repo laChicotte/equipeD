@@ -15,7 +15,7 @@ import type {
 
 const goalInclude = {
   milestones: { orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }] },
-  createdBy: { select: { id: true, firstName: true, lastName: true } },
+  createdBy: { select: { id: true, firstName: true, lastName: true, avatarUpdatedAt: true } },
 } satisfies Prisma.GoalInclude;
 
 /** Statut déduit de la progression. */

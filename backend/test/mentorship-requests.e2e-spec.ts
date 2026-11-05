@@ -198,22 +198,21 @@ describe('Demandes de mentorat', () => {
     expect(res.body.status).toBe('CANCELLED');
   });
 
-  it('refuse l’acceptation au-delà de la capacité du mentor (409 MENTOR_AT_CAPACITY)', async () => {
-    const mentor = await createMentor(app, { maxMentees: 1 });
-    const [a, b] = await Promise.all([createMentee(app), createMentee(app)]);
-    const ra = await a.agent
-      .post(`${API}/mentorship-requests`)
-      .send(validRequest(mentor.id))
-      .expect(201);
-    const rb = await b.agent
-      .post(`${API}/mentorship-requests`)
-      .send(validRequest(mentor.id))
-      .expect(201);
-    await mentor.agent.post(`${API}/mentorship-requests/${ra.body.id}/accept`).send({}).expect(200);
-    const res = await mentor.agent
-      .post(`${API}/mentorship-requests/${rb.body.id}/accept`)
-      .send({})
-      .expect(409);
-    expect(res.body.code).toBe('MENTOR_AT_CAPACITY');
+  it('accepte autant de mentorés que le mentor le souhaite (plus de plafond)', async () => {
+    const mentor = await createMentor(app);
+    const mentees = await Promise.all(Array.from({ length: 7 }, () => createMentee(app)));
+    for (const m of mentees) {
+      const r = await m.agent
+        .post(`${API}/mentorship-requests`)
+        .send(validRequest(mentor.id))
+        .expect(201);
+      await mentor.agent
+        .post(`${API}/mentorship-requests/${r.body.id}/accept`)
+        .send({})
+        .expect(200);
+    }
+    const card = await mentees[0].agent.get(`${API}/mentors/${mentor.id}`).expect(200);
+    expect(card.body).toMatchObject({ activeMentees: 7, mentoredCount: 7 });
+    expect(card.body).not.toHaveProperty('maxMentees');
   });
 });

@@ -1,8 +1,13 @@
 import type { Metadata } from 'next';
 import { Dashboard } from '@/features/dashboard/dashboard';
+import { HomeLayout } from '@/features/dashboard/home-layout';
 
-export const metadata: Metadata = { title: 'Tableau de bord' };
+export const metadata: Metadata = { title: 'Accueil' };
 
 export default function DashboardPage() {
-  return <Dashboard />;
+  return (
+    <HomeLayout>
+      <Dashboard />
+    </HomeLayout>
+  );
 }

@@ -101,6 +101,7 @@ enum NotificationType {
   GOAL_FEEDBACK
   RESOURCE_SHARED
   MENTORSHIP_COMPLETED
+  CERTIFICATE_ISSUED
 }
 
 enum GoalStatus {
@@ -112,19 +113,22 @@ enum GoalStatus {
 // ─── Identité & authentification ─────────────────────────────────────────────
 
 model User {
-  id           String     @id @default(cuid())
-  email        String     @unique
-  passwordHash String     @map("password_hash")
-  firstName    String     @map("first_name") @db.VarChar(80)
-  lastName     String     @map("last_name") @db.VarChar(80)
-  role         Role
-  status       UserStatus @default(ACTIVE)
-  timezone     String     @default("Africa/Conakry") @db.VarChar(64)
-  onboardedAt  DateTime?  @map("onboarded_at") @db.Timestamptz(3)
-  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt    DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+  id              String     @id @default(cuid())
+  email           String     @unique
+  passwordHash    String     @map("password_hash")
+  firstName       String     @map("first_name") @db.VarChar(80)
+  lastName        String     @map("last_name") @db.VarChar(80)
+  role            Role
+  status          UserStatus @default(ACTIVE)
+  timezone        String     @default("Africa/Conakry") @db.VarChar(64)
+  onboardedAt     DateTime?  @map("onboarded_at") @db.Timestamptz(3)
+  /// Date de la dernière photo de profil (null = aucune) : sert aussi de clé de cache côté client.
+  avatarUpdatedAt DateTime?  @map("avatar_updated_at") @db.Timestamptz(3)
+  createdAt       DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   sessions      AuthSession[]
+  avatar        UserAvatar?
   mentorProfile MentorProfile?
   menteeProfile MenteeProfile?
 
@@ -145,8 +149,22 @@ model User {
   notifications    Notification[]
   opportunities    Opportunity[]
 
+  certificatesAsMentor MentorshipCertificate[] @relation("CertificateMentor")
+  certificatesAsMentee MentorshipCertificate[] @relation("CertificateMentee")
+
   @@index([role, status])
   @@map("users")
+}
+
+/// Photo de profil (recadrée et réduite par le navigateur). Taille et type bornés par des CHECK SQL.
+model UserAvatar {
+  userId    String   @id @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mimeType  String   @map("mime_type") @db.VarChar(32)
+  data      Bytes
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("user_avatars")
 }
 
 /// Session d'authentification opaque : seul le hash SHA-256 du jeton est stocké.
@@ -204,7 +222,6 @@ model MentorProfile {
   modalities         Modality[]
   city               String?            @db.VarChar(80)
   sessionDurationMin Int                @default(60) @map("session_duration_min")
-  maxMentees         Int                @default(5) @map("max_mentees")
   verificationStatus VerificationStatus @default(UNVERIFIED) @map("verification_status")
   isPublished        Boolean            @default(true) @map("is_published")
   /// Texte de recherche normalisé (minuscules, sans accents) : titre, expertises, domaines, nom.
@@ -303,17 +320,51 @@ model Mentorship {
   createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  request   MentorshipRequest  @relation(fields: [requestId], references: [id], onDelete: Restrict)
-  mentor    User               @relation("MentorshipMentor", fields: [mentorId], references: [id], onDelete: Cascade)
-  mentee    User               @relation("MentorshipMentee", fields: [menteeId], references: [id], onDelete: Cascade)
-  sessions  MentoringSession[]
-  messages  Message[]
-  goals     Goal[]
-  resources Resource[]
+  request     MentorshipRequest      @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  mentor      User                   @relation("MentorshipMentor", fields: [mentorId], references: [id], onDelete: Cascade)
+  mentee      User                   @relation("MentorshipMentee", fields: [menteeId], references: [id], onDelete: Cascade)
+  sessions    MentoringSession[]
+  messages    Message[]
+  goals       Goal[]
+  resources   Resource[]
+  certificate MentorshipCertificate?
 
   @@index([mentorId, status])
   @@index([menteeId, status])
   @@map("mentorships")
+}
+
+/// Certificat d'accompagnement délivré au mentor à la clôture d'un mentorat ayant au moins une
+/// séance réalisée. Les chiffres sont figés au moment de la délivrance ; le code permet à
+/// quiconque de vérifier le certificat. Invariants (CHECK SQL) : au moins une séance, dates cohérentes.
+model MentorshipCertificate {
+  id                String    @id @default(cuid())
+  code              String    @unique @db.VarChar(16)
+  mentorshipId      String    @unique @map("mentorship_id")
+  mentorId          String    @map("mentor_id")
+  menteeId          String    @map("mentee_id")
+  /// Nom complet du mentor et prénom + initiale du mentoré (minimisation des données publiques).
+  mentorName        String    @map("mentor_name") @db.VarChar(170)
+  menteeName        String    @map("mentee_name") @db.VarChar(100)
+  domainName        String    @map("domain_name") @db.VarChar(120)
+  startedAt         DateTime  @map("started_at") @db.Timestamptz(3)
+  endedAt           DateTime  @map("ended_at") @db.Timestamptz(3)
+  completedSessions Int       @map("completed_sessions")
+  totalMinutes      Int       @map("total_minutes")
+  goalsCompleted    Int       @map("goals_completed")
+  goalsTotal        Int       @map("goals_total")
+  /// Moyenne des évaluations laissées par le mentoré (null s'il n'a rien évalué).
+  averageRating     Float?    @map("average_rating")
+  issuedAt          DateTime  @default(now()) @map("issued_at") @db.Timestamptz(3)
+  /// Renseignée si le compte du mentor est supprimé : le certificat n'est plus valide.
+  revokedAt         DateTime? @map("revoked_at") @db.Timestamptz(3)
+
+  mentorship Mentorship @relation(fields: [mentorshipId], references: [id], onDelete: Cascade)
+  mentor     User       @relation("CertificateMentor", fields: [mentorId], references: [id], onDelete: Cascade)
+  mentee     User       @relation("CertificateMentee", fields: [menteeId], references: [id], onDelete: Cascade)
+
+  @@index([mentorId, issuedAt])
+  @@map("mentorship_certificates")
 }
 
 // ─── Disponibilités & séances ────────────────────────────────────────────────

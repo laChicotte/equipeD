@@ -24,7 +24,13 @@ export function useLibrary(filters: LibraryFilters) {
     queryKey: ['resources', 'library', filters],
     queryFn: () =>
       api<Paginated<Resource>>('/resources', {
-        query: { q: filters.q, domain: filters.domain, kind: filters.kind, page: filters.page ?? 1, pageSize: 12 },
+        query: {
+          q: filters.q,
+          domain: filters.domain,
+          kind: filters.kind,
+          page: filters.page ?? 1,
+          pageSize: 12,
+        },
       }),
     placeholderData: keepPreviousData,
   });

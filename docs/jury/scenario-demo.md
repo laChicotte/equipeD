@@ -25,7 +25,7 @@ pnpm dev:frontend                               # interface sur :3000
 | 0:20 | **A** Connexion | Se connecter en tant qu'Aminata | Compte de démonstration, profil déjà complété |
 | 0:35 | **A** Tableau de bord | Montrer les « Suggestions pour vous » | « Fatoumata est suggérée, et la plateforme explique pourquoi. » |
 | 0:50 | **A** Annuaire | Taper « developpement web » **sans accent** | Recherche tolérante ; filtres par domaine, modalité et disponibilité |
-| 1:05 | **A** Fiche Fatoumata | Parcourir l'expérience, les langues, le badge « Profil vérifié » et les créneaux | Aucun email ni téléphone exposé publiquement |
+| 1:05 | **A** Fiche Fatoumata | Parcourir l'expérience, le badge « Profil vérifié », « 1 mentoré accompagné » et son **certificat d'accompagnement** (bouton « Afficher le certificat ») | Aucun email ni téléphone exposé ; le certificat est vérifiable publiquement par son code |
 | 1:20 | **A** Demande | Objectif : « Devenir développeuse web junior » ; message motivé → Envoyer | Statut **En attente** |
 | 1:40 | **F** Demandes reçues | Se connecter en tant que Fatoumata, ouvrir la demande, lire la motivation → **Accepter** | Seule la mentore sollicitée peut décider |
 | 2:00 | **A** Mes demandes | Rafraîchir : statut **Acceptée**, mentorat ouvert | Mise en relation effective |
@@ -35,7 +35,7 @@ pnpm dev:frontend                               # interface sur :3000
 | 3:20 | **A** Objectifs | Créer « Publier mon portfolio » avec 3 jalons | |
 | 3:35 | **F** Objectifs | Cocher un jalon (33 %) et écrire un retour | Le retour est réservé à la mentore |
 | 3:55 | **F** Tableau de bord | Mentorés actifs, séances à venir, progression moyenne | Indicateurs réels, aucun chiffre fictif |
-| 4:10 | (option) Mohamed | Montrer une séance passée évaluée 5/5 | Évaluation des séances |
+| 4:10 | (option) Mohamed ↔ Thierno | Thierno clôture le mentorat (une séance réalisée, évaluée 5/5) : un **certificat** est délivré en direct | « La crédibilité du mentor se construit sur des séances réelles, pas sur une déclaration. » |
 | 4:30 | Fin | | « Tout ce que vous avez vu est enregistré dans PostgreSQL et fonctionne aussi sur mobile. » |
 
 ## Points forts à montrer si le jury pose la question
@@ -49,7 +49,7 @@ pnpm dev:frontend                               # interface sur :3000
 | Incident | Repli |
 |---|---|
 | Pas d'Internet | Rien n'en dépend : tout tourne en local (PostgreSQL dans Docker, API et interface sur le PC). Le lien de réunion n'est qu'affiché. |
-| Le frontend plante | Montrer le même parcours via Swagger (`/api/docs`) avec les deux comptes, ou lancer `pnpm --filter backend test:e2e` (100 tests en environ 40 s) |
+| Le frontend plante | Montrer le même parcours via Swagger (`/api/docs`) avec les deux comptes, ou lancer `pnpm --filter backend test:e2e` (108 tests en environ 45 s) |
 | Base dans un état inattendu | `pnpm db:demo-reset` (moins de 10 s) puis reprendre à l'étape 0:20 |
 | Docker ne démarre pas | Ouvrir Docker Desktop, attendre l'état « running », puis `pnpm db:up` ; prévoir une vidéo enregistrée du parcours |
 | Ordinateur de démo défaillant | Deuxième PC préparé à l'identique (clone du dépôt, même seed) |

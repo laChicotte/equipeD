@@ -48,8 +48,14 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
     response = await fetch(buildUrl(path, query), {
       method,
       credentials: 'same-origin',
-      headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      // Un Blob (photo de profil) part tel quel, avec son type ; le reste en JSON.
+      headers:
+        body instanceof Blob
+          ? { 'Content-Type': body.type || 'application/octet-stream' }
+          : body !== undefined
+            ? { 'Content-Type': 'application/json' }
+            : undefined,
+      body: body instanceof Blob ? body : body !== undefined ? JSON.stringify(body) : undefined,
       signal,
     });
   } catch (error) {

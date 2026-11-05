@@ -46,7 +46,8 @@ export function ResourceDialog({
     e.preventDefault();
     const next: Record<string, string> = {};
     if (title.trim().length < 3) next.title = 'Le titre doit contenir au moins 3 caractères.';
-    if (url.trim() && !/^https:\/\/\S+\.\S+/.test(url.trim())) next.url = 'Le lien doit commencer par https://';
+    if (url.trim() && !/^https:\/\/\S+\.\S+/.test(url.trim()))
+      next.url = 'Le lien doit commencer par https://';
     if (!url.trim() && !description.trim()) next.url = 'Ajoutez un lien ou un contenu rédigé.';
     setErrors(next);
     if (Object.keys(next).length) return;
@@ -61,7 +62,9 @@ export function ResourceDialog({
       },
       {
         onSuccess: () => {
-          toast.success(mentorshipId ? 'Ressource partagée' : 'Ressource publiée dans la bibliothèque');
+          toast.success(
+            mentorshipId ? 'Ressource partagée' : 'Ressource publiée dans la bibliothèque',
+          );
           reset();
           onOpenChange(false);
         },
@@ -88,7 +91,12 @@ export function ResourceDialog({
       >
         <form onSubmit={submit} className="grid gap-4" noValidate>
           <Field label="Titre" error={errors.title}>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={160} placeholder="Ex. Préparer un entretien technique" />
+            <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              maxLength={160}
+              placeholder="Ex. Préparer un entretien technique"
+            />
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Type">
@@ -111,8 +119,19 @@ export function ResourceDialog({
               </NativeSelect>
             </Field>
           </div>
-          <Field label="Lien" optional error={errors.url} hint="Adresse https d’un article, d’une vidéo ou d’un document.">
-            <Input value={url} onChange={(e) => setUrl(e.target.value)} type="url" inputMode="url" placeholder="https://…" />
+          <Field
+            label="Lien"
+            optional
+            error={errors.url}
+            hint="Adresse https d’un article, d’une vidéo ou d’un document."
+          >
+            <Input
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              type="url"
+              inputMode="url"
+              placeholder="https://…"
+            />
           </Field>
           <Field
             label="Conseil ou présentation"
@@ -120,7 +139,12 @@ export function ResourceDialog({
             error={errors.description}
             counter={{ value: description.length, max: 2000 }}
           >
-            <Textarea value={description} onChange={(e) => setDescription(e.target.value)} maxLength={2000} placeholder="Ce qu’il faut retenir, pourquoi c’est utile…" />
+            <Textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              maxLength={2000}
+              placeholder="Ce qu’il faut retenir, pourquoi c’est utile…"
+            />
           </Field>
           <DialogFooter>
             <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>

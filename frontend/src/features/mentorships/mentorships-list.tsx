@@ -69,7 +69,8 @@ export function MentorshipsList() {
                       <StatusBadge kind="mentorship" status={m.status} />
                     </div>
                     <p className="mt-0.5 line-clamp-1 text-sm text-muted-foreground">
-                      {m.counterpart.mentorProfile?.headline ?? m.counterpart.menteeProfile?.goalsSummary}
+                      {m.counterpart.mentorProfile?.headline ??
+                        m.counterpart.menteeProfile?.goalsSummary}
                     </p>
                     {m.domain && (
                       <Badge tone="teal" className="mt-2">
@@ -96,7 +97,9 @@ export function MentorshipsList() {
                         ? `${m.lastMessage.senderId === me.id ? 'Vous : ' : ''}${m.lastMessage.content}`
                         : 'Aucun message'}
                     </span>
-                    {m.lastMessage && <span className="shrink-0">· {formatRelative(m.lastMessage.createdAt)}</span>}
+                    {m.lastMessage && (
+                      <span className="shrink-0">· {formatRelative(m.lastMessage.createdAt)}</span>
+                    )}
                     {m.unreadCount > 0 && (
                       <span className="ml-auto inline-flex h-5 shrink-0 items-center rounded-full bg-teal-700 px-1.5 text-[11px] font-semibold text-white">
                         {m.unreadCount}
@@ -107,13 +110,20 @@ export function MentorshipsList() {
                 <div className="mt-auto pt-5">
                   <div className="mb-1.5 flex justify-between text-xs font-semibold">
                     <span className="text-muted-foreground">
-                      {m.goalsCount > 0 ? `${m.goalsCompleted}/${m.goalsCount} objectif(s) atteint(s)` : 'Aucun objectif défini'}
+                      {m.goalsCount > 0
+                        ? `${m.goalsCompleted}/${m.goalsCount} objectif(s) atteint(s)`
+                        : 'Aucun objectif défini'}
                     </span>
                     {m.averageProgress !== null && (
-                      <span className="text-teal-800 tabular-nums">{Math.round(m.averageProgress)} %</span>
+                      <span className="text-teal-800 tabular-nums">
+                        {Math.round(m.averageProgress)} %
+                      </span>
                     )}
                   </div>
-                  <Progress value={m.averageProgress ?? 0} label="Progression moyenne des objectifs" />
+                  <Progress
+                    value={m.averageProgress ?? 0}
+                    label="Progression moyenne des objectifs"
+                  />
                 </div>
               </Link>
             </li>

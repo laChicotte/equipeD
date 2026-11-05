@@ -36,8 +36,8 @@ export class DashboardService {
           topic: true,
           mentorshipId: true,
           meetingUrl: true,
-          mentor: { select: { id: true, firstName: true, lastName: true } },
-          mentee: { select: { id: true, firstName: true, lastName: true } },
+          mentor: { select: { id: true, firstName: true, lastName: true, avatarUpdatedAt: true } },
+          mentee: { select: { id: true, firstName: true, lastName: true, avatarUpdatedAt: true } },
         },
       }),
       this.prisma.mentoringSession.count({
@@ -58,9 +58,8 @@ export class DashboardService {
 
     const mentorExtras = asMentor
       ? await Promise.all([
-          this.prisma.mentorProfile.findUnique({
-            where: { userId: user.id },
-            select: { maxMentees: true },
+          this.prisma.mentorshipCertificate.count({
+            where: { mentorId: user.id, revokedAt: null },
           }),
           this.prisma.availabilitySlot.count({
             where: {
@@ -88,7 +87,7 @@ export class DashboardService {
           : null,
       },
       mentor: mentorExtras
-        ? { maxMentees: mentorExtras[0]?.maxMentees ?? null, freeUpcomingSlots: mentorExtras[1] }
+        ? { certificates: mentorExtras[0], freeUpcomingSlots: mentorExtras[1] }
         : null,
     };
   }

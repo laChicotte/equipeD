@@ -48,7 +48,11 @@ function SessionList({ scope, me }: { scope: 'upcoming' | 'past'; me: Me }) {
         }
       />
     ) : (
-      <EmptyState icon={History} title="Aucune séance passée" description="L’historique de vos séances apparaîtra ici." />
+      <EmptyState
+        icon={History}
+        title="Aucune séance passée"
+        description="L’historique de vos séances apparaîtra ici."
+      />
     );
   }
   return (

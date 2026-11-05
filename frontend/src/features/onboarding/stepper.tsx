@@ -12,7 +12,11 @@ export function Stepper({ steps, current }: { steps: string[]; current: number }
           const done = i < current;
           const active = i === current;
           return (
-            <li key={label} className="flex flex-1 items-center gap-2" aria-current={active ? 'step' : undefined}>
+            <li
+              key={label}
+              className="flex flex-1 items-center gap-2"
+              aria-current={active ? 'step' : undefined}
+            >
               <span
                 className={cn(
                   'inline-flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold transition-colors',
@@ -32,7 +36,10 @@ export function Stepper({ steps, current }: { steps: string[]; current: number }
                 {label}
               </span>
               {i < steps.length - 1 && (
-                <span className={cn('h-px min-w-4 flex-1', done ? 'bg-teal-600' : 'bg-border-strong')} aria-hidden />
+                <span
+                  className={cn('h-px min-w-4 flex-1', done ? 'bg-teal-600' : 'bg-border-strong')}
+                  aria-hidden
+                />
               )}
             </li>
           );

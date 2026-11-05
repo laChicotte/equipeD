@@ -78,13 +78,19 @@ export function ChoiceGroup<V extends string>({
               )}
             >
               {o.icon && (
-                <span className={cn('shrink-0', selected ? 'text-teal-700' : 'text-muted-foreground')}>{o.icon}</span>
+                <span
+                  className={cn('shrink-0', selected ? 'text-teal-700' : 'text-muted-foreground')}
+                >
+                  {o.icon}
+                </span>
               )}
               {columns === 'cards' ? (
                 <span className="min-w-0">
                   <span className="block text-sm font-semibold">{o.label}</span>
                   {o.description && (
-                    <span className="mt-0.5 block text-xs leading-snug text-muted-foreground">{o.description}</span>
+                    <span className="mt-0.5 block text-xs leading-snug text-muted-foreground">
+                      {o.description}
+                    </span>
                   )}
                 </span>
               ) : (
@@ -159,14 +165,18 @@ export function TagInput({
     }
   };
 
-  const remaining = suggestions.filter((s) => !value.some((v) => v.toLowerCase() === s.toLowerCase()));
+  const remaining = suggestions.filter(
+    (s) => !value.some((v) => v.toLowerCase() === s.toLowerCase()),
+  );
 
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-baseline justify-between">
         <label htmlFor={id} className="text-sm font-semibold">
           {label}
-          {optional && <span className="ml-1.5 font-normal text-muted-foreground">(facultatif)</span>}
+          {optional && (
+            <span className="ml-1.5 font-normal text-muted-foreground">(facultatif)</span>
+          )}
         </label>
         <span className="text-xs text-muted-foreground tabular-nums">
           {value.length}/{max}

@@ -13,7 +13,7 @@ import type { MentorshipRequestStatus } from '../../generated/prisma/enums.js';
 import type { CreateMentorshipRequestDto, DecisionDto } from './mentorship-requests.dto.js';
 import { NotificationsService } from '../notifications/notifications.module.js';
 
-const personSelect = { id: true, firstName: true, lastName: true } as const;
+const personSelect = { id: true, firstName: true, lastName: true, avatarUpdatedAt: true } as const;
 
 const requestInclude = {
   mentee: {
@@ -155,20 +155,6 @@ export class MentorshipRequestsService {
       return this.getOne(user, id);
     }
     this.assertPending(request.status);
-
-    const [activeCount, profile] = await Promise.all([
-      this.prisma.mentorship.count({ where: { mentorId: user.id, status: 'ACTIVE' } }),
-      this.prisma.mentorProfile.findUnique({
-        where: { userId: user.id },
-        select: { maxMentees: true },
-      }),
-    ]);
-    if (profile && activeCount >= profile.maxMentees) {
-      throw conflict(
-        'MENTOR_AT_CAPACITY',
-        `Vous accompagnez déjà ${activeCount} mentoré(s), votre maximum. Augmentez votre capacité dans votre profil.`,
-      );
-    }
 
     try {
       await this.prisma.$transaction(async (tx) => {

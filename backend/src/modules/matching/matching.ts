@@ -22,7 +22,6 @@ export interface MatchMentor {
   modalities: Modality[];
   hasUpcomingAvailability: boolean;
   isVerified: boolean;
-  hasCapacity: boolean;
 }
 
 export interface MatchResult {
@@ -75,11 +74,6 @@ export function computeMatch(mentee: MatchMentee, mentor: MatchMentor): MatchRes
   if (mentor.isVerified) {
     score += 5;
     reasons.push('Profil vérifié par l’équipe');
-  }
-
-  if (!mentor.hasCapacity) {
-    score = Math.round(score * 0.5);
-    reasons.push('Capacité d’accompagnement actuellement atteinte');
   }
 
   return { score: Math.min(100, score), reasons };

@@ -91,12 +91,6 @@ export class UpsertMentorProfileDto {
   @Type(() => Number)
   @IsIn([30, 45, 60, 90], { message: 'Durée de séance : 30, 45, 60 ou 90 minutes.' })
   sessionDurationMin!: number;
-
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(20)
-  maxMentees!: number;
 }
 
 export class UpsertMenteeProfileDto {

@@ -1,6 +1,16 @@
 'use client';
 
-import { ArrowRight, Check, Inbox, MapPin, MessagesSquare, Search, Send, Target, X } from 'lucide-react';
+import {
+  ArrowRight,
+  Check,
+  Inbox,
+  MapPin,
+  MessagesSquare,
+  Search,
+  Send,
+  Target,
+  X,
+} from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -46,7 +56,10 @@ function DecisionDialog({
             toast.success(`Vous accompagnez désormais ${name}`, {
               description: 'La conversation privée est ouverte.',
               action: res.mentorship
-                ? { label: 'Ouvrir', onClick: () => router.push(`/mentorats/${res.mentorship!.id}`) }
+                ? {
+                    label: 'Ouvrir',
+                    onClick: () => router.push(`/mentorats/${res.mentorship!.id}`),
+                  }
                 : undefined,
             });
           } else {
@@ -69,7 +82,11 @@ function DecisionDialog({
             : 'Un mot bienveillant aide le mentoré à rebondir.'
         }
       >
-        <Field label={accept ? 'Message de bienvenue' : 'Explication'} optional counter={{ value: note.length, max: 500 }}>
+        <Field
+          label={accept ? 'Message de bienvenue' : 'Explication'}
+          optional
+          counter={{ value: note.length, max: 500 }}
+        >
           <Textarea
             rows={4}
             value={note}
@@ -86,7 +103,11 @@ function DecisionDialog({
           <Button variant="ghost" onClick={onClose}>
             Annuler
           </Button>
-          <Button variant={accept ? 'accent' : 'danger'} onClick={submit} loading={decide.isPending}>
+          <Button
+            variant={accept ? 'accent' : 'danger'}
+            onClick={submit}
+            loading={decide.isPending}
+          >
             {!decide.isPending && (accept ? <Check aria-hidden /> : <X aria-hidden />)}
             {accept ? 'Accepter' : 'Décliner'}
           </Button>
@@ -120,12 +141,16 @@ function RequestItem({ request, box }: { request: MentorshipRequest; box: 'inbox
               </h3>
               <p className="text-sm text-muted-foreground">
                 {box === 'inbox'
-                  ? [profile && situationLabels[profile.situation], profile?.city].filter(Boolean).join(' · ')
+                  ? [profile && situationLabels[profile.situation], profile?.city]
+                      .filter(Boolean)
+                      .join(' · ')
                   : request.mentor.mentorProfile?.headline}
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">{formatRelative(request.createdAt)}</span>
+              <span className="text-xs text-muted-foreground">
+                {formatRelative(request.createdAt)}
+              </span>
               <StatusBadge kind="request" status={request.status} />
             </div>
           </div>
@@ -200,7 +225,9 @@ function RequestItem({ request, box }: { request: MentorshipRequest; box: 'inbox
           </div>
         </div>
       </div>
-      {decision && <DecisionDialog request={request} action={decision} onClose={() => setDecision(null)} />}
+      {decision && (
+        <DecisionDialog request={request} action={decision} onClose={() => setDecision(null)} />
+      )}
     </Card>
   );
 }

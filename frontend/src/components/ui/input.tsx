@@ -10,7 +10,10 @@ export function Input({ className, ...props }: ComponentProps<'input'>) {
 
 export function Textarea({ className, ...props }: ComponentProps<'textarea'>) {
   return (
-    <textarea className={cn(fieldBase, 'min-h-28 resize-y py-3 leading-relaxed', className)} {...props} />
+    <textarea
+      className={cn(fieldBase, 'min-h-28 resize-y py-3 leading-relaxed', className)}
+      {...props}
+    />
   );
 }
 

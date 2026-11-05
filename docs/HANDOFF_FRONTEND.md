@@ -168,7 +168,7 @@ Préfixe : `/api/v1`. Swagger : `http://localhost:4000/api/docs`. 🔓 = public,
 |---|---|---|
 | `GET /domains` | 🔓 | `[{ id, slug, name, description, icon, topics: string[], mentorCount }]`. `icon` = nom d'icône Lucide (`rocket`, `code`, `compass`, `book-open`, `landmark`, `sparkles`, `graduation-cap`) |
 | `GET /profile/me` | 🔒 | `{ user, mentorProfile \| null (avec domains[]), menteeProfile \| null (avec interests[]) }` |
-| `PUT /profile/mentor` | 🔒 M | `{ headline (10–140), bio (80–2000), currentPosition?, organization?, yearsExperience (1–60), expertise: string[] (1–15), languages: string[] (1–6), modalities: Modality[] (1–3), city?, domainIds: string[] (1–4), sessionDurationMin: 30\|45\|60\|90, maxMentees (1–20) }` |
+| `PUT /profile/mentor` | 🔒 M | `{ headline (10–140), bio (80–2000), currentPosition?, organization?, yearsExperience (1–60), expertise: string[] (1–15), languages: string[] (1–6), modalities: Modality[] (1–3), city?, domainIds: string[] (1–4), sessionDurationMin: 30\|45\|60\|90 }` |
 | `PATCH /profile/me` | 🔒 | `{ firstName?, lastName?, timezone? (IANA, ex. Africa/Conakry) }` → même forme que `GET /profile/me` |
 | `PUT /profile/mentee` | 🔒 E | `{ situation, goalsSummary (20–1000), desiredSkills: string[] (0–15), preferredModality, city?, interestDomainIds: string[] (1–5) }` |
 
@@ -189,7 +189,7 @@ interface MentorCard {
   modalities: Modality[]; city: string | null; sessionDurationMin: number;
   verificationStatus: VerificationStatus;
   domains: { id: string; slug: string; name: string }[];
-  activeMentees: number; maxMentees: number; acceptingMentees: boolean;
+  activeMentees: number; mentoredCount: number; certificatesCount: number;
   nextAvailableAt: string | null;         // prochain créneau libre (ISO)
   rating: { average: number | null; count: number }; // notes laissées par les mentorés (afficher « Nouveau » si count = 0)
 }
@@ -215,11 +215,11 @@ interface MentorCard {
 
 `MentorshipRequest = { id, menteeId, mentorId, domainId, goal, message, status, decisionNote, respondedAt, createdAt, updatedAt, mentee: { id, firstName, lastName, menteeProfile: { situation, goalsSummary, preferredModality, city, desiredSkills } }, mentor: { id, firstName, lastName, mentorProfile: { headline } }, domain: { id, slug, name } | null, mentorship: { id, status } | null }`
 
-Erreurs : 422 `PROFILE_REQUIRED` (mentoré sans profil), `SELF_REQUEST`, `INVALID_DOMAIN` · 404 `MENTOR_NOT_FOUND`, `REQUEST_NOT_FOUND` · 403 `NOT_REQUEST_MENTOR`, `NOT_REQUEST_OWNER`, `NOT_PARTICIPANT` · 409 `REQUEST_ALREADY_PENDING`, `ALREADY_MENTORED`, `INVALID_TRANSITION`, `MENTOR_AT_CAPACITY`.
+Erreurs : 422 `PROFILE_REQUIRED` (mentoré sans profil), `SELF_REQUEST`, `INVALID_DOMAIN` · 404 `MENTOR_NOT_FOUND`, `REQUEST_NOT_FOUND` · 403 `NOT_REQUEST_MENTOR`, `NOT_REQUEST_OWNER`, `NOT_PARTICIPANT` · 409 `REQUEST_ALREADY_PENDING`, `ALREADY_MENTORED`, `INVALID_TRANSITION`.
 
 ### Mentorats
 
-`POST /mentorships/:id/complete` 🔒 participant : `{ note? (≤1000) }` → `MentorshipSummary` avec `status: COMPLETED`. Les séances futures sont annulées, la capacité du mentor est libérée et l'autre participant est notifié. Le mentorat devient **lecture seule** : écrire renvoie 409 `MENTORSHIP_NOT_ACTIVE`. Prévoyez un bouton « Clôturer le mentorat » avec confirmation et un champ bilan.
+`POST /mentorships/:id/complete` 🔒 participant : `{ note? (≤1000) }` → `MentorshipSummary` avec `status: COMPLETED`. Les séances futures sont annulées. Si au moins une séance a été réalisée, un certificat est délivré au mentor (`certificate: { code, issuedAt }` dans la réponse) ; `GET /certificates/:code` (public) le vérifie, `GET /mentors/:id/certificates` (public) les liste. Le mentorat devient **lecture seule** : écrire renvoie 409 `MENTORSHIP_NOT_ACTIVE`. Prévoyez un bouton « Clôturer le mentorat » avec confirmation et un champ bilan.
 
 `GET /mentorships/me` 🔒 et `GET /mentorships/:id` 🔒 participant →
 
@@ -335,7 +335,7 @@ Un utilisateur supprimé apparaît comme « Compte supprimé » dans les convers
 
 ### Tableau de bord et admin
 
-- `GET /dashboard/me` 🔒 → `{ role, pendingRequests, activeMentorships, upcomingSessions: Session[≤3] (avec mentorshipId et meetingUrl), sessionsAwaitingConfirmation, unreadMessages, goals: { total, completed, averageProgress | null }, mentor: { maxMentees, freeUpcomingSlots } | null }`
+- `GET /dashboard/me` 🔒 → `{ role, pendingRequests, activeMentorships, upcomingSessions: Session[≤3] (avec mentorshipId et meetingUrl), sessionsAwaitingConfirmation, unreadMessages, goals: { total, completed, averageProgress | null }, mentor: { freeUpcomingSlots } | null }`
 - `GET /admin/overview`, `GET /admin/users?role=`, `PATCH /admin/users/:id/status { status }`, `PATCH /admin/mentors/:id { verificationStatus?, isPublished? }` (🔒 A)
 - Domaines (🔒 A) : `GET /admin/domains` (tous, y compris inactifs, avec `_count: { mentors, mentees, resources }`), `POST /admin/domains { slug (kebab-case), name, description, icon (nom Lucide), topics[] }` (409 `DOMAIN_SLUG_TAKEN`), `PATCH /admin/domains/:id { name?, description?, icon?, topics?, isActive?, sortOrder? }`. Un domaine désactivé disparaît de `GET /domains`.
 - `GET /health` 🔓 → `{ status, database, time }`
@@ -357,7 +357,7 @@ Chaque étape doit être **reliée à l'API réelle** avant de passer à la suiv
 1. `/connexion`, `/inscription` (choix du rôle en deux grandes cartes) ; erreurs par champ.
 2. `/onboarding` différencié selon le rôle, avec indicateur d'étapes (mentoré en 3 étapes : situation, domaines et compétences, objectif et modalité ; mentor en 3 étapes : parcours, expertise et domaines, modalités et capacité).
 3. `/mentors` : annuaire avec recherche, filtres (domaine, modalité, langue, disponible), pagination, skeletons et état vide ; bloc « Suggestions pour vous » si mentoré connecté.
-4. `/mentors/[id]` : fiche complète, éléments de confiance (vérification, années d'expérience, capacité), créneaux libres, CTA adapté à `relation`.
+4. `/mentors/[id]` : fiche complète, éléments de confiance (vérification, années d'expérience, mentorés accompagnés, certificats), créneaux libres, CTA adapté à `relation`.
 5. Formulaire de demande (dialogue ou page) : objectif et message motivé avec compteurs de caractères.
 6. `/demandes` : onglets Reçues (mentor) ou Envoyées (mentoré), badges de statut, Accepter/Refuser avec note facultative.
 7. `/tableau-de-bord` adapté au rôle : demandes en attente, prochaines séances, mentorats, objectifs (uniquement des chiffres issus de `/dashboard/me`).

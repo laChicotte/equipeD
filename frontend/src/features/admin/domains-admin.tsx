@@ -27,7 +27,15 @@ function slugify(value: string) {
     .slice(0, 80);
 }
 
-function DomainDialog({ domain, open, onOpenChange }: { domain?: AdminDomain; open: boolean; onOpenChange: (o: boolean) => void }) {
+function DomainDialog({
+  domain,
+  open,
+  onOpenChange,
+}: {
+  domain?: AdminDomain;
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+}) {
   const { create, update } = useAdminDomainMutations();
   const [name, setName] = useState(domain?.name ?? '');
   const [slug, setSlug] = useState(domain?.slug ?? '');
@@ -39,7 +47,10 @@ function DomainDialog({ domain, open, onOpenChange }: { domain?: AdminDomain; op
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    const topicList = topics.split(',').map((t) => t.trim()).filter(Boolean);
+    const topicList = topics
+      .split(',')
+      .map((t) => t.trim())
+      .filter(Boolean);
     const onError = (err: unknown) => {
       if (isApiError(err) && err.details.length) {
         setErrors(Object.fromEntries(err.details.map((d) => [d.field, d.messages[0]])));
@@ -52,9 +63,15 @@ function DomainDialog({ domain, open, onOpenChange }: { domain?: AdminDomain; op
       onOpenChange(false);
     };
     if (domain) {
-      update.mutate({ id: domain.id, patch: { name, description, icon, topics: topicList } }, { onSuccess, onError });
+      update.mutate(
+        { id: domain.id, patch: { name, description, icon, topics: topicList } },
+        { onSuccess, onError },
+      );
     } else {
-      create.mutate({ slug: slug || slugify(name), name, description, icon, topics: topicList }, { onSuccess, onError });
+      create.mutate(
+        { slug: slug || slugify(name), name, description, icon, topics: topicList },
+        { onSuccess, onError },
+      );
     }
   };
 
@@ -66,12 +83,29 @@ function DomainDialog({ domain, open, onOpenChange }: { domain?: AdminDomain; op
             <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={120} />
           </Field>
           {!domain && (
-            <Field label="Identifiant d’URL" hint={`Minuscules et tirets. Proposé : ${slugify(name) || '—'}`} error={errors.slug}>
-              <Input value={slug} onChange={(e) => setSlug(e.target.value)} placeholder={slugify(name)} maxLength={80} />
+            <Field
+              label="Identifiant d’URL"
+              hint={`Minuscules et tirets. Proposé : ${slugify(name) || '—'}`}
+              error={errors.slug}
+            >
+              <Input
+                value={slug}
+                onChange={(e) => setSlug(e.target.value)}
+                placeholder={slugify(name)}
+                maxLength={80}
+              />
             </Field>
           )}
-          <Field label="Description" error={errors.description} counter={{ value: description.length, min: 10, max: 500 }}>
-            <Textarea value={description} onChange={(e) => setDescription(e.target.value)} maxLength={500} />
+          <Field
+            label="Description"
+            error={errors.description}
+            counter={{ value: description.length, min: 10, max: 500 }}
+          >
+            <Textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              maxLength={500}
+            />
           </Field>
           <div className="grid gap-4 sm:grid-cols-[200px_1fr]">
             <Field label="Icône">
@@ -83,7 +117,12 @@ function DomainDialog({ domain, open, onOpenChange }: { domain?: AdminDomain; op
                 ))}
               </NativeSelect>
             </Field>
-            <Field label="Thématiques" optional hint="Séparées par des virgules." error={errors.topics}>
+            <Field
+              label="Thématiques"
+              optional
+              hint="Séparées par des virgules."
+              error={errors.topics}
+            >
               <Input value={topics} onChange={(e) => setTopics(e.target.value)} />
             </Field>
           </div>
@@ -124,7 +163,7 @@ export function DomainsAdmin() {
       ) : list.isPending ? (
         <Skeleton className="h-96" />
       ) : (
-        <div className="overflow-x-auto bg-surface ring-1 ring-border">
+        <div className="overflow-x-auto rounded-lg bg-surface ring-1 ring-border">
           <table className="w-full min-w-[720px] border-collapse text-left text-[14px]">
             <thead>
               <tr className="border-b border-border text-[13px] text-muted-foreground">
@@ -156,7 +195,9 @@ export function DomainsAdmin() {
                   <td className="px-5 py-4 text-right tabular-nums">{d._count.mentees}</td>
                   <td className="px-5 py-4 text-right tabular-nums">{d._count.resources}</td>
                   <td className="px-5 py-4">
-                    <Badge tone={d.isActive ? 'success' : 'neutral'}>{d.isActive ? 'Actif' : 'Désactivé'}</Badge>
+                    <Badge tone={d.isActive ? 'success' : 'neutral'}>
+                      {d.isActive ? 'Actif' : 'Désactivé'}
+                    </Badge>
                   </td>
                   <td className="px-5 py-4">
                     <div className="flex justify-end gap-2">
@@ -172,7 +213,10 @@ export function DomainsAdmin() {
                           update.mutate(
                             { id: d.id, patch: { isActive: !d.isActive } },
                             {
-                              onSuccess: () => toast.success(d.isActive ? 'Domaine désactivé' : 'Domaine réactivé'),
+                              onSuccess: () =>
+                                toast.success(
+                                  d.isActive ? 'Domaine désactivé' : 'Domaine réactivé',
+                                ),
                               onError: (e) => toast.error(errorMessage(e)),
                             },
                           )
@@ -189,7 +233,14 @@ export function DomainsAdmin() {
         </div>
       )}
       {creating && <DomainDialog open onOpenChange={setCreating} />}
-      {editing && <DomainDialog key={editing.id} domain={editing} open onOpenChange={(o) => !o && setEditing(null)} />}
+      {editing && (
+        <DomainDialog
+          key={editing.id}
+          domain={editing}
+          open
+          onOpenChange={(o) => !o && setEditing(null)}
+        />
+      )}
     </div>
   );
 }

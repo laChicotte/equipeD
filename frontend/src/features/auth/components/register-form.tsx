@@ -75,7 +75,9 @@ export function RegisterForm() {
 
   return (
     <div className="animate-fade-in">
-      <h1 className="text-4xl font-display font-semibold tracking-[-0.03em] text-ink-900">Créer votre compte</h1>
+      <h1 className="text-4xl font-display font-semibold tracking-[-0.03em] text-ink-900">
+        Créer votre compte
+      </h1>
       <p className="mt-2 text-[15px] text-muted-foreground">
         Deux minutes suffisent. Vous compléterez ensuite votre profil.
       </p>

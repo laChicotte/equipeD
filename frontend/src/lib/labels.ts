@@ -68,8 +68,7 @@ export const goalStatusLabels: Record<GoalStatus, string> = {
 
 export const LANGUAGES = ['Français', 'Anglais', 'Pular', 'Malinké', 'Soussou'] as const;
 
-export const CAMPUS_FRANCE_NOTICE =
-  'Conseil et orientation, sans garantie d’admission ni de visa.';
+export const CAMPUS_FRANCE_NOTICE = 'Conseil et orientation, sans garantie d’admission ni de visa.';
 
 export function isCampusFrance(slug: string | undefined | null): boolean {
   return !!slug && slug.toLowerCase().includes('campus');

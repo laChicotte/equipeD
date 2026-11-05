@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  Award,
   Bell,
   CalendarCheck2,
   CalendarX2,
@@ -17,12 +18,16 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Popover } from 'radix-ui';
 import { Skeleton } from '@/components/ui/misc';
-import { useNotificationMutations, useNotifications, useUnreadCount } from '@/features/notifications/api';
+import {
+  useNotificationMutations,
+  useNotifications,
+  useUnreadCount,
+} from '@/features/notifications/api';
 import { formatRelative } from '@/lib/format';
 import type { AppNotification, NotificationType } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
-const ICONS: Record<NotificationType, LucideIcon> = {
+export const NOTIFICATION_ICONS: Record<NotificationType, LucideIcon> = {
   REQUEST_RECEIVED: Inbox,
   REQUEST_ACCEPTED: ThumbsUp,
   REQUEST_DECLINED: ThumbsDown,
@@ -32,10 +37,17 @@ const ICONS: Record<NotificationType, LucideIcon> = {
   GOAL_FEEDBACK: MessageSquareText,
   RESOURCE_SHARED: FileText,
   MENTORSHIP_COMPLETED: Flag,
+  CERTIFICATE_ISSUED: Award,
 };
 
 /** Cloche de notifications in-app : badge des non-lus, liste, navigation vers l'écran concerné. */
-export function NotificationBell({ tone = 'light' }: { tone?: 'light' | 'dark' }) {
+export function NotificationBell({
+  tone = 'light',
+  labeled = false,
+}: {
+  tone?: 'light' | 'dark';
+  labeled?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const unread = useUnreadCount();
@@ -53,13 +65,29 @@ export function NotificationBell({ tone = 'light' }: { tone?: 'light' | 'dark' }
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger
         className={cn(
-          'relative inline-flex size-11 items-center justify-center rounded-md transition-colors',
-          tone === 'dark' ? 'text-white hover:bg-white/10' : 'text-ink-900 hover:bg-surface-muted',
+          'relative inline-flex items-center justify-center rounded-md transition-colors',
+          labeled
+            ? 'h-[60px] min-w-11 flex-col lg:min-w-[64px] gap-0.5 px-2 text-[12px] text-muted-foreground hover:text-ink-900 data-[state=open]:text-ink-900 xl:min-w-[76px]'
+            : 'size-11',
+          !labeled &&
+            (tone === 'dark'
+              ? 'text-white hover:bg-white/10'
+              : 'text-ink-900 hover:bg-surface-muted'),
         )}
-        aria-label={count > 0 ? `Notifications : ${count} non lue${count > 1 ? 's' : ''}` : 'Notifications'}
+        aria-label={
+          count > 0 ? `Notifications : ${count} non lue${count > 1 ? 's' : ''}` : 'Notifications'
+        }
       >
-        <Bell className="size-5" aria-hidden />
-        {count > 0 && (
+        <span className="relative">
+          <Bell className={labeled ? 'size-[22px]' : 'size-5'} aria-hidden />
+          {labeled && count > 0 && (
+            <span className="absolute -top-1.5 -right-2 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-teal-600 px-1 text-[10px] font-semibold text-white ring-2 ring-surface">
+              {count > 9 ? '9+' : count}
+            </span>
+          )}
+        </span>
+        {labeled && <span className="hidden xl:block">Notifications</span>}
+        {!labeled && count > 0 && (
           <span className="absolute top-1.5 right-1.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-teal-600 px-1 text-[11px] font-semibold text-white tabular-nums ring-2 ring-surface">
             {count > 9 ? '9+' : count}
           </span>
@@ -101,7 +129,7 @@ export function NotificationBell({ tone = 'light' }: { tone?: 'light' | 'dark' }
             ) : (
               <ul>
                 {list.data.map((n) => {
-                  const Icon = ICONS[n.type];
+                  const Icon = NOTIFICATION_ICONS[n.type];
                   return (
                     <li key={n.id}>
                       <button
@@ -115,19 +143,37 @@ export function NotificationBell({ tone = 'light' }: { tone?: 'light' | 'dark' }
                         <span
                           className={cn(
                             'mt-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-full',
-                            n.readAt ? 'bg-surface-muted text-muted-foreground' : 'bg-teal-600 text-white',
+                            n.readAt
+                              ? 'bg-surface-muted text-muted-foreground'
+                              : 'bg-teal-600 text-white',
                           )}
                         >
                           <Icon className="size-4" aria-hidden />
                         </span>
                         <span className="min-w-0 flex-1">
-                          <span className={cn('block text-[14px] leading-snug text-ink-900', !n.readAt && 'font-semibold')}>
+                          <span
+                            className={cn(
+                              'block text-[14px] leading-snug text-ink-900',
+                              !n.readAt && 'font-semibold',
+                            )}
+                          >
                             {n.title}
                           </span>
-                          {n.body && <span className="mt-0.5 line-clamp-2 block text-[13px] text-muted-foreground">{n.body}</span>}
-                          <span className="mt-1 block text-[12px] text-muted-foreground">{formatRelative(n.createdAt)}</span>
+                          {n.body && (
+                            <span className="mt-0.5 line-clamp-2 block text-[13px] text-muted-foreground">
+                              {n.body}
+                            </span>
+                          )}
+                          <span className="mt-1 block text-[12px] text-muted-foreground">
+                            {formatRelative(n.createdAt)}
+                          </span>
                         </span>
-                        {!n.readAt && <span className="mt-2 size-2 shrink-0 rounded-full bg-teal-600" aria-label="Non lue" />}
+                        {!n.readAt && (
+                          <span
+                            className="mt-2 size-2 shrink-0 rounded-full bg-teal-600"
+                            aria-label="Non lue"
+                          />
+                        )}
                       </button>
                     </li>
                   );

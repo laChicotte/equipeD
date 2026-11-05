@@ -90,8 +90,8 @@ describe('Compte, clôture de mentorat et administration des domaines', () => {
   });
 
   describe('clôture d’un mentorat', () => {
-    it('clôture, annule les séances futures, libère le créneau et la capacité, notifie', async () => {
-      const mentor = await createMentor(app, { maxMentees: 1 });
+    it('clôture, annule les séances futures, libère le créneau, notifie', async () => {
+      const mentor = await createMentor(app);
       const mentee = await createMentee(app);
       const intruder = await createMentee(app);
       const mentorshipId = await createMentorship(mentee, mentor);
@@ -133,7 +133,7 @@ describe('Compte, clôture de mentorat et administration des domaines', () => {
         .expect(409);
       expect(write.body.code).toBe('MENTORSHIP_NOT_ACTIVE');
 
-      // Idempotence, puis capacité libérée : le mentor peut accepter un nouveau mentoré.
+      // Idempotence ; le mentor peut toujours accepter de nouveaux mentorés.
       await mentor.agent.post(`${API}/mentorships/${mentorshipId}/complete`).send({}).expect(200);
       const newcomer = await createMentee(app);
       await createMentorship(newcomer, mentor);

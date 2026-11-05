@@ -4,11 +4,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import type { MentorshipRequest, MentorshipRequestStatus } from '@/lib/types';
 
-export function useRequests(box: 'inbox' | 'sent', enabled = true, status?: MentorshipRequestStatus) {
+export function useRequests(
+  box: 'inbox' | 'sent',
+  enabled = true,
+  status?: MentorshipRequestStatus,
+) {
   return useQuery({
     queryKey: ['requests', box, status ?? 'all'],
-    queryFn: () =>
-      api<MentorshipRequest[]>(`/mentorship-requests/${box}`, { query: { status } }),
+    queryFn: () => api<MentorshipRequest[]>(`/mentorship-requests/${box}`, { query: { status } }),
     enabled,
     refetchInterval: 30_000,
   });
@@ -37,7 +40,15 @@ export function useCreateRequest() {
 export function useDecideRequest() {
   const invalidate = useInvalidateAll();
   return useMutation({
-    mutationFn: ({ id, action, note }: { id: string; action: 'accept' | 'decline'; note?: string }) =>
+    mutationFn: ({
+      id,
+      action,
+      note,
+    }: {
+      id: string;
+      action: 'accept' | 'decline';
+      note?: string;
+    }) =>
       api<MentorshipRequest>(`/mentorship-requests/${id}/${action}`, {
         method: 'POST',
         body: note ? { note } : {},

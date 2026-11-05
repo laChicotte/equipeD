@@ -12,7 +12,6 @@ const mentor: MatchMentor = {
   modalities: ['REMOTE'],
   hasUpcomingAvailability: true,
   isVerified: true,
-  hasCapacity: true,
 };
 
 describe('computeMatch', () => {
@@ -38,12 +37,6 @@ describe('computeMatch', () => {
       isVerified: false,
     });
     expect(result).toEqual({ score: 0, reasons: [] });
-  });
-
-  it('pénalise un mentor dont la capacité est atteinte', () => {
-    const full = computeMatch(mentee, { ...mentor, hasCapacity: false });
-    expect(full.score).toBe(40);
-    expect(full.reasons.at(-1)).toMatch(/Capacité/);
   });
 
   it('considère le format hybride comme compatible', () => {

@@ -14,7 +14,7 @@ import { NotificationBell } from './notification-bell';
 import { UserMenu } from './user-menu';
 
 const links = [
-  { href: '/mentors', label: 'Trouver un mentor' },
+  { href: '/mentors', label: 'Mentors' },
   { href: '/ressources', label: 'Ressources' },
   { href: '/opportunites', label: 'Opportunités' },
   { href: '/#fonctionnement', label: 'Fonctionnement' },
@@ -39,19 +39,23 @@ export function PublicHeader() {
     <header
       data-over-hero={overHero || undefined}
       className={cn(
-        'group/header sticky top-0 z-40 transition-colors duration-300',
-        overHero ? 'bg-transparent text-white' : pathname === '/' ? 'bg-ink-950 text-white' : 'bg-background text-ink-900',
+        'group/header sticky top-0 z-40 transition-colors duration-300 print:hidden',
+        overHero
+          ? 'bg-transparent text-white'
+          : pathname === '/'
+            ? 'bg-ink-950 text-white'
+            : 'bg-background text-ink-900',
       )}
     >
       <div className="page-frame grid h-16 grid-cols-[1fr_auto] items-center gap-4 lg:grid-cols-[var(--axis)_1fr_auto]">
         <Logo />
-        <nav aria-label="Navigation principale" className="hidden items-center gap-7 lg:flex">
+        <nav aria-label="Navigation principale" className="hidden items-center gap-6 lg:flex">
           {links.map((l) => (
             <Link
               key={l.href}
               href={l.href}
               className={cn(
-                'ed-link text-[16px] font-semibold',
+                'ed-link text-[15px] font-semibold whitespace-nowrap',
                 pathname.startsWith(l.href) && l.href !== '/' && 'text-teal-700',
               )}
             >
@@ -67,12 +71,17 @@ export function PublicHeader() {
               <Button asChild size="sm" className="hidden sm:inline-flex">
                 <Link href={homeFor(me)}>Mon espace</Link>
               </Button>
-              {me.role !== 'ADMIN' && <NotificationBell tone={overHero || pathname === '/' ? 'dark' : 'light'} />}
+              {me.role !== 'ADMIN' && (
+                <NotificationBell tone={overHero || pathname === '/' ? 'dark' : 'light'} />
+              )}
               <UserMenu me={me} compact />
             </>
           ) : (
             <>
-              <Link href="/connexion" className="ed-link hidden text-[16px] font-semibold sm:inline">
+              <Link
+                href="/connexion"
+                className="ed-link hidden text-[16px] font-semibold sm:inline"
+              >
                 Se connecter
               </Link>
               <Link
@@ -96,9 +105,29 @@ export function PublicHeader() {
         </div>
       </div>
       {open && (
-        <nav id="menu-mobile" aria-label="Navigation mobile" className={cn('page-frame animate-slide-up grid gap-1 pb-6 lg:hidden', pathname === '/' ? 'bg-ink-950' : 'bg-background')}>
-          {[...links, ...(me ? [] : [{ href: '/connexion', label: 'Se connecter' }, { href: '/inscription', label: 'Créer un compte' }])].map((l) => (
-            <Link key={l.href} href={l.href} onClick={() => setOpen(false)} className="py-3 text-xl font-semibold">
+        <nav
+          id="menu-mobile"
+          aria-label="Navigation mobile"
+          className={cn(
+            'page-frame animate-slide-up grid gap-1 pb-6 lg:hidden',
+            pathname === '/' ? 'bg-ink-950' : 'bg-background',
+          )}
+        >
+          {[
+            ...links,
+            ...(me
+              ? []
+              : [
+                  { href: '/connexion', label: 'Se connecter' },
+                  { href: '/inscription', label: 'Créer un compte' },
+                ]),
+          ].map((l) => (
+            <Link
+              key={l.href}
+              href={l.href}
+              onClick={() => setOpen(false)}
+              className="py-3 text-xl font-semibold"
+            >
               {l.label}
             </Link>
           ))}
@@ -113,7 +142,7 @@ export function PublicFooter() {
   return (
     <footer
       className={cn(
-        'grid grid-rows-[auto_1fr_auto] bg-ink-950 pt-12 text-ink-100',
+        'grid grid-rows-[auto_1fr_auto] bg-ink-950 pt-12 text-ink-100 print:hidden',
         'min-h-[60svh]',
       )}
     >
@@ -154,7 +183,9 @@ export function PublicFooter() {
         </div>
         <div className="col-span-2 lg:col-span-3">
           <p className="font-semibold text-white">Photographies</p>
-          <p className="mt-2">Photos sous licences libres (CC0, CC BY, CC BY-SA), Wikimedia Commons.</p>
+          <p className="mt-2">
+            Photos sous licences libres (CC0, CC BY, CC BY-SA), Wikimedia Commons.
+          </p>
           <details className="mt-2 group/credits">
             <summary className="cursor-pointer font-semibold text-white underline underline-offset-4">
               Voir les crédits ({allPhotos.length})
@@ -174,12 +205,20 @@ export function PublicFooter() {
       </div>
       <div aria-hidden />
       <div className="page-frame pb-5">
-        <p aria-hidden className="text-[19.5vw] leading-[0.86] font-extrabold tracking-[-0.055em] text-white sm:hidden">
+        <p
+          aria-hidden
+          className="text-[19.5vw] leading-[0.86] font-extrabold tracking-[-0.055em] text-white sm:hidden"
+        >
           Talents
           <br />
           Connectés
         </p>
-        <svg viewBox="0 0 1000 116" className="hidden w-full text-white sm:block" role="img" aria-label="Talents Connectés">
+        <svg
+          viewBox="0 0 1000 116"
+          className="hidden w-full text-white sm:block"
+          role="img"
+          aria-label="Talents Connectés"
+        >
           <text
             x="0"
             y="96"

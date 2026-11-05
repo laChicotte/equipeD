@@ -52,7 +52,9 @@ export function MentorshipResources({ mentorship, me }: { mentorship: Mentorship
           ))}
         </ul>
       )}
-      {active && <ResourceDialog open={sharing} onOpenChange={setSharing} mentorshipId={mentorship.id} />}
+      {active && (
+        <ResourceDialog open={sharing} onOpenChange={setSharing} mentorshipId={mentorship.id} />
+      )}
     </div>
   );
 }

@@ -17,17 +17,34 @@ export function useAccountMutations() {
         void qc.invalidateQueries({ queryKey: ['mentors'] });
       },
     }),
+    /** Photo de profil : toutes les vues sont rafraîchies (la photo apparaît partout). */
+    uploadAvatar: useMutation({
+      mutationFn: (image: Blob) =>
+        api<{ avatarUpdatedAt: string }>('/profile/me/avatar', { method: 'PUT', body: image }),
+      onSuccess: () => void qc.invalidateQueries(),
+    }),
+    removeAvatar: useMutation({
+      mutationFn: () => api<void>('/profile/me/avatar', { method: 'DELETE' }),
+      onSuccess: () => void qc.invalidateQueries(),
+    }),
     changePassword: useMutation({
       mutationFn: (input: { currentPassword: string; newPassword: string }) =>
         api<{ revokedSessions: number }>('/auth/password', { method: 'POST', body: input }),
     }),
     logoutAll: useMutation({
-      mutationFn: () => api<{ ok: boolean; revokedSessions: number }>('/auth/logout-all', { method: 'POST', body: {} }),
+      mutationFn: () =>
+        api<{ ok: boolean; revokedSessions: number }>('/auth/logout-all', {
+          method: 'POST',
+          body: {},
+        }),
       onSuccess: () => qc.clear(),
     }),
     deleteAccount: useMutation({
       mutationFn: (input: { password: string; confirmation: string }) =>
-        api<{ ok: boolean; closedMentorships: number }>('/profile/me', { method: 'DELETE', body: input }),
+        api<{ ok: boolean; closedMentorships: number }>('/profile/me', {
+          method: 'DELETE',
+          body: input,
+        }),
       onSuccess: () => qc.clear(),
     }),
   };

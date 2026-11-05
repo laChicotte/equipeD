@@ -65,7 +65,9 @@ export function BookDialog({
         },
         onError: (e) => {
           if (isApiError(e) && (e.code === 'SLOT_ALREADY_BOOKED' || e.code === 'SLOT_NOT_FOUND')) {
-            toast.error('Ce créneau vient d’être réservé.', { description: 'Choisissez-en un autre.' });
+            toast.error('Ce créneau vient d’être réservé.', {
+              description: 'Choisissez-en un autre.',
+            });
             setSelected(null);
             void slots.refetch();
             return;
@@ -105,8 +107,14 @@ export function BookDialog({
             <div className="scrollbar-thin grid max-h-72 gap-4 overflow-y-auto pr-1">
               {groupByDay(slots.data, timezone).map(([day, daySlots]) => (
                 <div key={day}>
-                  <p className="mb-2 text-sm font-semibold capitalize">{formatLongDate(daySlots[0].startsAt, timezone)}</p>
-                  <div role="radiogroup" aria-label={formatLongDate(daySlots[0].startsAt, timezone)} className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  <p className="mb-2 text-sm font-semibold capitalize">
+                    {formatLongDate(daySlots[0].startsAt, timezone)}
+                  </p>
+                  <div
+                    role="radiogroup"
+                    aria-label={formatLongDate(daySlots[0].startsAt, timezone)}
+                    className="grid grid-cols-2 gap-2 sm:grid-cols-3"
+                  >
                     {daySlots.map((s) => {
                       const active = selected?.id === s.id;
                       return (
@@ -124,7 +132,12 @@ export function BookDialog({
                           )}
                         >
                           {formatTime(s.startsAt, timezone)}
-                          <span className={cn('text-[11px] font-medium', active ? 'text-teal-100' : 'text-muted-foreground')}>
+                          <span
+                            className={cn(
+                              'text-[11px] font-medium',
+                              active ? 'text-teal-100' : 'text-muted-foreground',
+                            )}
+                          >
                             {durationMinutes(s.startsAt, s.endsAt)} min
                           </span>
                         </button>
@@ -150,7 +163,9 @@ export function BookDialog({
           </Button>
           <Button onClick={submit} disabled={!selected} loading={book.isPending}>
             {!book.isPending && <CalendarCheck2 aria-hidden />}
-            {selected ? `Réserver à ${formatTime(selected.startsAt, timezone)}` : 'Choisissez un créneau'}
+            {selected
+              ? `Réserver à ${formatTime(selected.startsAt, timezone)}`
+              : 'Choisissez un créneau'}
           </Button>
         </DialogFooter>
       </DialogContent>

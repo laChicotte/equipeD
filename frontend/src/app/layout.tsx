@@ -37,7 +37,11 @@ const enableMotion = "document.documentElement.classList.add('js')";
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
-    <html lang="fr" className={`${schibsted.variable} ${lexend.variable} h-full`} suppressHydrationWarning>
+    <html
+      lang="fr"
+      className={`${schibsted.variable} ${lexend.variable} h-full`}
+      suppressHydrationWarning
+    >
       <body className="min-h-full">
         <script dangerouslySetInnerHTML={{ __html: enableMotion }} />
         <a

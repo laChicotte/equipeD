@@ -1,6 +1,15 @@
 'use client';
 
-import { Ban, CalendarDays, Eye, EyeOff, Hourglass, ShieldCheck, UserCheck, Users } from 'lucide-react';
+import {
+  Ban,
+  CalendarDays,
+  Eye,
+  EyeOff,
+  Hourglass,
+  ShieldCheck,
+  UserCheck,
+  Users,
+} from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -15,7 +24,12 @@ import { Skeleton } from '@/components/ui/misc';
 import { useMe } from '@/features/auth/api';
 import { errorMessage } from '@/lib/api';
 import { formatDate, fullName } from '@/lib/format';
-import { requestStatusLabels, roleLabels, sessionStatusLabels, verificationLabels } from '@/lib/labels';
+import {
+  requestStatusLabels,
+  roleLabels,
+  sessionStatusLabels,
+  verificationLabels,
+} from '@/lib/labels';
 import type { MentorshipRequestStatus, Role, SessionStatus, VerificationStatus } from '@/lib/types';
 import { useAdminMutations, useAdminOverview, useAdminUsers } from './api';
 
@@ -79,7 +93,10 @@ export function AdminOverviewView() {
   if (!allowed) return <AccessDenied />;
   return (
     <>
-      <PageHeader title="Vue d’ensemble" description="Activité réelle de la plateforme, issue de la base de données." />
+      <PageHeader
+        title="Vue d’ensemble"
+        description="Activité réelle de la plateforme, issue de la base de données."
+      />
       {q.isError ? (
         <ErrorState error={q.error} onRetry={() => void q.refetch()} />
       ) : q.isPending ? (
@@ -113,7 +130,11 @@ export function AdminOverviewView() {
               data={q.data.requestsByStatus}
               labels={requestStatusLabels}
             />
-            <Breakdown<SessionStatus> title="Séances par statut" data={q.data.sessionsByStatus} labels={sessionStatusLabels} />
+            <Breakdown<SessionStatus>
+              title="Séances par statut"
+              data={q.data.sessionsByStatus}
+              labels={sessionStatusLabels}
+            />
           </div>
         </div>
       )}
@@ -135,7 +156,12 @@ export function AdminUsersView() {
         title="Comptes"
         description="La suspension révoque immédiatement les sessions actives du compte."
         actions={
-          <NativeSelect aria-label="Filtrer par rôle" value={role} onChange={(e) => setRole(e.target.value as Role | '')} className="w-48">
+          <NativeSelect
+            aria-label="Filtrer par rôle"
+            value={role}
+            onChange={(e) => setRole(e.target.value as Role | '')}
+            className="w-48"
+          >
             <option value="">Tous les rôles</option>
             {(Object.keys(roleLabels) as Role[]).map((r) => (
               <option key={r} value={r}>
@@ -157,11 +183,21 @@ export function AdminUsersView() {
             <table className="w-full min-w-[640px] text-sm">
               <thead className="bg-surface-muted text-left text-xs font-semibold text-muted-foreground">
                 <tr>
-                  <th scope="col" className="px-5 py-3">Utilisateur</th>
-                  <th scope="col" className="px-5 py-3">Rôle</th>
-                  <th scope="col" className="px-5 py-3">Inscription</th>
-                  <th scope="col" className="px-5 py-3">Statut</th>
-                  <th scope="col" className="px-5 py-3 text-right">Action</th>
+                  <th scope="col" className="px-5 py-3">
+                    Utilisateur
+                  </th>
+                  <th scope="col" className="px-5 py-3">
+                    Rôle
+                  </th>
+                  <th scope="col" className="px-5 py-3">
+                    Inscription
+                  </th>
+                  <th scope="col" className="px-5 py-3">
+                    Statut
+                  </th>
+                  <th scope="col" className="px-5 py-3 text-right">
+                    Action
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -179,7 +215,9 @@ export function AdminUsersView() {
                     <td className="px-5 py-3">{roleLabels[u.role]}</td>
                     <td className="px-5 py-3 text-muted-foreground">{formatDate(u.createdAt)}</td>
                     <td className="px-5 py-3">
-                      {u.status === 'ACTIVE' ? <Badge tone="success">Actif</Badge> : (
+                      {u.status === 'ACTIVE' ? (
+                        <Badge tone="success">Actif</Badge>
+                      ) : (
                         <Badge tone="danger">
                           <Ban aria-hidden />
                           Suspendu
@@ -196,7 +234,10 @@ export function AdminUsersView() {
                             setStatus.mutate(
                               { id: u.id, status: u.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE' },
                               {
-                                onSuccess: () => toast.success(u.status === 'ACTIVE' ? 'Compte suspendu.' : 'Compte réactivé.'),
+                                onSuccess: () =>
+                                  toast.success(
+                                    u.status === 'ACTIVE' ? 'Compte suspendu.' : 'Compte réactivé.',
+                                  ),
                                 onError: (e) => toast.error(errorMessage(e)),
                               },
                             )
@@ -263,8 +304,14 @@ export function AdminMentorsView() {
                       value={u.mentorProfile.verificationStatus}
                       onChange={(e) =>
                         updateMentor.mutate(
-                          { id: u.id, patch: { verificationStatus: e.target.value as VerificationStatus } },
-                          { onSuccess: () => toast.success('Statut de vérification mis à jour.'), onError },
+                          {
+                            id: u.id,
+                            patch: { verificationStatus: e.target.value as VerificationStatus },
+                          },
+                          {
+                            onSuccess: () => toast.success('Statut de vérification mis à jour.'),
+                            onError,
+                          },
                         )
                       }
                     >
@@ -282,7 +329,11 @@ export function AdminMentorsView() {
                           { id: u.id, patch: { isPublished: !u.mentorProfile!.isPublished } },
                           {
                             onSuccess: () =>
-                              toast.success(u.mentorProfile!.isPublished ? 'Profil retiré de l’annuaire.' : 'Profil publié.'),
+                              toast.success(
+                                u.mentorProfile!.isPublished
+                                  ? 'Profil retiré de l’annuaire.'
+                                  : 'Profil publié.',
+                              ),
                             onError,
                           },
                         )

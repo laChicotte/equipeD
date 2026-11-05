@@ -1,6 +1,16 @@
 'use client';
 
-import { ArrowUpRight, Briefcase, CalendarClock, Globe2, LoaderCircle, MapPin, Plus, Search, SearchX } from 'lucide-react';
+import {
+  ArrowUpRight,
+  Briefcase,
+  CalendarClock,
+  Globe2,
+  LoaderCircle,
+  MapPin,
+  Plus,
+  Search,
+  SearchX,
+} from 'lucide-react';
 import { useDeferredValue, useState } from 'react';
 import { toast } from 'sonner';
 import { EmptyState, ErrorState } from '@/components/feedback/states';
@@ -20,7 +30,15 @@ import { cn } from '@/lib/utils';
 import { useMyOpportunities, useOpportunities, useOpportunityMutations } from './api';
 import { OpportunityDialog } from './opportunity-dialog';
 
-const TYPES: (OpportunityType | '')[] = ['', 'INTERNSHIP', 'JOB', 'CALL_FOR_PROJECTS', 'SCHOLARSHIP', 'TRAINING', 'EVENT'];
+const TYPES: (OpportunityType | '')[] = [
+  '',
+  'INTERNSHIP',
+  'JOB',
+  'CALL_FOR_PROJECTS',
+  'SCHOLARSHIP',
+  'TRAINING',
+  'EVENT',
+];
 
 function daysLeft(iso: string): number {
   return Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000);
@@ -40,12 +58,18 @@ function Deadline({ iso }: { iso: string | null }) {
 
 function OpportunityCard({ item }: { item: Opportunity }) {
   return (
-    <article className="flex h-full flex-col bg-surface p-6 ring-1 ring-border transition-shadow duration-300 hover:shadow-raised">
+    <article className="flex h-full flex-col rounded-lg bg-surface p-5 ring-1 ring-border transition-shadow duration-300 hover:shadow-raised">
       <div className="flex flex-wrap items-center gap-2">
         <Badge tone="ink">{opportunityTypeLabels[item.type]}</Badge>
-        {item.domain && <Badge tone="teal" className="max-w-full truncate">{item.domain.name}</Badge>}
+        {item.domain && (
+          <Badge tone="teal" className="max-w-full truncate">
+            {item.domain.name}
+          </Badge>
+        )}
       </div>
-      <h3 className="mt-4 font-display text-[20px] leading-snug font-semibold tracking-[-0.02em] text-ink-900">{item.title}</h3>
+      <h3 className="mt-4 font-display text-[20px] leading-snug font-semibold tracking-[-0.02em] text-ink-900">
+        {item.title}
+      </h3>
       <p className="mt-1 text-[15px] font-semibold text-foreground">{item.organization}</p>
       <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[14px] text-muted-foreground">
         {item.location && (
@@ -60,7 +84,9 @@ function OpportunityCard({ item }: { item: Opportunity }) {
           </li>
         )}
       </ul>
-      <p className="mt-4 line-clamp-4 text-[15px] leading-relaxed text-foreground">{item.description}</p>
+      <p className="mt-4 line-clamp-4 text-[15px] leading-relaxed text-foreground">
+        {item.description}
+      </p>
       <div className="mt-auto pt-6">
         <p className="flex items-center gap-2 bg-background px-3 py-2.5 text-[14px]">
           <CalendarClock className="size-4 shrink-0 text-teal-700" aria-hidden />
@@ -94,10 +120,13 @@ function MyPublications() {
   if (mine.isPending || mine.isError || mine.data.length === 0) return null;
   return (
     <section aria-labelledby="mes-publications" className="mt-16">
-      <h2 id="mes-publications" className="font-display text-[24px] font-semibold tracking-[-0.025em] text-ink-900">
+      <h2
+        id="mes-publications"
+        className="font-display text-[24px] font-semibold tracking-[-0.025em] text-ink-900"
+      >
         Mes publications
       </h2>
-      <ul className="mt-5 divide-y divide-border bg-surface ring-1 ring-border">
+      <ul className="mt-5 divide-y divide-border overflow-hidden rounded-lg bg-surface ring-1 ring-border">
         {mine.data.map((o) => {
           const archived = !!o.archivedAt;
           const expired = !!o.deadline && daysLeft(o.deadline) < 0;
@@ -118,7 +147,8 @@ function MyPublications() {
                   setArchived.mutate(
                     { id: o.id, archived: !archived },
                     {
-                      onSuccess: () => toast.success(archived ? 'Opportunité republiée' : 'Opportunité archivée'),
+                      onSuccess: () =>
+                        toast.success(archived ? 'Opportunité republiée' : 'Opportunité archivée'),
                       onError: (e) => toast.error(errorMessage(e)),
                     },
                   )
@@ -144,7 +174,13 @@ export function OpportunitiesView() {
   const [remote, setRemote] = useState(false);
   const [page, setPage] = useState(1);
   const [publishing, setPublishing] = useState(false);
-  const list = useOpportunities({ q: query.length >= 2 ? query : undefined, type, domain, remote, page });
+  const list = useOpportunities({
+    q: query.length >= 2 ? query : undefined,
+    type,
+    domain,
+    remote,
+    page,
+  });
   const canPublish = me?.role === 'MENTOR' || me?.role === 'ADMIN';
 
   return (
@@ -156,19 +192,23 @@ export function OpportunitiesView() {
         photoPosition="object-[50%_40%]"
         actions={
           canPublish ? (
-            <Button onClick={() => setPublishing(true)} className="notch rounded-none bg-teal-600 hover:bg-teal-700">
+            <Button onClick={() => setPublishing(true)}>
               <Plus aria-hidden />
               Publier une opportunité
             </Button>
           ) : undefined
         }
       >
-        <div className="flex items-stretch bg-white text-ink-900">
+        <div className="flex max-w-2xl items-stretch rounded-lg bg-surface text-ink-900 shadow-raised focus-within:ring-3 focus-within:ring-amber-400/60">
           <label htmlFor="recherche-opportunite" className="sr-only">
             Rechercher une opportunité
           </label>
-          <span className="flex items-center pl-4 text-muted-foreground" aria-hidden>
-            {list.isFetching && q ? <LoaderCircle className="size-5 animate-spin" /> : <Search className="size-5" />}
+          <span className="flex items-center pl-3 text-muted-foreground" aria-hidden>
+            {list.isFetching && q ? (
+              <LoaderCircle className="size-5 animate-spin" />
+            ) : (
+              <Search className="size-4" />
+            )}
           </span>
           <input
             id="recherche-opportunite"
@@ -179,13 +219,22 @@ export function OpportunitiesView() {
               setPage(1);
             }}
             placeholder="Stage, atelier, financement, structure…"
-            className="h-14 min-w-0 flex-1 bg-transparent px-3 text-[16px] outline-none placeholder:text-muted-foreground"
+            className="h-13 min-w-0 flex-1 bg-transparent px-3 text-[16px] outline-none placeholder:text-muted-foreground"
           />
         </div>
-        <ul className="scrollbar-thin -mx-1 mt-5 flex gap-2 overflow-x-auto px-1 pb-2" aria-label="Filtrer par type">
+        <ul
+          className="scrollbar-thin -mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-2"
+          aria-label="Filtrer par type"
+        >
           {TYPES.map((t) => (
             <li key={t || 'all'}>
-              <BandChip active={type === t} onClick={() => { setType(t); setPage(1); }}>
+              <BandChip
+                active={type === t}
+                onClick={() => {
+                  setType(t);
+                  setPage(1);
+                }}
+              >
                 {t ? opportunityTypeLabels[t] : 'Toutes'}
               </BandChip>
             </li>
@@ -193,12 +242,15 @@ export function OpportunitiesView() {
         </ul>
       </PageBand>
 
-      <div className="mb-8 flex flex-wrap items-center justify-between gap-4 bg-surface px-4 py-3 ring-1 ring-border sm:px-6">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-4 rounded-lg bg-surface px-4 py-3 ring-1 ring-border sm:px-6">
         <div className="flex flex-wrap items-center gap-4">
           <NativeSelect
             aria-label="Domaine"
             value={domain}
-            onChange={(e) => { setDomain(e.target.value); setPage(1); }}
+            onChange={(e) => {
+              setDomain(e.target.value);
+              setPage(1);
+            }}
             className="h-11 w-auto min-w-56"
           >
             <option value="">Tous les domaines</option>
@@ -209,14 +261,21 @@ export function OpportunitiesView() {
             ))}
           </NativeSelect>
           <label className="inline-flex items-center gap-2.5 text-[14px] font-semibold">
-            <Checkbox checked={remote} onCheckedChange={(v) => { setRemote(v === true); setPage(1); }} />
+            <Checkbox
+              checked={remote}
+              onCheckedChange={(v) => {
+                setRemote(v === true);
+                setPage(1);
+              }}
+            />
             Accessible à distance
           </label>
         </div>
         <p className="text-[14px] text-muted-foreground" aria-live="polite">
           {list.data ? (
             <>
-              <span className="font-semibold text-ink-900">{list.data.total}</span> opportunité{list.data.total > 1 ? 's' : ''} ouverte{list.data.total > 1 ? 's' : ''}
+              <span className="font-semibold text-ink-900">{list.data.total}</span> opportunité
+              {list.data.total > 1 ? 's' : ''} ouverte{list.data.total > 1 ? 's' : ''}
             </>
           ) : (
             'Chargement…'
@@ -237,12 +296,21 @@ export function OpportunitiesView() {
       ) : list.data.items.length === 0 ? (
         <EmptyState
           icon={query || type || domain || remote ? SearchX : Briefcase}
-          title={query || type || domain || remote ? 'Aucune opportunité ne correspond' : 'Aucune opportunité ouverte pour le moment'}
+          title={
+            query || type || domain || remote
+              ? 'Aucune opportunité ne correspond'
+              : 'Aucune opportunité ouverte pour le moment'
+          }
           description="Revenez bientôt : les mentors partagent ici les stages, emplois et appels à projets qu’ils repèrent."
         />
       ) : (
         <>
-          <ul className={cn('grid gap-6 md:grid-cols-2 xl:grid-cols-3', list.isPlaceholderData && 'opacity-60')}>
+          <ul
+            className={cn(
+              'grid gap-6 md:grid-cols-2 xl:grid-cols-3',
+              list.isPlaceholderData && 'opacity-60',
+            )}
+          >
             {list.data.items.map((o) => (
               <li key={o.id} className="animate-slide-up">
                 <OpportunityCard item={o} />
@@ -251,13 +319,23 @@ export function OpportunitiesView() {
           </ul>
           {list.data.totalPages > 1 && (
             <nav aria-label="Pagination" className="mt-10 flex items-center justify-center gap-3">
-              <Button variant="secondary" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={page <= 1}
+                onClick={() => setPage(page - 1)}
+              >
                 Précédent
               </Button>
               <span className="text-sm text-muted-foreground tabular-nums">
                 Page {list.data.page} sur {list.data.totalPages}
               </span>
-              <Button variant="secondary" size="sm" disabled={page >= list.data.totalPages} onClick={() => setPage(page + 1)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={page >= list.data.totalPages}
+                onClick={() => setPage(page + 1)}
+              >
                 Suivant
               </Button>
             </nav>

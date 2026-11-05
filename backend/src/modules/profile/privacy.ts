@@ -173,6 +173,15 @@ export class PrivacyService {
       await tx.menteeProfile.deleteMany({ where: { userId: id } });
       await tx.notification.deleteMany({ where: { userId: id } });
       await tx.authSession.deleteMany({ where: { userId: id } });
+      await tx.userAvatar.deleteMany({ where: { userId: id } });
+      await tx.mentorshipCertificate.updateMany({
+        where: { mentorId: id, revokedAt: null },
+        data: { revokedAt: now },
+      });
+      await tx.mentorshipCertificate.updateMany({
+        where: { menteeId: id },
+        data: { menteeName: 'Mentoré·e (compte supprimé)' },
+      });
       await tx.user.update({
         where: { id },
         data: {
@@ -182,6 +191,7 @@ export class PrivacyService {
           passwordHash: unusableHash,
           status: 'DELETED',
           onboardedAt: null,
+          avatarUpdatedAt: null,
         },
       });
       return active.map((m) => ({

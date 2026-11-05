@@ -1,6 +1,15 @@
 'use client';
 
-import { ArrowLeft, BookOpen, CalendarCheck2, CalendarDays, Flag, MessagesSquare, Target } from 'lucide-react';
+import {
+  Award,
+  ArrowLeft,
+  BookOpen,
+  CalendarCheck2,
+  CalendarDays,
+  Flag,
+  MessagesSquare,
+  Target,
+} from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
@@ -34,7 +43,8 @@ function SessionsPanel({ mentorship, me }: { mentorship: MentorshipSummary; me: 
   const isMentee = mentorship.myRole === 'MENTEE';
   const active = mentorship.status === 'ACTIVE';
 
-  if (sessions.isError) return <ErrorState error={sessions.error} onRetry={() => void sessions.refetch()} />;
+  if (sessions.isError)
+    return <ErrorState error={sessions.error} onRetry={() => void sessions.refetch()} />;
   if (sessions.isPending) return <Skeleton className="h-32" />;
 
   const items = sessions.data
@@ -95,16 +105,29 @@ function SessionsPanel({ mentorship, me }: { mentorship: MentorshipSummary; me: 
   );
 }
 
-function CompleteDialog({ mentorship, open, onOpenChange }: { mentorship: MentorshipSummary; open: boolean; onOpenChange: (o: boolean) => void }) {
+function CompleteDialog({
+  mentorship,
+  open,
+  onOpenChange,
+}: {
+  mentorship: MentorshipSummary;
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+}) {
   const complete = useCompleteMentorship(mentorship.id);
   const [note, setNote] = useState('');
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         title="Clôturer le mentorat"
-        description={`Le mentorat avec ${mentorship.counterpart.firstName} passera en lecture seule. Les séances à venir seront annulées et ${mentorship.counterpart.firstName} sera prévenu·e.`}
+        description={`Le mentorat avec ${mentorship.counterpart.firstName} passera en lecture seule. Les séances à venir seront annulées et ${mentorship.counterpart.firstName} sera prévenu·e. Si au moins une séance a été réalisée, le mentor reçoit un certificat d’accompagnement vérifiable.`}
       >
-        <Field label="Bilan de l’accompagnement" optional counter={{ value: note.length, max: 1000 }} hint="Ce qui a été accompli, les prochaines étapes conseillées.">
+        <Field
+          label="Bilan de l’accompagnement"
+          optional
+          counter={{ value: note.length, max: 1000 }}
+          hint="Ce qui a été accompli, les prochaines étapes conseillées."
+        >
           <Textarea value={note} onChange={(e) => setNote(e.target.value)} maxLength={1000} />
         </Field>
         <DialogFooter>
@@ -115,8 +138,12 @@ function CompleteDialog({ mentorship, open, onOpenChange }: { mentorship: Mentor
             loading={complete.isPending}
             onClick={() =>
               complete.mutate(note.trim() || undefined, {
-                onSuccess: () => {
-                  toast.success('Mentorat clôturé', { description: 'Merci pour cet accompagnement.' });
+                onSuccess: (closed) => {
+                  toast.success('Mentorat clôturé', {
+                    description: closed.certificate
+                      ? `Certificat d’accompagnement délivré : ${closed.certificate.code}.`
+                      : 'Merci pour cet accompagnement.',
+                  });
                   onOpenChange(false);
                 },
                 onError: (e) => toast.error(errorMessage(e)),
@@ -172,12 +199,18 @@ export function Workspace() {
             <Avatar person={other} size="lg" />
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-2xl font-display font-semibold tracking-[-0.03em] text-ink-900 sm:text-3xl">{fullName(other)}</h1>
+                <h1 className="text-2xl font-display font-semibold tracking-[-0.03em] text-ink-900 sm:text-3xl">
+                  {fullName(other)}
+                </h1>
                 <StatusBadge kind="mentorship" status={m.status} />
               </div>
-              {subtitle && <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">{subtitle}</p>}
+              {subtitle && (
+                <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">{subtitle}</p>
+              )}
               <div className="mt-2.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                <Badge tone="ink">{m.myRole === 'MENTOR' ? 'Vous êtes son mentor' : 'Votre mentor'}</Badge>
+                <Badge tone="ink">
+                  {m.myRole === 'MENTOR' ? 'Vous êtes son mentor' : 'Votre mentor'}
+                </Badge>
                 {m.domain && <Badge tone="teal">{m.domain.name}</Badge>}
                 <span>Depuis le {formatDate(m.startedAt)}</span>
               </div>
@@ -191,7 +224,9 @@ export function Workspace() {
             <div>
               <dt className="text-xs font-medium text-muted-foreground">Prochaine séance</dt>
               <dd className="mt-0.5 text-sm font-semibold">
-                {m.nextSession ? formatRange(m.nextSession.startsAt, m.nextSession.endsAt, me.timezone) : 'Aucune'}
+                {m.nextSession
+                  ? formatRange(m.nextSession.startsAt, m.nextSession.endsAt, me.timezone)
+                  : 'Aucune'}
               </dd>
             </div>
             <div>
@@ -201,8 +236,14 @@ export function Workspace() {
               <dd className="mt-1.5">
                 {m.averageProgress !== null ? (
                   <div className="flex items-center gap-2">
-                    <Progress value={m.averageProgress} className="flex-1" label="Progression moyenne" />
-                    <span className="text-xs font-semibold tabular-nums">{Math.round(m.averageProgress)} %</span>
+                    <Progress
+                      value={m.averageProgress}
+                      className="flex-1"
+                      label="Progression moyenne"
+                    />
+                    <span className="text-xs font-semibold tabular-nums">
+                      {Math.round(m.averageProgress)} %
+                    </span>
                   </div>
                 ) : (
                   <span className="text-sm font-semibold">—</span>
@@ -214,15 +255,25 @@ export function Workspace() {
       </Card>
 
       {m.status !== 'ACTIVE' ? (
-        <div className="mb-6 flex flex-wrap items-start gap-3 bg-ink-900 px-5 py-4 text-white">
+        <div className="mb-6 flex flex-wrap items-center gap-3 rounded-lg bg-ink-900 px-5 py-4 text-white">
           <Flag className="mt-0.5 size-5 shrink-0 text-amber-400" aria-hidden />
           <div className="min-w-0 flex-1">
             <p className="font-semibold">
               Mentorat {m.status === 'COMPLETED' ? 'clôturé' : 'interrompu'}
-              {m.endedAt && <> le {formatDate(m.endedAt)}</>} : il reste consultable en lecture seule.
+              {m.endedAt && <> le {formatDate(m.endedAt)}</>} : il reste consultable en lecture
+              seule.
             </p>
             {m.endNote && <p className="mt-1 text-[15px] text-ink-100">Bilan : « {m.endNote} »</p>}
           </div>
+          {m.certificate && (
+            <Link
+              href={`/certificats/${m.certificate.code}`}
+              className="inline-flex h-9 shrink-0 items-center gap-2 rounded-full bg-amber-400 px-4 text-[14px] font-semibold text-ink-950 transition-colors hover:bg-amber-500"
+            >
+              <Award className="size-4" aria-hidden />
+              Certificat d’accompagnement
+            </Link>
+          )}
         </div>
       ) : (
         <div className="mb-4 flex justify-end">

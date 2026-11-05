@@ -1,7 +1,15 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, ArrowRight, Building2, Globe2, MapPin, MonitorSmartphone, Users } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  Building2,
+  Globe2,
+  MapPin,
+  MonitorSmartphone,
+  Users,
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
 import { Controller, useForm, useWatch, type FieldPath } from 'react-hook-form';
@@ -18,7 +26,13 @@ import { Skeleton } from '@/components/ui/misc';
 import { useMe } from '@/features/auth/api';
 import { useDomains, useProfile, useSaveProfile } from '@/features/catalog/api';
 import { applyApiError } from '@/lib/forms';
-import { CAMPUS_FRANCE_NOTICE, LANGUAGES, isCampusFrance, modalityLabels, situationLabels } from '@/lib/labels';
+import {
+  CAMPUS_FRANCE_NOTICE,
+  LANGUAGES,
+  isCampusFrance,
+  modalityLabels,
+  situationLabels,
+} from '@/lib/labels';
 import type { Domain, MenteeSituation, Modality, ProfileMe } from '@/lib/types';
 import { Stepper } from './stepper';
 
@@ -80,7 +94,11 @@ function Nav({
         <ArrowLeft aria-hidden />
         Retour
       </Button>
-      <Button type={last ? 'submit' : 'button'} onClick={last ? undefined : onNext} loading={saving}>
+      <Button
+        type={last ? 'submit' : 'button'}
+        onClick={last ? undefined : onNext}
+        loading={saving}
+      >
         {last ? 'Enregistrer mon profil' : 'Continuer'}
         {!last && <ArrowRight aria-hidden />}
       </Button>
@@ -95,14 +113,19 @@ const menteeSchema = z.object({
     error: 'Choisissez votre situation.',
   }),
   city: z.string().trim().max(80).optional(),
-  interestDomainIds: z.array(z.string()).min(1, 'Choisissez au moins un domaine.').max(5, '5 domaines au maximum.'),
+  interestDomainIds: z
+    .array(z.string())
+    .min(1, 'Choisissez au moins un domaine.')
+    .max(5, '5 domaines au maximum.'),
   desiredSkills: z.array(z.string()).max(15),
   goalsSummary: z
     .string()
     .trim()
     .min(20, 'Décrivez votre objectif en 20 caractères au moins.')
     .max(1000, '1 000 caractères au maximum.'),
-  preferredModality: z.enum(['REMOTE', 'IN_PERSON', 'HYBRID'], { error: 'Choisissez une modalité.' }),
+  preferredModality: z.enum(['REMOTE', 'IN_PERSON', 'HYBRID'], {
+    error: 'Choisissez une modalité.',
+  }),
 });
 type MenteeValues = z.infer<typeof menteeSchema>;
 
@@ -144,7 +167,9 @@ function MenteeOnboarding({ domains, profile }: { domains: Domain[]; profile: Pr
         { ...v, city: v.city || undefined },
         {
           onSuccess: () => {
-            toast.success(existing ? 'Profil mis à jour.' : 'Profil enregistré. Voici des mentors pour vous.');
+            toast.success(
+              existing ? 'Profil mis à jour.' : 'Profil enregistré. Voici des mentors pour vous.',
+            );
             router.replace(existing ? '/tableau-de-bord' : '/mentors');
           },
           onError: (e) => {
@@ -164,10 +189,16 @@ function MenteeOnboarding({ domains, profile }: { domains: Domain[]; profile: Pr
 
   return (
     <form onSubmit={onSubmit} noValidate>
-      <Stepper steps={['Situation', 'Domaines et compétences', 'Objectif et modalité']} current={step} />
+      <Stepper
+        steps={['Situation', 'Domaines et compétences', 'Objectif et modalité']}
+        current={step}
+      />
       <Card className="mt-6 p-5 sm:p-8">
         {step === 0 && (
-          <StepShell title="Où en êtes-vous ?" description="Cela aide les mentors à comprendre votre contexte.">
+          <StepShell
+            title="Où en êtes-vous ?"
+            description="Cela aide les mentors à comprendre votre contexte."
+          >
             <Controller
               control={control}
               name="situation"
@@ -257,7 +288,13 @@ function MenteeOnboarding({ domains, profile }: { domains: Domain[]; profile: Pr
             />
           </StepShell>
         )}
-        <Nav step={step} total={3} onBack={() => setStep((s) => s - 1)} onNext={next} saving={save.isPending} />
+        <Nav
+          step={step}
+          total={3}
+          onBack={() => setStep((s) => s - 1)}
+          onNext={next}
+          saving={save.isPending}
+        />
       </Card>
     </form>
   );
@@ -266,7 +303,11 @@ function MenteeOnboarding({ domains, profile }: { domains: Domain[]; profile: Pr
 /* ── Mentor ──────────────────────────────────────────────────────────── */
 
 const mentorSchema = z.object({
-  headline: z.string().trim().min(10, '10 caractères au minimum.').max(140, '140 caractères au maximum.'),
+  headline: z
+    .string()
+    .trim()
+    .min(10, '10 caractères au minimum.')
+    .max(140, '140 caractères au maximum.'),
   currentPosition: z.string().trim().max(120).optional(),
   organization: z.string().trim().max(120).optional(),
   yearsExperience: z.coerce
@@ -275,24 +316,28 @@ const mentorSchema = z.object({
     .min(1, 'Au moins 1 an.')
     .max(60, '60 ans au maximum.'),
   city: z.string().trim().max(80).optional(),
-  bio: z.string().trim().min(80, '80 caractères au minimum.').max(2000, '2 000 caractères au maximum.'),
+  bio: z
+    .string()
+    .trim()
+    .min(80, '80 caractères au minimum.')
+    .max(2000, '2 000 caractères au maximum.'),
   expertise: z.array(z.string()).min(1, 'Ajoutez au moins une compétence.').max(15),
-  domainIds: z.array(z.string()).min(1, 'Choisissez au moins un domaine.').max(4, '4 domaines au maximum.'),
+  domainIds: z
+    .array(z.string())
+    .min(1, 'Choisissez au moins un domaine.')
+    .max(4, '4 domaines au maximum.'),
   languages: z.array(z.string()).min(1, 'Choisissez au moins une langue.').max(6),
-  modalities: z.array(z.enum(['REMOTE', 'IN_PERSON', 'HYBRID'])).min(1, 'Choisissez au moins une modalité.'),
+  modalities: z
+    .array(z.enum(['REMOTE', 'IN_PERSON', 'HYBRID']))
+    .min(1, 'Choisissez au moins une modalité.'),
   sessionDurationMin: z.union([z.literal(30), z.literal(45), z.literal(60), z.literal(90)]),
-  maxMentees: z.coerce
-    .number<number>({ error: 'Indiquez un nombre.' })
-    .int()
-    .min(1, 'Au moins 1.')
-    .max(20, '20 au maximum.'),
 });
 type MentorValues = z.infer<typeof mentorSchema>;
 
 const mentorSteps: FieldPath<MentorValues>[][] = [
   ['headline', 'currentPosition', 'organization', 'yearsExperience', 'city', 'bio'],
   ['expertise', 'domainIds', 'languages'],
-  ['modalities', 'sessionDurationMin', 'maxMentees'],
+  ['modalities', 'sessionDurationMin'],
 ];
 
 function MentorOnboarding({ domains, profile }: { domains: Domain[]; profile: ProfileMe }) {
@@ -315,7 +360,6 @@ function MentorOnboarding({ domains, profile }: { domains: Domain[]; profile: Pr
       languages: existing?.languages ?? ['Français'],
       modalities: existing?.modalities ?? ['REMOTE'],
       sessionDurationMin: (existing?.sessionDurationMin as 30 | 45 | 60 | 90) ?? 60,
-      maxMentees: existing?.maxMentees ?? 3,
     },
   });
   const { control, register, formState, trigger, handleSubmit, setError } = form;
@@ -339,7 +383,11 @@ function MentorOnboarding({ domains, profile }: { domains: Domain[]; profile: Pr
       },
       {
         onSuccess: () => {
-          toast.success(existing ? 'Profil mis à jour.' : 'Profil mentor enregistré. Ajoutez vos premiers créneaux.');
+          toast.success(
+            existing
+              ? 'Profil mis à jour.'
+              : 'Profil mentor enregistré. Ajoutez vos premiers créneaux.',
+          );
           router.replace(existing ? '/tableau-de-bord' : '/disponibilites');
         },
         onError: (e) => {
@@ -351,10 +399,16 @@ function MentorOnboarding({ domains, profile }: { domains: Domain[]; profile: Pr
 
   return (
     <form onSubmit={onSubmit} noValidate>
-      <Stepper steps={['Parcours', 'Expertise et domaines', 'Modalités et capacité']} current={step} />
+      <Stepper
+        steps={['Parcours', 'Expertise et domaines', 'Modalités et capacité']}
+        current={step}
+      />
       <Card className="mt-6 p-5 sm:p-8">
         {step === 0 && (
-          <StepShell title="Votre parcours" description="Ce que les mentorés verront en premier sur votre fiche.">
+          <StepShell
+            title="Votre parcours"
+            description="Ce que les mentorés verront en premier sur votre fiche."
+          >
             <Field
               label="Titre de profil"
               error={errors.headline?.message}
@@ -371,7 +425,13 @@ function MentorOnboarding({ domains, profile }: { domains: Domain[]; profile: Pr
                 <Input autoComplete="organization" {...register('organization')} />
               </Field>
               <Field label="Années d’expérience" error={errors.yearsExperience?.message}>
-                <Input type="number" inputMode="numeric" min={1} max={60} {...register('yearsExperience')} />
+                <Input
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={60}
+                  {...register('yearsExperience')}
+                />
               </Field>
               <Field label="Ville" optional error={errors.city?.message}>
                 <Input placeholder="Conakry" {...register('city')} />
@@ -388,7 +448,10 @@ function MentorOnboarding({ domains, profile }: { domains: Domain[]; profile: Pr
           </StepShell>
         )}
         {step === 1 && (
-          <StepShell title="Votre expertise" description="Ces informations alimentent la recherche et les suggestions.">
+          <StepShell
+            title="Votre expertise"
+            description="Ces informations alimentent la recherche et les suggestions."
+          >
             <Controller
               control={control}
               name="domainIds"
@@ -414,7 +477,9 @@ function MentorOnboarding({ domains, profile }: { domains: Domain[]; profile: Pr
                   value={field.value}
                   onChange={field.onChange}
                   placeholder="Ex. : React, levée de fonds, CV…"
-                  suggestions={domains.filter((d) => selectedDomains.includes(d.id)).flatMap((d) => d.topics)}
+                  suggestions={domains
+                    .filter((d) => selectedDomains.includes(d.id))
+                    .flatMap((d) => d.topics)}
                   error={errors.expertise?.message}
                 />
               )}
@@ -437,7 +502,10 @@ function MentorOnboarding({ domains, profile }: { domains: Domain[]; profile: Pr
           </StepShell>
         )}
         {step === 2 && (
-          <StepShell title="Modalités et capacité" description="Vous pourrez les modifier à tout moment.">
+          <StepShell
+            title="Modalités et capacité"
+            description="Vous pourrez les modifier à tout moment."
+          >
             <Controller
               control={control}
               name="modalities"
@@ -459,7 +527,10 @@ function MentorOnboarding({ domains, profile }: { domains: Domain[]; profile: Pr
                 name="sessionDurationMin"
                 render={({ field }) => (
                   <Field label="Durée habituelle d’une séance">
-                    <NativeSelect value={field.value} onChange={(e) => field.onChange(Number(e.target.value))}>
+                    <NativeSelect
+                      value={field.value}
+                      onChange={(e) => field.onChange(Number(e.target.value))}
+                    >
                       {[30, 45, 60, 90].map((d) => (
                         <option key={d} value={d}>
                           {d} minutes
@@ -469,13 +540,6 @@ function MentorOnboarding({ domains, profile }: { domains: Domain[]; profile: Pr
                   </Field>
                 )}
               />
-              <Field
-                label="Mentorés accompagnés en même temps"
-                error={errors.maxMentees?.message}
-                hint="Au-delà, votre profil n’acceptera plus de demandes."
-              >
-                <Input type="number" inputMode="numeric" min={1} max={20} {...register('maxMentees')} />
-              </Field>
             </div>
             <div className="flex gap-3 rounded-lg bg-surface-muted p-4 text-sm text-muted-foreground">
               <Users className="mt-0.5 size-4 shrink-0 text-teal-700" aria-hidden />

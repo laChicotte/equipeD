@@ -30,7 +30,9 @@ export function EmptyState({
       <Icon className="mb-4 size-6 text-muted-foreground" aria-hidden />
       <h3 className="text-base font-semibold text-foreground">{title}</h3>
       {description && (
-        <p className="mt-1.5 max-w-sm text-sm leading-relaxed text-muted-foreground">{description}</p>
+        <p className="mt-1.5 max-w-sm text-sm leading-relaxed text-muted-foreground">
+          {description}
+        </p>
       )}
       {action && <div className="mt-5">{action}</div>}
     </div>
@@ -46,7 +48,8 @@ export function ErrorState({
   onRetry?: () => void;
   className?: string;
 }) {
-  if (isApiError(error) && error.statusCode === 403) return <AccessDenied message={error.message} />;
+  if (isApiError(error) && error.statusCode === 403)
+    return <AccessDenied message={error.message} />;
   return (
     <div
       role="alert"
@@ -100,7 +103,7 @@ export function PageHeader({
     <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-end sm:justify-between">
       <div className="min-w-0">
         {eyebrow && <div className="mb-2">{eyebrow}</div>}
-        <h1 className="text-3xl font-display font-semibold tracking-[-0.03em] text-ink-900 sm:text-4xl">{title}</h1>
+        <h1 className="text-[24px] leading-tight font-semibold text-ink-900">{title}</h1>
         {description && (
           <p className="mt-1.5 max-w-2xl text-[15px] leading-relaxed text-muted-foreground">
             {description}

@@ -39,7 +39,10 @@ export interface AdminUser {
 }
 
 export function useAdminOverview() {
-  return useQuery({ queryKey: ['admin', 'overview'], queryFn: () => api<AdminOverview>('/admin/overview') });
+  return useQuery({
+    queryKey: ['admin', 'overview'],
+    queryFn: () => api<AdminOverview>('/admin/overview'),
+  });
 }
 
 export function useAdminUsers(role?: Role) {
@@ -85,7 +88,10 @@ export interface DomainInput {
 }
 
 export function useAdminDomains() {
-  return useQuery({ queryKey: ['admin', 'domains'], queryFn: () => api<AdminDomain[]>('/admin/domains') });
+  return useQuery({
+    queryKey: ['admin', 'domains'],
+    queryFn: () => api<AdminDomain[]>('/admin/domains'),
+  });
 }
 
 export function useAdminDomainMutations() {
@@ -96,7 +102,8 @@ export function useAdminDomainMutations() {
   };
   return {
     create: useMutation({
-      mutationFn: (input: DomainInput) => api<AdminDomain>('/admin/domains', { method: 'POST', body: input }),
+      mutationFn: (input: DomainInput) =>
+        api<AdminDomain>('/admin/domains', { method: 'POST', body: input }),
       onSuccess: invalidate,
     }),
     update: useMutation({

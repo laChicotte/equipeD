@@ -23,10 +23,26 @@ const schema = z.object({
 type Values = z.infer<typeof schema>;
 
 const DEMO_ACCOUNTS = [
-  { email: 'aminata@demo.talents-connectes.test', label: 'Aminata', role: 'Mentorée — parcours principal' },
-  { email: 'fatoumata@demo.talents-connectes.test', label: 'Fatoumata', role: 'Mentore — développement web' },
-  { email: 'mohamed@demo.talents-connectes.test', label: 'Mohamed', role: 'Mentoré déjà accompagné' },
-  { email: 'thierno@demo.talents-connectes.test', label: 'Thierno', role: 'Mentor — entrepreneuriat' },
+  {
+    email: 'aminata@demo.talents-connectes.test',
+    label: 'Aminata',
+    role: 'Mentorée — parcours principal',
+  },
+  {
+    email: 'fatoumata@demo.talents-connectes.test',
+    label: 'Fatoumata',
+    role: 'Mentore — développement web',
+  },
+  {
+    email: 'mohamed@demo.talents-connectes.test',
+    label: 'Mohamed',
+    role: 'Mentoré déjà accompagné',
+  },
+  {
+    email: 'thierno@demo.talents-connectes.test',
+    label: 'Thierno',
+    role: 'Mentor — entrepreneuriat',
+  },
   { email: 'admin@demo.talents-connectes.test', label: 'Admin', role: 'Modération' },
 ];
 const DEMO_PASSWORD = 'Mentorat2026!';
@@ -41,7 +57,10 @@ export function LoginForm() {
   const login = useLogin();
   const [showPassword, setShowPassword] = useState(false);
 
-  const form = useForm<Values>({ resolver: zodResolver(schema), defaultValues: { email: '', password: '' } });
+  const form = useForm<Values>({
+    resolver: zodResolver(schema),
+    defaultValues: { email: '', password: '' },
+  });
   const { register, handleSubmit, setError, setValue, formState } = form;
 
   const onSubmit = handleSubmit((values) => {
@@ -49,7 +68,9 @@ export function LoginForm() {
       onSuccess: async () => {
         const me = await api<Me>('/auth/me');
         const next = safeNext(params.get('next'));
-        router.replace(me.hasProfile || me.role === 'ADMIN' ? (next ?? homeFor(me)) : '/onboarding');
+        router.replace(
+          me.hasProfile || me.role === 'ADMIN' ? (next ?? homeFor(me)) : '/onboarding',
+        );
       },
       onError: (error) => applyApiError(error, setError, ['email', 'password']),
     });
@@ -57,7 +78,9 @@ export function LoginForm() {
 
   return (
     <div className="animate-fade-in">
-      <h1 className="text-4xl font-display font-semibold tracking-[-0.03em] text-ink-900">Bon retour parmi nous</h1>
+      <h1 className="text-4xl font-display font-semibold tracking-[-0.03em] text-ink-900">
+        Bon retour parmi nous
+      </h1>
       <p className="mt-2 text-[15px] text-muted-foreground">
         Connectez-vous pour retrouver vos demandes, vos séances et vos conversations.
       </p>
@@ -81,7 +104,11 @@ export function LoginForm() {
               aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
               aria-pressed={showPassword}
             >
-              {showPassword ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
+              {showPassword ? (
+                <EyeOff className="size-4" aria-hidden />
+              ) : (
+                <Eye className="size-4" aria-hidden />
+              )}
             </button>
           </div>
         </Field>

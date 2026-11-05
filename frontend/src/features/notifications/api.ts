@@ -29,11 +29,13 @@ export function useNotificationMutations() {
   const invalidate = () => void qc.invalidateQueries({ queryKey: key });
   return {
     markRead: useMutation({
-      mutationFn: (id: string) => api<unknown>(`/notifications/${id}/read`, { method: 'POST', body: {} }),
+      mutationFn: (id: string) =>
+        api<unknown>(`/notifications/${id}/read`, { method: 'POST', body: {} }),
       onSuccess: invalidate,
     }),
     markAll: useMutation({
-      mutationFn: () => api<{ updated: number }>('/notifications/read-all', { method: 'POST', body: {} }),
+      mutationFn: () =>
+        api<{ updated: number }>('/notifications/read-all', { method: 'POST', body: {} }),
       onSuccess: invalidate,
     }),
   };

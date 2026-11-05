@@ -13,7 +13,15 @@ import { Skeleton } from '@/components/ui/misc';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useMe } from '@/features/auth/api';
 import { errorMessage } from '@/lib/api';
-import { DEFAULT_TZ, dayKey, durationMinutes, formatLongDate, formatTime, fullName, zonedToIso } from '@/lib/format';
+import {
+  DEFAULT_TZ,
+  dayKey,
+  durationMinutes,
+  formatLongDate,
+  formatTime,
+  fullName,
+  zonedToIso,
+} from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { useCreateSlot, useDeleteSlot, useMyAvailability } from './api';
 import { groupByDay } from './book-dialog';
@@ -44,14 +52,20 @@ function AddSlotForm({ tz }: { tz: string }) {
       const s = new Date(start.getTime() + i * 7 * 86_400_000);
       const end = new Date(s.getTime() + duration * 60_000);
       try {
-        await create.mutateAsync({ startsAt: s.toISOString(), endsAt: end.toISOString(), timezone: tz });
+        await create.mutateAsync({
+          startsAt: s.toISOString(),
+          endsAt: end.toISOString(),
+          timezone: tz,
+        });
         created++;
       } catch (err) {
         if (created === 0) {
           setError(errorMessage(err));
           return;
         }
-        toast.warning(`${created} créneau(x) ajouté(s). Le suivant a été refusé : ${errorMessage(err)}`);
+        toast.warning(
+          `${created} créneau(x) ajouté(s). Le suivant a été refusé : ${errorMessage(err)}`,
+        );
         return;
       }
     }
@@ -69,7 +83,12 @@ function AddSlotForm({ tz }: { tz: string }) {
       <p className="mt-1 text-sm text-muted-foreground">Heure de Conakry (UTC+0).</p>
       <form onSubmit={submit} noValidate className="mt-5 grid gap-4">
         <Field label="Date">
-          <Input type="date" value={date} min={dayKey(new Date().toISOString(), tz)} onChange={(e) => setDate(e.target.value)} />
+          <Input
+            type="date"
+            value={date}
+            min={dayKey(new Date().toISOString(), tz)}
+            onChange={(e) => setDate(e.target.value)}
+          />
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Début">
@@ -93,7 +112,10 @@ function AddSlotForm({ tz }: { tz: string }) {
           </NativeSelect>
         </Field>
         {error && (
-          <p role="alert" className="rounded-md bg-danger-50 px-3 py-2 text-sm font-medium text-danger-700">
+          <p
+            role="alert"
+            className="rounded-md bg-danger-50 px-3 py-2 text-sm font-medium text-danger-700"
+          >
             {error}
           </p>
         )}
@@ -146,7 +168,9 @@ export function AvailabilityView() {
                   </h2>
                   <ul className="grid gap-2">
                     {daySlots.map((s) => {
-                      const booking = s.sessions.find((x) => x.status === 'REQUESTED' || x.status === 'CONFIRMED');
+                      const booking = s.sessions.find(
+                        (x) => x.status === 'REQUESTED' || x.status === 'CONFIRMED',
+                      );
                       return (
                         <li
                           key={s.id}
@@ -176,7 +200,11 @@ export function AvailabilityView() {
                           </div>
                           {booking ? (
                             <Tooltip content="Créneau réservé : annulez d’abord la séance pour le libérer.">
-                              <span className="inline-flex size-9 items-center justify-center text-muted-foreground" aria-label="Créneau réservé" role="img">
+                              <span
+                                className="inline-flex size-9 items-center justify-center text-muted-foreground"
+                                aria-label="Créneau réservé"
+                                role="img"
+                              >
                                 <Lock className="size-4" aria-hidden />
                               </span>
                             </Tooltip>

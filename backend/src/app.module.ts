@@ -22,6 +22,7 @@ import { AdminModule } from './modules/admin/admin.module.js';
 import { NotificationsModule } from './modules/notifications/notifications.module.js';
 import { ResourcesModule } from './modules/resources/resources.module.js';
 import { OpportunitiesModule } from './modules/opportunities/opportunities.module.js';
+import { CertificatesModule } from './modules/certificates/certificates.module.js';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { OpportunitiesModule } from './modules/opportunities/opportunities.modul
     NotificationsModule,
     ResourcesModule,
     OpportunitiesModule,
+    CertificatesModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: AllExceptionsFilter },

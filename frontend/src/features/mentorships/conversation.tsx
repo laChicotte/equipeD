@@ -117,7 +117,9 @@ export function Conversation({ mentorship, me }: { mentorship: MentorshipSummary
             <div key={day.key} className="mb-4">
               <div className="my-4 flex items-center gap-3" role="separator">
                 <span className="h-px flex-1 bg-border" />
-                <span className="text-xs font-medium text-muted-foreground capitalize">{day.label}</span>
+                <span className="text-xs font-medium text-muted-foreground capitalize">
+                  {day.label}
+                </span>
                 <span className="h-px flex-1 bg-border" />
               </div>
               <ul className="grid gap-1.5">
@@ -125,8 +127,21 @@ export function Conversation({ mentorship, me }: { mentorship: MentorshipSummary
                   const mine = m.senderId === me.id;
                   const nextSame = day.items[i + 1]?.senderId === m.senderId;
                   return (
-                    <li key={m.id} className={cn('flex animate-fade-in', mine ? 'justify-end' : 'justify-start', !nextSame && 'mb-2')}>
-                      <div className={cn('max-w-[min(80%,70ch)]', mine ? 'items-end' : 'items-start', 'flex flex-col')}>
+                    <li
+                      key={m.id}
+                      className={cn(
+                        'flex animate-fade-in',
+                        mine ? 'justify-end' : 'justify-start',
+                        !nextSame && 'mb-2',
+                      )}
+                    >
+                      <div
+                        className={cn(
+                          'max-w-[min(80%,70ch)]',
+                          mine ? 'items-end' : 'items-start',
+                          'flex flex-col',
+                        )}
+                      >
                         <p
                           className={cn(
                             'rounded-[14px] px-3.5 py-2 text-[15px] leading-relaxed break-words whitespace-pre-wrap',
@@ -135,7 +150,9 @@ export function Conversation({ mentorship, me }: { mentorship: MentorshipSummary
                               : 'rounded-bl-[4px] border border-border bg-surface text-foreground',
                           )}
                         >
-                          <span className="sr-only">{mine ? 'Vous : ' : `${other.firstName} : `}</span>
+                          <span className="sr-only">
+                            {mine ? 'Vous : ' : `${other.firstName} : `}
+                          </span>
                           {m.content}
                         </p>
                         {!nextSame && (
@@ -191,7 +208,13 @@ export function Conversation({ mentorship, me }: { mentorship: MentorshipSummary
             placeholder={`Écrire à ${other.firstName}…`}
             className="max-h-40 min-h-11 flex-1 resize-none rounded-md border border-border bg-surface px-3.5 py-2.5 text-[15px] leading-relaxed outline-none transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-focus"
           />
-          <Button type="submit" size="icon" aria-label="Envoyer" disabled={!draft.trim()} loading={send.isPending}>
+          <Button
+            type="submit"
+            size="icon"
+            aria-label="Envoyer"
+            disabled={!draft.trim()}
+            loading={send.isPending}
+          >
             {!send.isPending && <SendHorizontal aria-hidden />}
           </Button>
         </form>

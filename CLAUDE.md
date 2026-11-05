@@ -25,7 +25,7 @@ pnpm db:demo-reset    # remet à zéro le parcours d'Aminata
 pnpm dev:backend      # http://localhost:4000/api/v1 — Swagger : /api/docs
 pnpm dev:frontend     # http://localhost:3000
 pnpm --filter backend test      # tests unitaires (Vitest)
-pnpm --filter backend test:e2e  # 100 tests e2e sur talents_connectes_test (recréée à chaque fois ; copier backend/.env.test.example vers .env.test)
+pnpm --filter backend test:e2e  # 108 tests e2e sur talents_connectes_test (recréée à chaque fois ; copier backend/.env.test.example vers .env.test)
 pnpm --filter backend typecheck
 pnpm --filter backend lint
 ```
@@ -47,7 +47,7 @@ Comptes de démo (dev uniquement) : `<prenom>@demo.talents-connectes.test`, mot 
 - **Git : Claude ne fait ni `git add`, ni `git commit`, ni `git push`.** Il crée la branche, code, vérifie, puis propose les commandes à Bakary. Aucune attribution à Claude dans les commits ni dans les documents.
 
 ## État au 4 novembre 2026
-- Backend P0 et P1 complets (chat, objectifs, évaluation des séances, ressources, notifications, compte, clôture de mentorat, admin avec gestion des domaines, opportunités, export et suppression de compte). Vérifiés par 8 tests unitaires et **100 tests e2e** sur un vrai PostgreSQL (double réservation concurrente, accès d'un tiers, transitions invalides, CSRF…).
+- Backend P0 et P1 complets (chat, objectifs, évaluation des séances, ressources, notifications, compte, clôture de mentorat, admin avec gestion des domaines, opportunités, export et suppression de compte, photo de profil, certificats d’accompagnement vérifiables). Plus de capacité maximale par mentor. Vérifiés par 8 tests unitaires et **108 tests e2e** sur un vrai PostgreSQL (double réservation concurrente, accès d'un tiers, transitions invalides, CSRF…).
 - CI GitHub Actions : `.github/workflows/ci.yml` (backend : typecheck, lint, tests unitaires et e2e, build).
 - Livrables du jury : `docs/jury/` (présentation, scénario de démo, note de pérennisation, pitch, checklist).
 - Frontend : complet et relié à l'API (accueil, annuaire, fiche mentor, demandes, séances avec évaluation, espace de mentorat avec ressources et clôture, ressources, opportunités, notifications, compte, administration). Direction visuelle inspirée de NOVA : Lexend pour les titres, Schibsted Grotesk pour le texte, bleu encre, turquoise et ambre, photos sous licence libre (crédits dans `frontend/public/images/credits.json`).
