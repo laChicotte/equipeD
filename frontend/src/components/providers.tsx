@@ -1,12 +1,15 @@
 'use client';
 
-import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
+import { QueryClient, useQuery } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { useState, type ReactNode } from 'react';
 import { Toaster } from 'sonner';
 import { isApiError } from '@/lib/api';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { meQuery } from '@/features/auth/api';
 import { CallProvider } from '@/features/calls/call-provider';
+import { OFFLINE_MAX_AGE_MS, queryPersister, shouldPersistQuery } from '@/features/offline/cache';
+import { useOfflineSession } from '@/features/offline/session-sync';
 import { useServiceWorker } from '@/lib/pwa';
 import { RealtimeProvider } from '@/lib/realtime';
 
@@ -15,13 +18,16 @@ function makeQueryClient() {
     defaultOptions: {
       queries: {
         staleTime: 15_000,
+        // Conservées pour la relecture hors ligne ; sans réseau, elles sont suspendues, pas en erreur.
+        gcTime: OFFLINE_MAX_AGE_MS,
         refetchOnWindowFocus: true,
         retry: (failureCount, error) => {
           if (isApiError(error) && error.statusCode >= 400 && error.statusCode < 500) return false;
           return failureCount < 2;
         },
       },
-      mutations: { retry: false },
+      // Une action sans réseau échoue tout de suite : elle ne reste pas bloquée en chargement.
+      mutations: { retry: false, networkMode: 'always' },
     },
   });
 }
@@ -34,6 +40,7 @@ function SessionServices({ children }: { children: ReactNode }) {
   // Observation passive de la session (sans requête) : un `useMe` à la racine résoudrait la session
   // avant l'hydratation des zones Suspense et provoquerait une erreur d'hydratation.
   const { data: me } = useQuery({ ...meQuery, enabled: false });
+  useOfflineSession(me);
   return (
     <RealtimeProvider enabled={!!me}>
       <CallProvider>{children}</CallProvider>
@@ -45,7 +52,15 @@ export function Providers({ children }: { children: ReactNode }) {
   const [client] = useState(makeQueryClient);
   useServiceWorker();
   return (
-    <QueryClientProvider client={client}>
+    <PersistQueryClientProvider
+      client={client}
+      persistOptions={{
+        persister: queryPersister,
+        maxAge: OFFLINE_MAX_AGE_MS,
+        buster: 'v1',
+        dehydrateOptions: { shouldDehydrateQuery: shouldPersistQuery },
+      }}
+    >
       <TooltipProvider delayDuration={200}>
         <SessionServices>{children}</SessionServices>
       </TooltipProvider>
@@ -60,6 +75,6 @@ export function Providers({ children }: { children: ReactNode }) {
           },
         }}
       />
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   );
 }

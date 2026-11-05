@@ -22,6 +22,7 @@ import {
   IsOptional,
   IsString,
   Length,
+  Matches,
   Max,
   MaxLength,
   Min,
@@ -47,6 +48,12 @@ export class SendMessageDto {
   @IsString()
   @Length(1, 2000, { message: 'Un message contient entre 1 et 2000 caractères.' })
   content!: string;
+
+  /** Identifiant unique généré par le navigateur : renvoyer le même message ne le duplique pas. */
+  @IsOptional()
+  @IsString()
+  @Matches(/^[A-Za-z0-9-]{8,64}$/, { message: 'Identifiant de message invalide.' })
+  clientId?: string;
 }
 
 /** Message avec pièce jointe : la légende est facultative. */
@@ -110,10 +117,15 @@ export class MessagesService {
 
   async send(user: AuthUser, mentorshipId: string, dto: SendMessageDto) {
     const access = await this.access.assertMessagingParticipant(user, mentorshipId);
-    const message = await this.prisma.message.create({
-      data: { mentorshipId, senderId: user.id, content: dto.content },
-      select: messageSelect,
-    });
+    const data = { mentorshipId, senderId: user.id, content: dto.content };
+    const message = dto.clientId
+      ? await this.prisma.message.upsert({
+          where: { senderId_clientId: { senderId: user.id, clientId: dto.clientId } },
+          create: { ...data, clientId: dto.clientId },
+          update: {},
+          select: messageSelect,
+        })
+      : await this.prisma.message.create({ data, select: messageSelect });
     this.realtime.emitToUser(access.counterpartId, 'message:new', { mentorshipId });
     return message;
   }

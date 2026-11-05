@@ -1,3 +1,5 @@
+import { markApiReachable, markApiUnreachable } from './connectivity';
+
 import type { ApiErrorBody } from './types';
 
 /** Erreur structurée renvoyée par l'API NestJS (`{ statusCode, code, message, details? }`). */
@@ -40,10 +42,14 @@ function buildUrl(path: string, query?: Query): string {
   return qs ? `${url}?${qs}` : url;
 }
 
+/** Au-delà, une lecture est considérée comme perdue (réseau qui ne répond plus). */
+const READ_TIMEOUT_MS = 30_000;
+
 /** Appel typé vers l'API, via le rewrite Next.js (même origine, cookie HttpOnly géré par le navigateur). */
 export async function api<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { method = 'GET', body, query, signal } = options;
   let response: Response;
+  const timeout = method === 'GET' ? AbortSignal.timeout(READ_TIMEOUT_MS) : undefined;
   try {
     response = await fetch(buildUrl(path, query), {
       method,
@@ -64,10 +70,12 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
           : body !== undefined
             ? JSON.stringify(body)
             : undefined,
-      signal,
+      signal: signal && timeout ? AbortSignal.any([signal, timeout]) : (signal ?? timeout),
     });
+    if (response.status < 500) markApiReachable();
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') throw error;
+    markApiUnreachable();
     throw new ApiError({
       statusCode: 0,
       code: 'NETWORK_ERROR',

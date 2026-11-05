@@ -42,7 +42,7 @@ Une plateforme web responsive (mobile, tablette, ordinateur) qui couvre **tout l
 
 - **Un parcours complet et réellement fonctionnel**, de la recherche au suivi d'objectifs, avec des données persistées dans PostgreSQL : pas une maquette.
 - **La confiance d'abord** : vérification des mentors par l'équipe (jamais automatique), informations de contact privées non exposées, règles d'accès contrôlées côté serveur à chaque requête.
-- **Des recommandations explicables** plutôt qu'une « IA » opaque : le mentoré comprend pourquoi un mentor lui est proposé.
+- **Des recommandations explicables** : le score suit des règles transparentes, l'IA ne fait que les expliquer et le mentoré comprend pourquoi un mentor lui est proposé.
 - **Le contexte local** : fuseau Africa/Conakry, langues nationales (soussou, pular, malinké) dans les profils, accompagnement en présentiel, hybride ou à distance, domaine Campus France avec une mention honnête de son périmètre.
 - **Une fondation durable** : architecture modulaire, tests automatisés (unitaires et de bout en bout), migrations versionnées, déploiement auto-hébergeable.
 
@@ -59,7 +59,7 @@ Une plateforme web responsive (mobile, tablette, ordinateur) qui couvre **tout l
 | Évaluation des séances | ✅ |
 | Bibliothèque de ressources | ✅ (bibliothèque publique et partage privé dans un mentorat) |
 | Partage d'opportunités | ✅ (stages, emplois, appels à projets, bourses, formations, événements) |
-| IA de recommandation | ⏳ envisagée après mesure ; score explicable en place |
+| IA en assistance | ✅ orientation, explication du score, proposition de parcours validée (facultative, sans donnée nominative) ; le score reste calculé par des règles |
 
 ## 6. Proposition de valeur
 

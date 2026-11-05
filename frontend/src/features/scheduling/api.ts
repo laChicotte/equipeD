@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
+import { poll } from '@/lib/data-saver';
 import type { Modality, OwnSlot, Session, Slot } from '@/lib/types';
 
 export function useMyAvailability(enabled = true) {
@@ -16,7 +17,7 @@ export function useSessions(scope: 'upcoming' | 'past' | 'all' = 'upcoming') {
   return useQuery({
     queryKey: ['sessions', scope],
     queryFn: () => api<Session[]>('/sessions/me', { query: { scope } }),
-    refetchInterval: 30_000,
+    refetchInterval: () => poll(30_000),
   });
 }
 

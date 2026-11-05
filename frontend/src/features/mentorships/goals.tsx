@@ -1,6 +1,15 @@
 'use client';
 
-import { CalendarClock, MessageSquareQuote, Plus, Route, Target, Trash2, X } from 'lucide-react';
+import {
+  CalendarClock,
+  MessageSquareQuote,
+  Plus,
+  Route,
+  Target,
+  Trash2,
+  X,
+  Sparkles,
+} from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { EmptyState, ErrorState } from '@/components/feedback/states';
@@ -16,6 +25,8 @@ import { formatDate, fullName } from '@/lib/format';
 import { goalStatusLabels } from '@/lib/labels';
 import type { Goal, GoalStatus, Me, MentorshipSummary } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { PathProposalDialog } from '@/features/ai/ai-parts';
+import { useAiAvailable } from '@/features/ai/api';
 import { useGoalMutations, useGoals } from './api';
 import { GuidedPathDialog, GuidedPathHint } from './guided-paths';
 
@@ -396,6 +407,8 @@ export function GoalsPanel({ mentorship, me }: { mentorship: MentorshipSummary; 
   const goals = useGoals(mentorship.id);
   const [creating, setCreating] = useState(false);
   const [guided, setGuided] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
+  const aiAvailable = useAiAvailable();
   const readOnly = mentorship.status !== 'ACTIVE';
 
   if (goals.isError) return <ErrorState error={goals.error} onRetry={() => void goals.refetch()} />;
@@ -408,8 +421,27 @@ export function GoalsPanel({ mentorship, me }: { mentorship: MentorshipSummary; 
 
   return (
     <div className="grid gap-4">
+      {!readOnly && aiAvailable && (
+        <>
+          <PathProposalDialog mentorshipId={mentorship.id} open={aiOpen} onOpenChange={setAiOpen} />
+          {goals.data.length === 0 && (
+            <div className="flex justify-end">
+              <Button variant="secondary" onClick={() => setAiOpen(true)}>
+                <Sparkles aria-hidden />
+                Proposer avec l’IA
+              </Button>
+            </div>
+          )}
+        </>
+      )}
       {!readOnly && goals.data.length > 0 && (
         <div className="flex flex-wrap justify-end gap-2">
+          {aiAvailable && (
+            <Button variant="secondary" onClick={() => setAiOpen(true)}>
+              <Sparkles aria-hidden />
+              Proposer avec l’IA
+            </Button>
+          )}
           <Button variant="secondary" onClick={() => setGuided(true)}>
             <Route aria-hidden />
             Parcours guidé

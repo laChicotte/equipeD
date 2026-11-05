@@ -631,6 +631,8 @@ model Message {
   content      String
   /// Vrai si une pièce jointe est stockée dans message_files.
   hasFile      Boolean   @default(false) @map("has_file")
+  /// Identifiant choisi par le navigateur : un message renvoyé après une coupure n'est pas dupliqué.
+  clientId     String?   @map("client_id") @db.VarChar(64)
   /// Compte rendu d'appel (« Appel vidéo · 3 min », « Appel manqué ») inscrit dans le fil.
   callId       String?   @unique @map("call_id")
   readAt       DateTime? @map("read_at") @db.Timestamptz(3)
@@ -641,6 +643,7 @@ model Message {
   file       MessageFile?
   call       Call?        @relation(fields: [callId], references: [id], onDelete: SetNull)
 
+  @@unique([senderId, clientId])
   @@index([mentorshipId, createdAt])
   @@map("messages")
 }
@@ -726,12 +729,15 @@ model GroupMessage {
   /// Vide si le message ne porte qu'une pièce jointe.
   content   String
   hasFile   Boolean  @default(false) @map("has_file")
+  /// Identifiant choisi par le navigateur : un message renvoyé après une coupure n'est pas dupliqué.
+  clientId  String?  @map("client_id") @db.VarChar(64)
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   group  MentoringGroup    @relation(fields: [groupId], references: [id], onDelete: Cascade)
   sender User              @relation(fields: [senderId], references: [id], onDelete: Cascade)
   file   GroupMessageFile?
 
+  @@unique([senderId, clientId])
   @@index([groupId, createdAt])
   @@map("group_messages")
 }

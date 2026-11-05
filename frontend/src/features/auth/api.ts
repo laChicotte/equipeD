@@ -1,10 +1,13 @@
 'use client';
 
+import { useSyncExternalStore } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, isApiError } from '@/lib/api';
 import type { Me, Role } from '@/lib/types';
 
 export const meKey = ['auth', 'me'] as const;
+
+const noSubscription = () => () => undefined;
 
 /** Requête de session, partagée par `useMe` et par l'observateur passif de la racine. */
 export const meQuery = {
@@ -22,7 +25,22 @@ export const meQuery = {
 
 /** Utilisateur connecté, ou `null` si la session est absente (401). */
 export function useMe() {
-  return useQuery(meQuery);
+  const query = useQuery(meQuery);
+  // Pendant l'hydratation, même rendu que le serveur : le cache restauré depuis l'appareil peut
+  // connaître la session avant que les zones Suspense soient hydratées.
+  const hydrated = useSyncExternalStore(
+    noSubscription,
+    () => true,
+    () => false,
+  );
+  if (hydrated) return query;
+  return {
+    ...query,
+    data: undefined,
+    isPending: true,
+    isError: false,
+    fetchStatus: 'idle' as const,
+  };
 }
 
 export interface RegisterInput {

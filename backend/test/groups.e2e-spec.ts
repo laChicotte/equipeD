@@ -38,7 +38,14 @@ describe('Groupes d’accompagnement', () => {
 
     const candidates = await owner.agent.get(`${API}/groups/candidates`).expect(200);
     const ids = candidates.body.map((c: { id: string }) => c.id);
-    expect(ids).toEqual(expect.arrayContaining([menteeA.id, menteeB.id, colleague.id]));
+    expect(ids).toEqual(expect.arrayContaining([menteeA.id, menteeB.id]));
+    // Liste bornée à 50 : d'autres suites créent des mentors en parallèle, on cherche par le nom.
+    await prismaOf(app).user.update({
+      where: { id: colleague.id },
+      data: { lastName: 'Collègue Unique' },
+    });
+    const found = await owner.agent.get(`${API}/groups/candidates?q=unique`).expect(200);
+    expect(found.body.map((c: { id: string }) => c.id)).toContain(colleague.id);
     expect(ids).not.toContain(stranger.id);
     expect(ids).not.toContain(owner.id);
 

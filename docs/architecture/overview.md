@@ -41,7 +41,7 @@ données. Le frontend n'accède jamais à la base ; il n'implémente aucune règ
 | `profile` | Profils mentor et mentoré, compte, **photo de profil**, export JSON et suppression par anonymisation |
 | `domains` | Catalogue des 7 domaines des TDR |
 | `mentors` | Annuaire (recherche sans accents, filtres, pagination), fiche publique, compteurs réels |
-| `matching` | Score de suggestion déterministe et explicable (`matching.ts`, testé unitairement) — pas d'IA |
+| `matching` | Score de suggestion déterministe et explicable (`matching.ts`, testé unitairement) ; l'IA ne fait que l'expliquer |
 | `mentorship-requests` | Demande motivée, acceptation idempotente, refus, annulation |
 | `mentorships` | Espace de mentorat, clôture avec bilan |
 | `scheduling` | Créneaux, réservation, confirmation (lien Jitsi généré), annulation, clôture, évaluation |
@@ -54,6 +54,7 @@ données. Le frontend n'accède jamais à la base ; il n'implémente aucune règ
 | `dashboard` | Indicateurs par rôle |
 | `admin` | Comptes, suspension, vérification et publication des mentors, domaines |
 | `platform` | Pilotage, équipe d'administration, journal d'audit, révocation des certificats, rapport d'impact (routes `/admin/*`) |
+| `ai` | Assistance facultative via OpenAI : orientation, explication du score, proposition de parcours (quotas, données minimisées) |
 | `verification` | Vérification des profils mentors et candidatures de mentorés pour devenir mentor (justificatifs privés, décision motivée) |
 | `health` | Santé de l'API et de la base |
 
@@ -120,7 +121,7 @@ Exemple vérifié par les tests : 8 réservations simultanées du même créneau
 
 ## 9. Tests et vérifications
 
-- **142 tests e2e** sur un vrai PostgreSQL (base `talents_connectes_test` recréée à chaque exécution) et 15 tests unitaires (Vitest).
+- **149 tests e2e** sur un vrai PostgreSQL (base `talents_connectes_test` recréée à chaque exécution) et 22 tests unitaires (Vitest).
 - Typecheck et lint (oxlint côté API, ESLint côté web), build de production du frontend.
 - CI GitHub Actions : `.github/workflows/ci.yml`.
 

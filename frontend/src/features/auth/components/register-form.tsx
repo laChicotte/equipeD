@@ -1,7 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowRight, Check, GraduationCap, Presentation } from 'lucide-react';
+import { Check } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm, useWatch } from 'react-hook-form';
@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { useRegister } from '@/features/auth/api';
 import { applyApiError } from '@/lib/forms';
 import { cn } from '@/lib/utils';
+import { AuthHeading, PasswordInput } from './password-input';
 
 const schema = z.object({
   role: z.enum(['MENTEE', 'MENTOR']),
@@ -31,15 +32,13 @@ type Values = z.infer<typeof schema>;
 const roles = [
   {
     value: 'MENTEE' as const,
-    icon: GraduationCap,
     title: 'Je cherche un mentor',
-    text: 'Étudiant·e, jeune diplômé·e, entrepreneur·e, en reconversion…',
+    text: 'Étudiant·e, jeune diplômé·e, entrepreneur·e, en reconversion',
   },
   {
     value: 'MENTOR' as const,
-    icon: Presentation,
-    title: 'Je deviens mentor',
-    text: 'Professionnel·le prêt·e à partager son expérience.',
+    title: 'Je veux accompagner',
+    text: 'Professionnel·le prêt·e à partager son expérience',
   },
 ];
 
@@ -74,19 +73,16 @@ export function RegisterForm() {
   });
 
   return (
-    <div className="animate-fade-in">
-      <h1 className="text-4xl font-display font-semibold tracking-[-0.03em] text-ink-900">
-        Créer votre compte
-      </h1>
-      <p className="mt-2 text-[15px] text-muted-foreground">
+    <div>
+      <AuthHeading title="Créer un compte">
         Deux minutes suffisent. Vous compléterez ensuite votre profil.
-      </p>
+      </AuthHeading>
 
       <form onSubmit={onSubmit} noValidate className="mt-8 grid gap-5">
         <fieldset>
-          <legend className="mb-2 text-sm font-semibold">Vous êtes…</legend>
-          <div role="radiogroup" className="grid gap-3 sm:grid-cols-2">
-            {roles.map(({ value, icon: Icon, title, text }) => {
+          <legend className="mb-2 text-sm font-semibold">Votre objectif</legend>
+          <div role="radiogroup" className="grid gap-2">
+            {roles.map(({ value, title, text }) => {
               const selected = role === value;
               return (
                 <button
@@ -96,27 +92,27 @@ export function RegisterForm() {
                   aria-checked={selected}
                   onClick={() => setValue('role', value)}
                   className={cn(
-                    'relative flex flex-col items-start gap-2 rounded-lg border bg-surface p-4 text-left transition-[border-color,box-shadow] duration-150',
+                    'flex items-center gap-3 rounded-md border px-3.5 py-3 text-left transition-colors duration-150',
                     selected
-                      ? 'border-accent shadow-[0_0_0_3px_rgb(11_122_115/0.15)]'
-                      : 'border-border hover:border-border-strong',
+                      ? 'border-ink-900 bg-ink-50'
+                      : 'border-border bg-surface hover:border-border-strong',
                   )}
                 >
                   <span
                     className={cn(
-                      'inline-flex size-9 items-center justify-center rounded-md',
-                      selected ? 'bg-teal-700 text-white' : 'bg-surface-muted text-ink-700',
+                      'inline-flex size-[18px] shrink-0 items-center justify-center rounded-full border',
+                      selected ? 'border-ink-900' : 'border-border-strong',
                     )}
+                    aria-hidden
                   >
-                    <Icon className="size-5" aria-hidden />
+                    {selected && <span className="size-2.5 rounded-full bg-ink-900" />}
                   </span>
-                  <span className="text-sm font-semibold">{title}</span>
-                  <span className="text-xs leading-snug text-muted-foreground">{text}</span>
-                  {selected && (
-                    <span className="absolute top-3 right-3 inline-flex size-5 items-center justify-center rounded-full bg-teal-700 text-white">
-                      <Check className="size-3" strokeWidth={3} aria-hidden />
+                  <span className="min-w-0">
+                    <span className="block text-[15px] font-semibold text-ink-900">{title}</span>
+                    <span className="block text-[13px] leading-snug text-muted-foreground">
+                      {text}
                     </span>
-                  )}
+                  </span>
                 </button>
               );
             })}
@@ -135,7 +131,7 @@ export function RegisterForm() {
           <Input type="email" autoComplete="email" inputMode="email" {...register('email')} />
         </Field>
         <Field label="Mot de passe" error={formState.errors.password?.message}>
-          <Input type="password" autoComplete="new-password" {...register('password')} />
+          <PasswordInput autoComplete="new-password" {...register('password')} />
         </Field>
         <ul className="-mt-2 flex flex-wrap gap-x-4 gap-y-1" aria-label="Règles du mot de passe">
           {rules.map((r) => (
@@ -153,14 +149,13 @@ export function RegisterForm() {
           ))}
         </ul>
 
-        <Button type="submit" size="lg" loading={registerUser.isPending} className="mt-1 w-full">
+        <Button type="submit" size="lg" loading={registerUser.isPending} className="w-full">
           Créer mon compte
-          {!registerUser.isPending && <ArrowRight aria-hidden />}
         </Button>
       </form>
 
       <p className="mt-6 text-center text-sm text-muted-foreground">
-        Déjà inscrit·e ?{' '}
+        Vous avez déjà un compte ?{' '}
         <Link href="/connexion" className="font-semibold text-accent hover:underline">
           Se connecter
         </Link>

@@ -30,6 +30,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Skeleton } from '@/components/ui/misc';
 import { homeFor, useMe } from '@/features/auth/api';
 import { useDashboard } from '@/features/mentorships/api';
+import { OfflineBanner } from '@/features/offline/offline-banner';
 import type { Me } from '@/lib/types';
 import { cn, isStaff } from '@/lib/utils';
 import { DemoBanner } from './demo-banner';
@@ -344,6 +345,7 @@ function AuthenticatedLayout({ me, children }: { me: Me; children: ReactNode }) 
   return (
     <div className="flex min-h-dvh flex-col bg-background">
       <DemoBanner />
+      <OfflineBanner />
       <TopNav me={me} items={items} counts={counts} />
       <main
         id="contenu"
@@ -360,7 +362,7 @@ function AuthenticatedLayout({ me, children }: { me: Me; children: ReactNode }) 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { data: me, isPending, isError } = useMe();
+  const { data: me, isPending, isError, fetchStatus } = useMe();
 
   const needsOnboarding = !!me && !isStaff(me.role) && !me.hasProfile && pathname !== '/onboarding';
 
@@ -370,7 +372,18 @@ export function AppShell({ children }: { children: ReactNode }) {
     else if (needsOnboarding) router.replace('/onboarding');
   }, [isPending, me, needsOnboarding, pathname, router]);
 
-  if (isError) {
+  // Sans réseau et sans session gardée sur l'appareil : rien à afficher, on le dit.
+  if (isPending && fetchStatus === 'paused') {
+    return (
+      <div className="flex min-h-dvh items-center justify-center p-6 text-center">
+        <p className="text-sm text-muted-foreground">
+          Vous êtes hors ligne. Connectez-vous une première fois avec du réseau pour retrouver vos
+          messages et vos séances sur cet appareil.
+        </p>
+      </div>
+    );
+  }
+  if (isError && !me) {
     return (
       <div className="flex min-h-dvh items-center justify-center p-6 text-center">
         <p className="text-sm text-muted-foreground">

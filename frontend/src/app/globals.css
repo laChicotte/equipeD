@@ -331,3 +331,8 @@
     background-size: 48px 48px;
   }
 }
+
+/* Économie de données : les photos décoratives ne sont pas chargées, leur fond reste. */
+html[data-saver] img.photo {
+  display: none;
+}

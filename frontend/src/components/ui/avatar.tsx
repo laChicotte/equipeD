@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useDataSaver } from '@/lib/data-saver';
 import { initials } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -48,7 +49,8 @@ export function Avatar({
 }) {
   const src = avatarSrc(person);
   const [failed, setFailed] = useState<string | null>(null);
-  const showPhoto = src !== null && failed !== src;
+  const saver = useDataSaver();
+  const showPhoto = src !== null && failed !== src && !saver;
 
   return (
     <span

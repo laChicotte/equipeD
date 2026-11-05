@@ -17,6 +17,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { DomainIcon } from '@/components/domain-icon';
 import { EmptyState, ErrorState } from '@/components/feedback/states';
 import { Button } from '@/components/ui/button';
+import { OrientationPanel, WhyThisMentor } from '@/features/ai/ai-parts';
 import { useMe } from '@/features/auth/api';
 import { useDomains, useMentors, useSuggestions, type MentorFilters } from '@/features/catalog/api';
 import { CAMPUS_FRANCE_NOTICE, LANGUAGES, isCampusFrance, modalityLabels } from '@/lib/labels';
@@ -142,8 +143,8 @@ function Suggestions() {
           Recommandés pour vous
         </h2>
         <p className="mt-0.5 text-[13px] text-muted-foreground">
-          Selon vos domaines, compétences recherchées, modalité et langues. Règles transparentes,
-          sans IA.
+          Selon vos domaines, compétences recherchées et modalité. Le score suit des règles
+          transparentes, l’IA ne fait que l’expliquer.
         </p>
       </div>
       <ul className="divide-y divide-border/70">
@@ -152,18 +153,24 @@ function Suggestions() {
             <MentorResult
               mentor={mentor}
               aside={
-                <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px]">
-                  <span className="inline-flex items-center gap-2 font-semibold text-teal-700 tabular-nums">
-                    <span className="h-1.5 w-16 overflow-hidden rounded-full bg-ink-50" aria-hidden>
+                <div className="grid gap-1.5">
+                  <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px]">
+                    <span className="inline-flex items-center gap-2 font-semibold text-teal-700 tabular-nums">
                       <span
-                        className="block h-full rounded-full bg-teal-600"
-                        style={{ width: `${score}%` }}
-                      />
+                        className="h-1.5 w-16 overflow-hidden rounded-full bg-ink-50"
+                        aria-hidden
+                      >
+                        <span
+                          className="block h-full rounded-full bg-teal-600"
+                          style={{ width: `${score}%` }}
+                        />
+                      </span>
+                      Correspondance {score}/100
                     </span>
-                    Correspondance {score}/100
-                  </span>
-                  <span className="text-muted-foreground">{reasons[0]}</span>
-                </p>
+                    <span className="text-muted-foreground">{reasons[0]}</span>
+                  </p>
+                  <WhyThisMentor mentorId={mentor.id} />
+                </div>
               }
             />
           </li>
@@ -305,6 +312,10 @@ export function Directory() {
               <Info className="mt-0.5 size-4 shrink-0" aria-hidden />
               {CAMPUS_FRANCE_NOTICE}
             </p>
+          )}
+
+          {me && me.role !== 'ADMIN' && (
+            <OrientationPanel onDomain={(domain) => update({ domain })} onSkill={setQ} />
           )}
 
           {showSuggestions && <Suggestions />}

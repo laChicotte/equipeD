@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Lexend, Schibsted_Grotesk } from 'next/font/google';
 import { Providers } from '@/components/providers';
+import { dataSaverBootScript } from '@/lib/data-saver-boot';
 import './globals.css';
 
 const schibsted = Schibsted_Grotesk({
@@ -36,7 +37,7 @@ export const viewport: Viewport = {
 };
 
 /** Active les animations d'entrée uniquement si JavaScript s'exécute (sinon tout reste visible). */
-const enableMotion = "document.documentElement.classList.add('js')";
+const enableMotion = "document.documentElement.classList.add('js');";
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
@@ -48,7 +49,7 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
     >
       {/* suppressHydrationWarning : certaines extensions (ColorZilla…) ajoutent des attributs au body. */}
       <body className="min-h-full" suppressHydrationWarning>
-        <script dangerouslySetInnerHTML={{ __html: enableMotion }} />
+        <script dangerouslySetInnerHTML={{ __html: enableMotion + dataSaverBootScript }} />
         <a
           href="#contenu"
           className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[80] focus:rounded-md focus:bg-ink-900 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white"

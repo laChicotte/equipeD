@@ -3,13 +3,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
+import { poll } from '@/lib/data-saver';
 import type { Dashboard, Goal, GuidedPath, Message, MentorshipSummary } from '@/lib/types';
 
 export function useDashboard(enabled = true) {
   return useQuery({
     queryKey: ['dashboard'],
     queryFn: () => api<Dashboard>('/dashboard/me'),
-    refetchInterval: 30_000,
+    refetchInterval: () => poll(30_000),
     enabled,
   });
 }
@@ -19,7 +20,7 @@ export function useMentorships(enabled = true) {
     queryKey: ['mentorships', 'me'],
     queryFn: () => api<MentorshipSummary[]>('/mentorships/me'),
     enabled,
-    refetchInterval: 30_000,
+    refetchInterval: () => poll(30_000),
   });
 }
 
@@ -49,7 +50,7 @@ export function useMessages(mentorshipId: string) {
     queryKey: ['mentorships', mentorshipId, 'messages'],
     queryFn: () =>
       api<Message[]>(`/mentorships/${mentorshipId}/messages`, { query: { limit: 100 } }),
-    refetchInterval: visible ? 4_000 : false,
+    refetchInterval: () => (visible ? poll(4_000) : false),
     refetchIntervalInBackground: false,
   });
 }
@@ -57,8 +58,8 @@ export function useMessages(mentorshipId: string) {
 export function useSendMessage(mentorshipId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (content: string) =>
-      api<Message>(`/mentorships/${mentorshipId}/messages`, { method: 'POST', body: { content } }),
+    mutationFn: (body: { content: string; clientId: string }) =>
+      api<Message>(`/mentorships/${mentorshipId}/messages`, { method: 'POST', body }),
     onSuccess: (message) => {
       qc.setQueryData<Message[]>(['mentorships', mentorshipId, 'messages'], (old) =>
         old && !old.some((m) => m.id === message.id) ? [...old, message] : old,

@@ -428,10 +428,15 @@ export class GroupsService {
 
   async send(user: AuthUser, groupId: string, dto: SendGroupMessageDto) {
     await this.membership(user, groupId);
-    const message = await this.prisma.groupMessage.create({
-      data: { groupId, senderId: user.id, content: dto.content },
-      select: messageSelect,
-    });
+    const data = { groupId, senderId: user.id, content: dto.content };
+    const message = dto.clientId
+      ? await this.prisma.groupMessage.upsert({
+          where: { senderId_clientId: { senderId: user.id, clientId: dto.clientId } },
+          create: { ...data, clientId: dto.clientId },
+          update: {},
+          select: messageSelect,
+        })
+      : await this.prisma.groupMessage.create({ data, select: messageSelect });
     // Son propre message ne compte jamais comme non lu.
     await this.prisma.groupMember.update({
       where: { groupId_userId: { groupId, userId: user.id } },

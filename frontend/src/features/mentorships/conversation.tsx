@@ -14,8 +14,11 @@ import {
   CallButtons,
   CallLog,
   PendingFile,
+  PendingMessages,
 } from '@/features/messages/chat-parts';
-import { errorMessage } from '@/lib/api';
+import { enqueueMessage, newClientId, useOutbox } from '@/features/offline/outbox';
+import { errorMessage, isApiError } from '@/lib/api';
+import { isOnline, useOnline } from '@/lib/connectivity';
 import { dayKey, formatLongDate, formatTime } from '@/lib/format';
 import type { Me, Message, MentorshipSummary } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -57,22 +60,24 @@ export function Conversation({
   const active = mentorship.status !== 'CANCELLED';
   const other = mentorship.counterpart;
   const sending = send.isPending || sendFile.isPending;
+  const online = useOnline();
+  const waiting = useOutbox().filter((e) => e.threadId === mentorship.id).length;
 
   // Accusés de lecture : marque comme lus les messages reçus non lus.
   const unreadIncoming = messages.data?.some((m) => m.senderId !== me.id && !m.readAt) ?? false;
   useEffect(() => {
-    if (unreadIncoming && !markRead.isPending) markRead.mutate();
+    if (online && unreadIncoming && !markRead.isPending) markRead.mutate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [unreadIncoming, messages.dataUpdatedAt]);
 
   // Défile vers le bas à l'arrivée de nouveaux messages.
   useLayoutEffect(() => {
-    const count = messages.data?.length ?? 0;
+    const count = (messages.data?.length ?? 0) + waiting;
     if (count !== lastCount.current && listRef.current) {
       listRef.current.scrollTop = listRef.current.scrollHeight;
     }
     lastCount.current = count;
-  }, [messages.data?.length]);
+  }, [messages.data?.length, waiting]);
 
   const done = () => {
     setDraft('');
@@ -92,7 +97,27 @@ export function Conversation({
       return;
     }
     if (!content) return;
-    send.mutate(content, { onSuccess: done, onError: (e) => toast.error(errorMessage(e)) });
+    // Sans réseau, le message attend sur l'appareil et part tout seul au retour de la connexion.
+    const clientId = newClientId();
+    const queue = () => {
+      enqueueMessage({
+        clientId,
+        kind: 'direct',
+        threadId: mentorship.id,
+        userId: me.id,
+        content,
+      });
+      done();
+    };
+    if (!isOnline()) return queue();
+    send.mutate(
+      { content, clientId },
+      {
+        onSuccess: done,
+        onError: (e) =>
+          isApiError(e) && e.code === 'NETWORK_ERROR' ? queue() : toast.error(errorMessage(e)),
+      },
+    );
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -245,6 +270,7 @@ export function Conversation({
             </div>
           ))
         )}
+        <PendingMessages kind="direct" threadId={mentorship.id} />
       </div>
 
       {active ? (
@@ -257,7 +283,7 @@ export function Conversation({
               submit();
             }}
           >
-            <AttachButton onPick={setFile} disabled={sending} />
+            <AttachButton onPick={setFile} disabled={sending || !online} />
             <label htmlFor="message" className="sr-only">
               Votre message
             </label>

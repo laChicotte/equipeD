@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
+import { poll } from '@/lib/data-saver';
 import type { AppNotification } from '@/lib/types';
 
 const key = ['notifications'] as const;
@@ -11,7 +12,7 @@ export function useUnreadCount(enabled = true) {
   return useQuery({
     queryKey: [...key, 'unread-count'],
     queryFn: () => api<{ count: number }>('/notifications/unread-count'),
-    refetchInterval: 30_000,
+    refetchInterval: () => poll(30_000),
     enabled,
   });
 }

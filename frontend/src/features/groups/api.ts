@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
+import { poll } from '@/lib/data-saver';
 import type {
   GroupCandidate,
   GroupDetail,
@@ -28,7 +29,7 @@ export function useGroups(enabled = true) {
     queryKey: ['groups', 'me'],
     queryFn: () => api<GroupSummary[]>('/groups/me'),
     enabled,
-    refetchInterval: 30_000,
+    refetchInterval: () => poll(30_000),
   });
 }
 
@@ -58,7 +59,7 @@ export function useGroupMessages(groupId: string) {
   return useQuery({
     queryKey: ['groups', groupId, 'messages'],
     queryFn: () => api<GroupMessage[]>(`/groups/${groupId}/messages`, { query: { limit: 100 } }),
-    refetchInterval: visible ? 4_000 : false,
+    refetchInterval: () => (visible ? poll(4_000) : false),
     refetchIntervalInBackground: false,
   });
 }
@@ -66,8 +67,8 @@ export function useGroupMessages(groupId: string) {
 export function useSendGroupMessage(groupId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (content: string) =>
-      api<GroupMessage>(`/groups/${groupId}/messages`, { method: 'POST', body: { content } }),
+    mutationFn: (body: { content: string; clientId: string }) =>
+      api<GroupMessage>(`/groups/${groupId}/messages`, { method: 'POST', body }),
     onSuccess: (message) => {
       qc.setQueryData<GroupMessage[]>(['groups', groupId, 'messages'], (old) =>
         old && !old.some((m) => m.id === message.id) ? [...old, message] : old,
@@ -161,7 +162,7 @@ export function useMyWorkshops(scope: WorkshopScope = 'upcoming') {
   return useQuery({
     queryKey: ['workshops', 'me', scope],
     queryFn: () => api<Workshop[]>('/workshops/me', { query: { scope } }),
-    refetchInterval: 60_000,
+    refetchInterval: () => poll(60_000),
   });
 }
 

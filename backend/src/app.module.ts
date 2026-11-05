@@ -29,6 +29,7 @@ import { OpportunitiesModule } from './modules/opportunities/opportunities.modul
 import { CertificatesModule } from './modules/certificates/certificates.module.js';
 import { PlatformModule } from './modules/platform/platform.module.js';
 import { VerificationModule } from './modules/verification/verification.module.js';
+import { AiModule } from './modules/ai/ai.module.js';
 
 @Module({
   imports: [
@@ -62,6 +63,7 @@ import { VerificationModule } from './modules/verification/verification.module.j
     CertificatesModule,
     PlatformModule,
     VerificationModule,
+    AiModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: AllExceptionsFilter },

@@ -2,7 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { ArrowLeft, Check, Copy, KeyRound, LifeBuoy } from 'lucide-react';
+import { ArrowLeft, Check, Copy, KeyRound } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
@@ -17,6 +17,7 @@ import { Skeleton } from '@/components/ui/misc';
 import { api, errorMessage } from '@/lib/api';
 import { fullName, formatTime } from '@/lib/format';
 import { applyApiError } from '@/lib/forms';
+import { AuthHeading, PasswordInput } from './password-input';
 
 /* ── Page « Mot de passe oublié » ─────────────────────────────────────── */
 
@@ -25,35 +26,30 @@ import { applyApiError } from '@/lib/forms';
  * plutôt que d'afficher un faux formulaire « recevoir un lien par email ».
  */
 export function ForgotPassword() {
+  const steps = [
+    'Contactez l’équipe de la plateforme, sur le stand du programme ou auprès de votre structure, avec l’adresse email de votre compte.',
+    'Après vérification de votre identité, elle vous remet un lien personnel, valable 2 heures et utilisable une seule fois.',
+    'Ouvrez ce lien et choisissez un nouveau mot de passe. Vos anciennes sessions sont alors fermées.',
+  ];
   return (
-    <div className="animate-fade-in">
-      <span className="inline-flex size-11 items-center justify-center rounded-full bg-teal-50 text-teal-700">
-        <LifeBuoy className="size-5" aria-hidden />
-      </span>
-      <h1 className="mt-5 text-4xl font-display font-semibold tracking-[-0.03em] text-ink-900">
-        Mot de passe oublié
-      </h1>
-      <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground">
-        La plateforme n’envoie pas encore d’emails. Pour retrouver l’accès à votre compte :
-      </p>
-      <ol className="mt-5 grid gap-3 text-[15px] leading-relaxed">
-        <li className="flex gap-3">
-          <span className="font-semibold text-teal-700 tabular-nums">1.</span>
-          Contactez l’équipe de la plateforme (stand du programme ou administrateur de votre
-          structure) en indiquant l’adresse email de votre compte.
-        </li>
-        <li className="flex gap-3">
-          <span className="font-semibold text-teal-700 tabular-nums">2.</span>
-          Après avoir vérifié votre identité, l’équipe vous remet un lien personnel, à usage unique
-          et valable 2 heures.
-        </li>
-        <li className="flex gap-3">
-          <span className="font-semibold text-teal-700 tabular-nums">3.</span>
-          Ouvrez ce lien et choisissez un nouveau mot de passe : vos anciennes sessions sont fermées
-          par sécurité.
-        </li>
+    <div>
+      <AuthHeading title="Mot de passe oublié">
+        L’équipe de la plateforme vous aide à récupérer votre compte, en trois étapes.
+      </AuthHeading>
+      <ol className="mt-8 grid gap-5">
+        {steps.map((step, i) => (
+          <li key={step} className="flex gap-3.5 text-[15px] leading-relaxed text-foreground">
+            <span
+              className="inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-ink-50 text-[13px] font-semibold text-ink-900 tabular-nums"
+              aria-hidden
+            >
+              {i + 1}
+            </span>
+            {step}
+          </li>
+        ))}
       </ol>
-      <Button asChild variant="secondary" className="mt-8">
+      <Button asChild variant="secondary" size="lg" className="mt-8 w-full">
         <Link href="/connexion">
           <ArrowLeft aria-hidden />
           Retour à la connexion
@@ -116,17 +112,14 @@ export function ResetPasswordForm() {
 
   if (token.length < 20 || check.isError) {
     return (
-      <div className="animate-fade-in">
-        <h1 className="text-4xl font-display font-semibold tracking-[-0.03em] text-ink-900">
-          Lien invalide
-        </h1>
-        <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground">
+      <div>
+        <AuthHeading title="Ce lien ne fonctionne pas">
           {check.isError
             ? errorMessage(check.error)
-            : 'Ce lien de réinitialisation est incomplet. Vérifiez qu’il a été copié en entier.'}
-        </p>
-        <Button asChild variant="secondary" className="mt-8">
-          <Link href="/mot-de-passe-oublie">Que faire ?</Link>
+            : 'Il est incomplet. Vérifiez qu’il a été copié en entier.'}
+        </AuthHeading>
+        <Button asChild variant="secondary" size="lg" className="mt-8 w-full">
+          <Link href="/mot-de-passe-oublie">Demander un nouveau lien</Link>
         </Button>
       </div>
     );
@@ -134,27 +127,23 @@ export function ResetPasswordForm() {
   if (check.isPending) return <Skeleton className="h-72" />;
 
   return (
-    <div className="animate-fade-in">
-      <h1 className="text-4xl font-display font-semibold tracking-[-0.03em] text-ink-900">
-        Nouveau mot de passe
-      </h1>
-      <p className="mt-2 text-[15px] text-muted-foreground">
-        Bonjour {check.data.firstName}, choisissez un nouveau mot de passe. Ce lien expire à{' '}
+    <div>
+      <AuthHeading title="Nouveau mot de passe">
+        Bonjour {check.data.firstName}, choisissez votre nouveau mot de passe. Ce lien expire à{' '}
         {formatTime(check.data.expiresAt)}.
-      </p>
+      </AuthHeading>
       <form onSubmit={onSubmit} noValidate className="mt-8 grid gap-5">
         <Field
           label="Nouveau mot de passe"
           hint="10 caractères au moins, dont une lettre et un chiffre."
           error={form.formState.errors.newPassword?.message}
         >
-          <Input type="password" autoComplete="new-password" {...form.register('newPassword')} />
+          <PasswordInput autoComplete="new-password" {...form.register('newPassword')} />
         </Field>
         <Field label="Confirmation" error={form.formState.errors.confirm?.message}>
-          <Input type="password" autoComplete="new-password" {...form.register('confirm')} />
+          <PasswordInput autoComplete="new-password" {...form.register('confirm')} />
         </Field>
-        <Button type="submit" size="lg" loading={reset.isPending} className="mt-1 w-full">
-          <KeyRound aria-hidden />
+        <Button type="submit" size="lg" loading={reset.isPending} className="w-full">
           Enregistrer le mot de passe
         </Button>
       </form>

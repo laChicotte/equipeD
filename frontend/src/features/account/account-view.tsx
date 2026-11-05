@@ -22,6 +22,7 @@ import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
 import { Input, NativeSelect } from '@/components/ui/input';
 import { useMe } from '@/features/auth/api';
+import { ClearOfflineButton, DataSaverSetting } from '@/features/offline/offline-settings';
 import {
   BecomeMentorSection,
   MentorVerificationSection,
@@ -482,6 +483,20 @@ function SecuritySection() {
 function DataSection({ me }: { me: Me }) {
   return (
     <div className="grid gap-5">
+      <Panel title="Connexion faible et hors ligne">
+        <ActionRow
+          title="Économie de données"
+          description="Actualisations espacées, photos masquées ou chargées à la demande. En automatique, elle s’active sur réseau 2G ou si le téléphone le demande."
+        >
+          <DataSaverSetting />
+        </ActionRow>
+        <ActionRow
+          title="Données gardées sur cet appareil"
+          description="Vos dernières conversations, séances et objectifs restent lisibles sans réseau, 7 jours au plus. Ils sont effacés à la déconnexion."
+        >
+          <ClearOfflineButton />
+        </ActionRow>
+      </Panel>
       <Panel title="Mes données">
         <ActionRow
           title="Exporter mes données"

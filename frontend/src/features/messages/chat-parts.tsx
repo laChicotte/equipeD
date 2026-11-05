@@ -1,8 +1,10 @@
 'use client';
 
 import {
+  Clock3,
   Download,
   FileText,
+  Image as ImageIcon,
   Paperclip,
   Phone,
   PhoneIncoming,
@@ -11,7 +13,8 @@ import {
   Video,
   X,
 } from 'lucide-react';
-import { useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -23,6 +26,13 @@ import {
   RESOURCE_FILE_ACCEPT,
   RESOURCE_FILE_MAX_BYTES,
 } from '@/features/resources/files';
+import {
+  removeFromOutbox,
+  retryOutboxEntry,
+  useOutbox,
+  type ThreadKind,
+} from '@/features/offline/outbox';
+import { useDataSaver } from '@/lib/data-saver';
 import { formatTime } from '@/lib/format';
 import type { ChatFile, Message, PersonRef } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -118,7 +128,27 @@ export function PendingFile({ file, onRemove }: { file: File; onRemove: () => vo
 
 /** Pièce jointe dans une bulle : photo affichée, document téléchargeable. */
 export function Attachment({ file, url, mine }: { file: ChatFile; url: string; mine: boolean }) {
-  if (isImage(file.mimeType)) {
+  const saver = useDataSaver();
+  const [requested, setRequested] = useState(false);
+  const [failed, setFailed] = useState(false);
+  if (isImage(file.mimeType) && !failed && saver && !requested) {
+    return (
+      <button
+        type="button"
+        onClick={() => setRequested(true)}
+        className={cn(
+          'flex min-w-[220px] items-center gap-3 rounded-[10px] px-3 py-2.5 text-left transition-colors',
+          mine ? 'bg-white/10 hover:bg-white/15' : 'bg-surface-muted hover:bg-ink-50',
+        )}
+      >
+        <ImageIcon className="size-5 shrink-0" aria-hidden />
+        <span className="text-[14px] font-semibold">
+          Afficher la photo · {formatFileSize(file.size)}
+        </span>
+      </button>
+    );
+  }
+  if (isImage(file.mimeType) && !failed) {
     return (
       <a
         href={url}
@@ -132,6 +162,7 @@ export function Attachment({ file, url, mine }: { file: ChatFile; url: string; m
           src={`${url}?inline=1`}
           alt={file.fileName}
           loading="lazy"
+          onError={() => setFailed(true)}
           className="max-h-72 w-auto max-w-full rounded-[10px] object-contain"
         />
       </a>
@@ -275,5 +306,49 @@ export function CallButtons({
         </>
       )}
     </span>
+  );
+}
+
+/** Messages écrits hors ligne : ils partent seuls au retour du réseau. */
+export function PendingMessages({ kind, threadId }: { kind: ThreadKind; threadId: string }) {
+  const qc = useQueryClient();
+  const entries = useOutbox().filter((e) => e.kind === kind && e.threadId === threadId);
+  if (entries.length === 0) return null;
+  return (
+    <ul className="mt-2 grid gap-1.5" aria-label="Messages en attente d’envoi">
+      {entries.map((e) => (
+        <li key={e.clientId} className="flex justify-end">
+          <div className="flex max-w-[min(80%,70ch)] flex-col items-end">
+            <p className="rounded-[14px] rounded-br-[4px] bg-ink-900/70 px-3.5 py-2 text-[15px] leading-relaxed break-words whitespace-pre-wrap text-white">
+              {e.content}
+            </p>
+            {e.error ? (
+              <span className="mt-1 flex flex-wrap justify-end gap-x-2 px-1 text-[12px] text-danger-700">
+                <span>Non envoyé : {e.error}</span>
+                <button
+                  type="button"
+                  className="font-semibold underline"
+                  onClick={() => retryOutboxEntry(e.clientId, qc)}
+                >
+                  Réessayer
+                </button>
+                <button
+                  type="button"
+                  className="font-semibold underline"
+                  onClick={() => removeFromOutbox(e.clientId)}
+                >
+                  Supprimer
+                </button>
+              </span>
+            ) : (
+              <span className="mt-1 flex items-center gap-1 px-1 text-[11px] text-muted-foreground">
+                <Clock3 className="size-3" aria-hidden />
+                En attente d’envoi
+              </span>
+            )}
+          </div>
+        </li>
+      ))}
+    </ul>
   );
 }

@@ -7,8 +7,15 @@ import { ErrorState } from '@/components/feedback/states';
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/misc';
-import { AttachButton, Attachment, PendingFile } from '@/features/messages/chat-parts';
-import { errorMessage } from '@/lib/api';
+import {
+  AttachButton,
+  Attachment,
+  PendingFile,
+  PendingMessages,
+} from '@/features/messages/chat-parts';
+import { enqueueMessage, newClientId, useOutbox } from '@/features/offline/outbox';
+import { errorMessage, isApiError } from '@/lib/api';
+import { isOnline, useOnline } from '@/lib/connectivity';
 import { dayKey, formatLongDate, formatTime, fullName } from '@/lib/format';
 import type { GroupMessage, GroupSummary, Me } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -42,6 +49,8 @@ export function GroupConversation({
   const [draft, setDraft] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const sending = send.isPending || sendFile.isPending;
+  const online = useOnline();
+  const waiting = useOutbox().filter((e) => e.threadId === group.id).length;
   const listRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lastCount = useRef(0);
@@ -51,7 +60,7 @@ export function GroupConversation({
   const lastMarked = useRef<string | null>(null);
   useEffect(() => {
     const fresh = !!latestIncoming && latestIncoming.id !== lastMarked.current;
-    if ((group.unreadCount > 0 || fresh) && !markRead.isPending) {
+    if (online && (group.unreadCount > 0 || fresh) && !markRead.isPending) {
       lastMarked.current = latestIncoming?.id ?? null;
       markRead.mutate();
     }
@@ -59,12 +68,12 @@ export function GroupConversation({
   }, [latestIncoming?.id, group.unreadCount]);
 
   useLayoutEffect(() => {
-    const count = messages.data?.length ?? 0;
+    const count = (messages.data?.length ?? 0) + waiting;
     if (count !== lastCount.current && listRef.current) {
       listRef.current.scrollTop = listRef.current.scrollHeight;
     }
     lastCount.current = count;
-  }, [messages.data?.length]);
+  }, [messages.data?.length, waiting]);
 
   const done = () => {
     setDraft('');
@@ -84,7 +93,21 @@ export function GroupConversation({
       return;
     }
     if (!content) return;
-    send.mutate(content, { onSuccess: done, onError: (e) => toast.error(errorMessage(e)) });
+    // Sans réseau, le message attend sur l'appareil et part tout seul au retour de la connexion.
+    const clientId = newClientId();
+    const queue = () => {
+      enqueueMessage({ clientId, kind: 'group', threadId: group.id, userId: me.id, content });
+      done();
+    };
+    if (!isOnline()) return queue();
+    send.mutate(
+      { content, clientId },
+      {
+        onSuccess: done,
+        onError: (e) =>
+          isApiError(e) && e.code === 'NETWORK_ERROR' ? queue() : toast.error(errorMessage(e)),
+      },
+    );
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -199,6 +222,7 @@ export function GroupConversation({
             </div>
           ))
         )}
+        <PendingMessages kind="group" threadId={group.id} />
       </div>
 
       {file && <PendingFile file={file} onRemove={() => setFile(null)} />}
@@ -209,7 +233,7 @@ export function GroupConversation({
           submit();
         }}
       >
-        <AttachButton onPick={setFile} disabled={sending} />
+        <AttachButton onPick={setFile} disabled={sending || !online} />
         <label htmlFor="message-groupe" className="sr-only">
           Votre message au groupe
         </label>

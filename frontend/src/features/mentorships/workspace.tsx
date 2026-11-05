@@ -11,7 +11,7 @@ import {
   Target,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog';
@@ -161,6 +161,16 @@ function CompleteDialog({
 
 export function Workspace() {
   const { id } = useParams<{ id: string }>();
+  return <WorkspaceContent id={id} />;
+}
+
+/** Même espace, identifié par l'adresse `?id=` (voir la route `mentorats/consultation`). */
+export function OfflineWorkspace() {
+  const id = useSearchParams().get('id');
+  return id ? <WorkspaceContent id={id} /> : null;
+}
+
+function WorkspaceContent({ id }: { id: string }) {
   const { data: me } = useMe();
   const q = useMentorship(id);
   const [closing, setClosing] = useState(false);

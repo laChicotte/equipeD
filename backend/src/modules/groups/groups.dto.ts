@@ -9,6 +9,7 @@ import {
   IsOptional,
   IsString,
   Length,
+  Matches,
   Max,
   MaxLength,
   Min,
@@ -78,6 +79,12 @@ export class SendGroupMessageDto {
   @IsString()
   @Length(1, 2000, { message: 'Un message contient entre 1 et 2000 caractères.' })
   content!: string;
+
+  /** Identifiant unique généré par le navigateur : renvoyer le même message ne le duplique pas. */
+  @IsOptional()
+  @IsString()
+  @Matches(/^[A-Za-z0-9-]{8,64}$/, { message: 'Identifiant de message invalide.' })
+  clientId?: string;
 }
 
 /** Message avec pièce jointe : la légende est facultative. */

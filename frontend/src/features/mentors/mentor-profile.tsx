@@ -21,6 +21,7 @@ import { ErrorState } from '@/components/feedback/states';
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/misc';
+import { WhyThisMentor } from '@/features/ai/ai-parts';
 import { useMe } from '@/features/auth/api';
 import { useMentor, useMentorAvailability, useMentors } from '@/features/catalog/api';
 import { BookDialog, groupByDay } from '@/features/scheduling/book-dialog';
@@ -139,6 +140,17 @@ function SlotsPreview({ mentorId }: { mentorId: string }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+/** Pour un mentoré : pourquoi ce mentor lui correspond (score par règles, reformulé par l'IA). */
+function WhyBox({ mentorId }: { mentorId: string }) {
+  const { data: me } = useMe();
+  if (me?.role !== 'MENTEE' || !me.hasProfile) return null;
+  return (
+    <section className="rounded-lg bg-surface p-4 shadow-card ring-1 ring-border/70">
+      <WhyThisMentor mentorId={mentorId} />
+    </section>
   );
 }
 
@@ -365,6 +377,7 @@ export function MentorProfile() {
 
         {/* Colonne de droite */}
         <aside className="grid gap-2 lg:sticky lg:top-[88px]">
+          <WhyBox mentorId={mentor.id} />
           <section className={cn(section, 'p-5 sm:p-5')}>
             <h2 className="font-display text-[16px] font-semibold text-ink-900">
               Un cadre de confiance

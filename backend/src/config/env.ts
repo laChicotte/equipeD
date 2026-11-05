@@ -19,6 +19,13 @@ export interface AppEnv {
   TURN_URLS: string[];
   /** Secret partagé avec coturn (use-auth-secret) : identifiants TURN temporaires par utilisateur. */
   TURN_SECRET: string;
+  /** Clé OpenAI (vide : l'assistance par IA est désactivée, tout le reste fonctionne). */
+  OPENAI_API_KEY: string;
+  OPENAI_MODEL: string;
+  OPENAI_BASE_URL: string;
+  /** Garde-fous de coût : nombre d'appels par personne et au total, par jour. */
+  AI_USER_DAILY_LIMIT: number;
+  AI_GLOBAL_DAILY_LIMIT: number;
 }
 
 export function validateEnv(raw: Record<string, unknown>): AppEnv {
@@ -83,6 +90,14 @@ export function validateEnv(raw: Record<string, unknown>): AppEnv {
     errors.push('TURN_SECRET (16 caractères au moins) est obligatoire avec TURN_URLS');
   }
 
+  const positive = (key: string, fallback: number) => {
+    const value = Number(raw[key] ?? fallback);
+    if (!Number.isInteger(value) || value <= 0) errors.push(`${key} doit être un entier positif`);
+    return value;
+  };
+  const openAiBase = str('OPENAI_BASE_URL', 'https://api.openai.com/v1').replace(/\/+$/, '');
+  if (!/^https?:\/\//.test(openAiBase)) errors.push('OPENAI_BASE_URL doit être une URL');
+
   const env: AppEnv = {
     NODE_ENV: nodeEnv as AppEnv['NODE_ENV'],
     PORT: port,
@@ -96,6 +111,11 @@ export function validateEnv(raw: Record<string, unknown>): AppEnv {
     STUN_URLS: stunUrls,
     TURN_URLS: turnUrls,
     TURN_SECRET: turnSecret,
+    OPENAI_API_KEY: typeof raw.OPENAI_API_KEY === 'string' ? raw.OPENAI_API_KEY.trim() : '',
+    OPENAI_MODEL: str('OPENAI_MODEL', 'gpt-4o-mini'),
+    OPENAI_BASE_URL: openAiBase,
+    AI_USER_DAILY_LIMIT: positive('AI_USER_DAILY_LIMIT', 30),
+    AI_GLOBAL_DAILY_LIMIT: positive('AI_GLOBAL_DAILY_LIMIT', 1000),
   };
 
   if (errors.length > 0) {

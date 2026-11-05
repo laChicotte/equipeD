@@ -40,7 +40,7 @@
 - [x] Notifications in-app (demande reçue, acceptée ou refusée ; séance demandée, confirmée ou annulée ; retour sur objectif ; ressource partagée)
 
 ### P2
-- [x] Suggestions par score déterministe et explicable (pas d'IA)
+- [x] Suggestions par score déterministe et explicable ; IA facultative en assistance (orientation, explication, proposition de parcours validée)
 - [x] Visio : salle Jitsi Meet générée automatiquement à la confirmation (service externe, présenté comme tel ; pas de WebRTC maison)
 - [x] Espace d’opportunités (stages, emplois, appels à projets, bourses, formations, événements), avec archivage et échéances
 - [x] Confidentialité : export JSON de ses données, suppression du compte par anonymisation (l’historique de l’autre participant est préservé)
@@ -48,7 +48,7 @@
 - [x] Ateliers thématiques de groupe (planification, réponses des membres, salle de visio, notifications)
 - [x] Rapport d’impact exportable (CSV) et imprimable depuis le pilotage
 - [x] Réinitialisation du mot de passe par lien à usage unique remis par l’équipe
-- [x] PWA installable (manifeste, icônes, page hors ligne)
+- [x] PWA installable (manifeste, icônes), relecture sans réseau, messages différés, économie de données
 - [ ] Emails transactionnels
 
 ## Frontend

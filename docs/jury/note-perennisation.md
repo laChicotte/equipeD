@@ -12,8 +12,8 @@ Il repose sur des technologies ouvertes et répandues (Next.js, NestJS, PostgreS
 | Horizon | Objectifs produit | Objectifs programme |
 |---|---|---|
 | **0–3 mois** (pilote) | Mise en production sécurisée (HTTPS, sauvegardes), emails transactionnels, charte d’utilisation et politique de confidentialité, dépôt de documents dans la bibliothèque | Pilote avec une première cohorte de mentors issus du réseau du Salon et des partenaires ; procédure de vérification des mentors ; collecte des premiers retours |
-| **3–6 mois** | Visioconférence intégrée via une solution éprouvée (pas de WebRTC maison), application mobile installable (PWA), espace « opportunités » (stages, appels à projets), tableaux de bord pour les partenaires | Élargissement aux établissements d'enseignement et aux incubateurs ; ateliers thématiques en lien avec les séances |
-| **6–12 mois** | Recommandation améliorée (éventuellement assistée par IA si les données montrent un gain mesurable), parcours types par domaine, mode faible connectivité, multilingue | Réseau d'ambassadeurs, partenariats entreprises et institutions, programme de reconnaissance des mentors |
+| **3–6 mois** | Appels de groupe via un serveur média dédié, relais TURN en production, espace « opportunités » (stages, appels à projets), tableaux de bord pour les partenaires | Élargissement aux établissements d'enseignement et aux incubateurs ; ateliers thématiques en lien avec les séances |
+| **6–12 mois** | Recommandation améliorée (mesure de l'apport réel de l'assistance par IA), multilingue | Réseau d'ambassadeurs, partenariats entreprises et institutions, programme de reconnaissance des mentors |
 
 ## 3. Modération et validation des mentors
 

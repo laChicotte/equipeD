@@ -1,10 +1,8 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowRight, Eye, EyeOff, FlaskConical } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -15,6 +13,7 @@ import { api } from '@/lib/api';
 import { applyApiError } from '@/lib/forms';
 import type { Me } from '@/lib/types';
 import { isDemoMode, isStaff } from '@/lib/utils';
+import { AuthHeading, PasswordInput } from './password-input';
 
 const schema = z.object({
   email: z.email('Saisissez une adresse email valide.'),
@@ -55,7 +54,6 @@ export function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
   const login = useLogin();
-  const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<Values>({
     resolver: zodResolver(schema),
@@ -75,50 +73,28 @@ export function LoginForm() {
   });
 
   return (
-    <div className="animate-fade-in">
-      <h1 className="text-4xl font-display font-semibold tracking-[-0.03em] text-ink-900">
-        Bon retour parmi nous
-      </h1>
-      <p className="mt-2 text-[15px] text-muted-foreground">
-        Connectez-vous pour retrouver vos demandes, vos séances et vos conversations.
-      </p>
+    <div>
+      <AuthHeading title="Connexion">
+        Retrouvez vos demandes, vos séances et vos conversations.
+      </AuthHeading>
 
       <form onSubmit={onSubmit} noValidate className="mt-8 grid gap-5">
         <Field label="Adresse email" error={formState.errors.email?.message}>
           <Input type="email" autoComplete="email" inputMode="email" {...register('email')} />
         </Field>
-        <Field label="Mot de passe" error={formState.errors.password?.message}>
-          <div className="relative">
-            <Input
-              type={showPassword ? 'text' : 'password'}
-              autoComplete="current-password"
-              className="pr-12"
-              {...register('password')}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword((v) => !v)}
-              className="absolute top-1/2 right-1 inline-flex size-9 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:bg-surface-muted hover:text-foreground"
-              aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
-              aria-pressed={showPassword}
-            >
-              {showPassword ? (
-                <EyeOff className="size-4" aria-hidden />
-              ) : (
-                <Eye className="size-4" aria-hidden />
-              )}
-            </button>
-          </div>
-        </Field>
-        <Link
-          href="/mot-de-passe-oublie"
-          className="-mt-2 justify-self-end text-sm font-medium text-accent hover:underline"
-        >
-          Mot de passe oublié ?
-        </Link>
-        <Button type="submit" size="lg" loading={login.isPending} className="mt-1 w-full">
+        <div className="grid gap-2">
+          <Field label="Mot de passe" error={formState.errors.password?.message}>
+            <PasswordInput autoComplete="current-password" {...register('password')} />
+          </Field>
+          <Link
+            href="/mot-de-passe-oublie"
+            className="justify-self-end text-sm font-medium text-accent hover:underline"
+          >
+            Mot de passe oublié ?
+          </Link>
+        </div>
+        <Button type="submit" size="lg" loading={login.isPending} className="w-full">
           Se connecter
-          {!login.isPending && <ArrowRight aria-hidden />}
         </Button>
       </form>
 
@@ -130,12 +106,11 @@ export function LoginForm() {
       </p>
 
       {isDemoMode && (
-        <div className="mt-8 rounded-lg border border-dashed border-border-strong bg-surface p-4">
-          <p className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-            <FlaskConical className="size-3.5 text-amber-500" aria-hidden />
-            Comptes de démonstration (fictifs)
-          </p>
-          <ul className="mt-3 grid gap-1">
+        <details className="group mt-8 border-t border-border pt-4 text-sm">
+          <summary className="cursor-pointer font-medium text-muted-foreground hover:text-foreground">
+            Essayer avec un compte de démonstration
+          </summary>
+          <ul className="mt-2 grid gap-0.5">
             {DEMO_ACCOUNTS.map((a) => (
               <li key={a.email}>
                 <button
@@ -144,7 +119,7 @@ export function LoginForm() {
                     setValue('email', a.email, { shouldValidate: true });
                     setValue('password', DEMO_PASSWORD, { shouldValidate: true });
                   }}
-                  className="flex w-full items-center justify-between gap-3 rounded-md px-2.5 py-2 text-left text-sm transition-colors hover:bg-surface-muted"
+                  className="flex w-full items-center justify-between gap-3 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-surface-muted"
                 >
                   <span className="font-semibold">{a.label}</span>
                   <span className="truncate text-xs text-muted-foreground">{a.role}</span>
@@ -152,10 +127,7 @@ export function LoginForm() {
               </li>
             ))}
           </ul>
-          <p className="mt-2 px-2.5 text-xs text-muted-foreground">
-            Cliquez pour pré-remplir, puis « Se connecter ».
-          </p>
-        </div>
+        </details>
       )}
     </div>
   );

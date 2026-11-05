@@ -599,3 +599,25 @@ Frontend : onglet **Objectifs** → « Parcours guidé » (et encart « Parcours
 
 `VerificationRequest = { id, kind: 'MENTOR_VERIFICATION'|'MENTOR_APPLICATION', status: 'PENDING'|'APPROVED'|'REJECTED'|'WITHDRAWN', message, profileUrl, decisionNote, decidedAt, createdAt, documents[] }`. Notifications `VERIFICATION_APPROVED` et `VERIFICATION_REJECTED` ; décisions tracées dans le journal d'audit. La base garantit une seule demande en attente par personne et un motif pour chaque refus. Frontend : section « Vérification du profil » ou « Devenir mentor » dans `/compte`, page `/devenir-mentor`, page `/admin/verifications`.
 
+## Ajouts du 6 novembre 2026 : hors ligne, faible débit et assistance par IA
+
+**Hors ligne** (build de production : le service worker n'est pas actif avec `pnpm dev`).
+- Le cache TanStack Query est écrit dans IndexedDB (`features/offline/cache.ts`), 7 jours au plus : session, profil, tableau de bord, mentorats, messages, objectifs, séances, groupes. Effacé dès qu'il n'y a plus de session.
+- Après la connexion, les 5 dernières conversations et les pages de l'espace connecté sont préchargées, sauf en économie de données.
+- `POST /mentorships/:id/messages` et `POST /groups/:id/messages` acceptent `clientId` (8 à 64 caractères, lettres, chiffres, tiret) : renvoyer le même identifiant renvoie le même message.
+- La file d'envoi (`features/offline/outbox.ts`) ne contient que du texte. Les fichiers exigent le réseau.
+- `lib/connectivity.ts` combine `navigator.onLine` et l'échec réel des requêtes (test de `/health` toutes les 15 s).
+
+**Économie de données** (`lib/data-saver.ts`) : automatique sur 2G ou si le téléphone le demande, réglable dans Mon compte. Actualisations espacées (`poll()`), photos décoratives et de profil masquées, photos de conversation à la demande.
+
+**Assistance par IA** (`modules/ai`, facultative, `OPENAI_API_KEY` dans `backend/.env`). Le score reste calculé par les règles.
+
+| Route | Accès | Détail |
+|---|---|---|
+| `GET /ai/status` | 🔒 | `{ enabled, remainingToday }` : l'interface masque l'assistant si `enabled` est faux |
+| `POST /ai/orientation` | 🔒, 10/min | `{ need (20–1000) }` → `{ summary, domains[{ id, slug, name, reason }], skills[] }` (domaines limités au catalogue) |
+| `POST /ai/mentors/:id/explanation` | 🔒 MENTEE, 20/min | `{ score, reasons[], text, source: 'ai'\|'rules' }` ; sans IA, `text` est nul et les raisons restent (mise en cache 24 h) |
+| `POST /ai/mentorships/:id/path-proposal` | 🔒 participant (mentorat actif), 10/min | `{ focus? (≤300) }` → `{ goals[{ title, description, milestones[] }] }` : rien n'est enregistré, l'interface crée ensuite les objectifs validés via `POST /mentorships/:id/goals` |
+
+Erreurs : 503 `AI_UNAVAILABLE`, 429 `AI_QUOTA_REACHED` (30 appels par personne et 1000 au total par jour, réglables). Emails, liens et numéros sont retirés des textes libres avant l'envoi ; aucun nom ni message privé n'est transmis.
+

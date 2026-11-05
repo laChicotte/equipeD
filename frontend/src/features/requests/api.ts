@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
+import { poll } from '@/lib/data-saver';
 import type { MentorshipRequest, MentorshipRequestStatus } from '@/lib/types';
 
 export function useRequests(
@@ -13,7 +14,7 @@ export function useRequests(
     queryKey: ['requests', box, status ?? 'all'],
     queryFn: () => api<MentorshipRequest[]>(`/mentorship-requests/${box}`, { query: { status } }),
     enabled,
-    refetchInterval: 30_000,
+    refetchInterval: () => poll(30_000),
   });
 }
 

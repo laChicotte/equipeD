@@ -10,7 +10,7 @@ Hackathon « Talents connectés », Conakry, 4–7 novembre 2026. Monolithe modu
 
 ## Structure
 - `backend/` : NestJS 12 (ESM, TypeScript 6, Vitest, oxlint), Prisma 7.10.1 (générateur `prisma-client`, adaptateur `pg`, client généré dans `backend/src/generated/`, ignoré par git), PostgreSQL 17.
-  - `src/modules/*` : auth, domains, profile (dont photo de profil), mentors, matching, mentorship-requests, mentorships, scheduling (availability, sessions et évaluations), messages, goals, resources, opportunities, certificates, notifications, dashboard, admin, platform (pilotage, équipe, journal d’audit, certificats, rapport d’impact), verification (vérification des profils et candidatures de mentor), groups, calls, realtime, health.
+  - `src/modules/*` : auth, domains, profile (dont photo de profil), mentors, matching, mentorship-requests, mentorships, scheduling (availability, sessions et évaluations), messages, goals, resources, opportunities, certificates, notifications, dashboard, admin, platform (pilotage, équipe, journal d’audit, certificats, rapport d’impact), verification (vérification des profils et candidatures de mentor), ai (assistance facultative via OpenAI), groups, calls, realtime, health.
   - `src/common` : gardes (session globale, rôles), middleware CSRF par Origin, filtre d'erreurs, ValidationPipe (422).
   - `prisma/migrations/*_integrity_constraints` : index partiels et contraintes d'exclusion (anti double réservation). **Ne pas les supprimer.**
 - `frontend/` : Next.js 16.4.5, App Router, React 19.3, Tailwind 4. Lire `frontend/AGENTS.md` (breaking changes de Next 16).
@@ -26,10 +26,10 @@ pnpm db:demo-reset    # remet à zéro le parcours d'Aminata
 pnpm dev:backend      # http://localhost:4000/api/v1 — Swagger : /api/docs
 pnpm dev:frontend     # http://localhost:3000
 pnpm --filter backend test      # tests unitaires (Vitest)
-pnpm --filter backend test:e2e  # 142 tests e2e sur talents_connectes_test (recréée à chaque fois ; copier backend/.env.test.example vers .env.test)
+pnpm --filter backend test:e2e  # 149 tests e2e sur talents_connectes_test (recréée à chaque fois ; copier backend/.env.test.example vers .env.test)
 pnpm --filter backend typecheck
 pnpm --filter backend lint
-pnpm --filter frontend test:e2e # Playwright : scénario de démo complet (ports 3100/4100, remet la démo à zéro)
+pnpm --filter frontend test:e2e # Playwright : scénario de démo complet et mode hors ligne (ports 3100/4100, remet la démo à zéro)
 ```
 Comptes de démo (dev uniquement) : `<prenom>@demo.talents-connectes.test`, mot de passe `Mentorat2026!` (aminata, mohamed, fatoumata, thierno, mariama, sekou, aissatou, lansana, admin).
 
@@ -42,7 +42,8 @@ Comptes de démo (dev uniquement) : `<prenom>@demo.talents-connectes.test`, mot 
 - CSRF : vérification de l'en-tête `Origin` sur les méthodes modifiantes (liste `WEB_ORIGINS`).
 - Invariants garantis par la base (et non par l'interface) : 1 demande PENDING par couple, 1 mentorat ACTIVE par couple, aucun chevauchement de créneaux ni de séances (exclusion GiST), 1 séance active par créneau.
 - Erreurs : `{ statusCode, code, message, details?, path, timestamp }` ; codes métier stables (voir le handoff §4).
-- Suggestions : score déterministe et explicable (`modules/matching/matching.ts`), **pas d'IA**.
+- Suggestions : score déterministe et explicable (`modules/matching/matching.ts`). L'IA (OpenAI, côté serveur, facultative : `OPENAI_API_KEY`) assiste sans décider : orientation, reformulation des raisons du score, proposition de parcours validée par un participant. Aucun nom, email ni message privé envoyé ; rien ne casse sans clé.
+- Hors ligne : cache TanStack Query persisté dans IndexedDB (`features/offline`), file d'envoi des messages avec `clientId` (pas de doublon), effacement à la déconnexion. Sans réseau, `/mentorats/<id>` passe par la route statique `/mentorats/consultation?id=` (service worker).
 - Dates en UTC (timestamptz) ; affichage dans le fuseau de l'utilisateur (`Africa/Conakry` par défaut).
 
 ## Conventions
@@ -52,10 +53,10 @@ Comptes de démo (dev uniquement) : `<prenom>@demo.talents-connectes.test`, mot 
 - **Git : Claude ne fait ni `git add`, ni `git commit`, ni `git push`.** Il crée la branche, code, vérifie, puis propose les commandes à Bakary. Aucune attribution à Claude dans les commits ni dans les documents.
 
 ## État au 5 novembre 2026
-- Backend P0 et P1 complets (chat, objectifs, évaluation des séances, ressources, notifications, compte, clôture de mentorat, admin avec gestion des domaines, opportunités, export et suppression de compte, photo de profil, certificats d’accompagnement vérifiables). Plus de capacité maximale par mentor. Parcours guidés, ateliers de groupe, rapport d’impact CSV, réinitialisation du mot de passe par lien remis par l’équipe. Vérifiés par 15 tests unitaires et **142 tests e2e** sur un vrai PostgreSQL (double réservation concurrente, accès d'un tiers, transitions invalides, CSRF…).
+- Backend P0 et P1 complets (chat, objectifs, évaluation des séances, ressources, notifications, compte, clôture de mentorat, admin avec gestion des domaines, opportunités, export et suppression de compte, photo de profil, certificats d’accompagnement vérifiables). Plus de capacité maximale par mentor. Parcours guidés, ateliers de groupe, rapport d’impact CSV, réinitialisation du mot de passe par lien remis par l’équipe. Vérifiés par 22 tests unitaires et **149 tests e2e** sur un vrai PostgreSQL (double réservation concurrente, accès d'un tiers, transitions invalides, CSRF…).
 - CI GitHub Actions : `.github/workflows/ci.yml` (backend : typecheck, lint, tests unitaires et e2e, build).
 - Livrables du jury : `docs/jury/` (présentation, scénario de démo, note de pérennisation, pitch, checklist).
 - Frontend : complet et relié à l'API (accueil, annuaire, fiche mentor, demandes, séances avec évaluation, espace de mentorat avec ressources et clôture, ressources, opportunités, notifications, compte, administration). Direction visuelle inspirée de NOVA : Lexend pour les titres, Schibsted Grotesk pour le texte, bleu encre, turquoise et ambre, photos sous licence libre (crédits dans `frontend/public/images/credits.json`).
 - Temps réel : WebSocket `/api/v1/ws` (cookie de session + Origin) pour les nouveaux messages et la signalisation des appels audio/vidéo WebRTC (conversations privées). État des appels en mémoire : une seule instance de l'API. TURN (coturn) optionnel : `docker compose --profile calls`.
-- PWA installable (manifeste, service worker en production) ; appels audio plafonnés à 32 kbit/s avec compteur de données.
+- PWA installable (manifeste, service worker en production uniquement) ; relecture et envoi différé sans réseau ; économie de données (automatique sur 2G, réglable dans Mon compte) ; appels audio plafonnés à 32 kbit/s avec compteur de données.
 - À faire côté backend : emails transactionnels (la réinitialisation passe pour l’instant par un lien remis par l’équipe) ; surveiller l'avertissement `pg` émis par `@prisma/adapter-pg` 7.10.1 dans les transactions.
