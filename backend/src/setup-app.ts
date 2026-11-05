@@ -14,7 +14,8 @@ export function setupApp(app: INestApplication): void {
   const express = app as NestExpressApplication;
 
   // Derrière le proxy Next.js (même machine) : IP réelle via X-Forwarded-For pour le rate limiting.
-  express.set('trust proxy', 'loopback');
+  // Next.js transmet X-Forwarded-For tel quel ; derrière un hébergeur, TRUST_PROXY=1 (voir env.ts).
+  express.set('trust proxy', config.get('TRUST_PROXY'));
   express.disable('x-powered-by');
   express.useBodyParser('json', { limit: '100kb' });
 

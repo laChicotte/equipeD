@@ -57,6 +57,7 @@ Comptes de démo (dev uniquement) : `<prenom>@demo.talents-connectes.test`, mot 
 
 ## État au 5 novembre 2026
 - Backend P0 et P1 complets (chat, objectifs, évaluation des séances, ressources, notifications, compte, clôture de mentorat, admin avec gestion des domaines, opportunités, export et suppression de compte, photo de profil, certificats d’accompagnement vérifiables). Plus de capacité maximale par mentor. Parcours guidés, ateliers de groupe, rapport d’impact CSV, réinitialisation du mot de passe par lien remis par l’équipe. Vérifiés par 30 tests unitaires et **151 tests e2e** sur un vrai PostgreSQL (double réservation concurrente, accès d'un tiers, transitions invalides, CSRF…).
+- Hébergement de test gratuit : Render (`render.yaml` + `Dockerfile` racine tout-en-un, `deploy/start.sh`), mode d'emploi dans `docs/deploiement.md`. `TRUST_PROXY=1` derrière Render (IP réelle pour les limites de débit).
 - CI GitHub Actions : `.github/workflows/ci.yml` (backend : typecheck, lint, tests unitaires et e2e, build).
 - Livrables du jury : `docs/jury/` (présentation, scénario de démo, note de pérennisation, pitch, checklist).
 - Frontend : complet et relié à l'API (accueil, annuaire, fiche mentor, demandes, séances avec évaluation, espace de mentorat avec ressources et clôture, ressources, opportunités, notifications, compte, administration). Direction visuelle inspirée de NOVA : Lexend pour les titres, Schibsted Grotesk pour le texte, bleu encre, turquoise et ambre, photos sous licence libre (crédits dans `frontend/public/images/credits.json`).

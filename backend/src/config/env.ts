@@ -11,6 +11,11 @@ export interface AppEnv {
   SESSION_TTL_HOURS: number;
   SESSION_SECRET: string;
   SWAGGER_ENABLED: boolean;
+  /**
+   * Proxys de confiance pour retrouver l'IP réelle (limites de débit) : `loopback` quand seul
+   * Next.js est devant l'API, un nombre de sauts derrière un hébergeur (Render : 1).
+   */
+  TRUST_PROXY: string | number;
   /** Base des liens de visio générés à la confirmation (vide = désactivé). */
   MEETING_BASE_URL: string;
   /** Serveurs STUN pour les appels WebRTC (vide : candidats locaux seulement, suffisant sur un même réseau). */
@@ -99,6 +104,9 @@ export function validateEnv(raw: Record<string, unknown>): AppEnv {
     if (!Number.isInteger(value) || value <= 0) errors.push(`${key} doit être un entier positif`);
     return value;
   };
+  const trustRaw = str('TRUST_PROXY', 'loopback');
+  const trustProxy = /^\d+$/.test(trustRaw) ? Number(trustRaw) : trustRaw;
+
   const openAiBase = str('OPENAI_BASE_URL', 'https://api.openai.com/v1').replace(/\/+$/, '');
   if (!/^https?:\/\//.test(openAiBase)) errors.push('OPENAI_BASE_URL doit être une URL');
 
@@ -111,6 +119,7 @@ export function validateEnv(raw: Record<string, unknown>): AppEnv {
     SESSION_TTL_HOURS: ttl,
     SESSION_SECRET: secret,
     SWAGGER_ENABLED: str('SWAGGER_ENABLED', nodeEnv === 'production' ? 'false' : 'true') === 'true',
+    TRUST_PROXY: trustProxy,
     MEETING_BASE_URL: meetingBase,
     STUN_URLS: stunUrls,
     TURN_URLS: turnUrls,
