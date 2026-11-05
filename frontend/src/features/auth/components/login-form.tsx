@@ -14,7 +14,7 @@ import { homeFor, useLogin } from '@/features/auth/api';
 import { api } from '@/lib/api';
 import { applyApiError } from '@/lib/forms';
 import type { Me } from '@/lib/types';
-import { isDemoMode } from '@/lib/utils';
+import { isDemoMode, isStaff } from '@/lib/utils';
 
 const schema = z.object({
   email: z.email('Saisissez une adresse email valide.'),
@@ -68,9 +68,7 @@ export function LoginForm() {
       onSuccess: async () => {
         const me = await api<Me>('/auth/me');
         const next = safeNext(params.get('next'));
-        router.replace(
-          me.hasProfile || me.role === 'ADMIN' ? (next ?? homeFor(me)) : '/onboarding',
-        );
+        router.replace(me.hasProfile || isStaff(me.role) ? (next ?? homeFor(me)) : '/onboarding');
       },
       onError: (error) => applyApiError(error, setError, ['email', 'password']),
     });

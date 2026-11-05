@@ -15,6 +15,7 @@ import { TIMEZONES, roleLabels } from '@/lib/labels';
 import type { Me } from '@/lib/types';
 import { useAccountMutations } from './api';
 import { AvatarSection } from './avatar-editor';
+import { isStaff } from '@/lib/utils';
 
 function Section({
   icon: Icon,
@@ -351,7 +352,7 @@ export function AccountView() {
             </Button>
           </div>
         </Section>
-        {me.role !== 'ADMIN' && (
+        {!isStaff(me.role) && (
           <Section
             icon={ShieldAlert}
             title="Supprimer le compte"

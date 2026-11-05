@@ -21,6 +21,7 @@ import type { Prisma } from '../../generated/prisma/client.js';
 import { ResourceKind } from '../../generated/prisma/enums.js';
 import { MentorshipAccessService } from '../mentorships/mentorship-access.service.js';
 import { NotificationsService } from '../notifications/notifications.module.js';
+import { isStaff, recordAudit } from '../../common/audit.js';
 
 const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
 const emptyToUndefined = ({ value }: { value: unknown }) => {
@@ -177,18 +178,26 @@ export class ResourcesService {
   async remove(user: AuthUser, id: string) {
     const resource = await this.prisma.resource.findUnique({
       where: { id },
-      select: { authorId: true, mentorshipId: true },
+      select: { authorId: true, mentorshipId: true, title: true },
     });
     if (!resource) throw notFound('RESOURCE_NOT_FOUND', 'Ressource introuvable.');
     if (resource.mentorshipId) {
       // Ressource privée : on ne révèle son existence qu'aux participants.
       await this.access.assertParticipant(user, resource.mentorshipId);
     }
-    const isModerator = user.role === 'ADMIN' && resource.mentorshipId === null;
+    const isModerator = isStaff(user.role) && resource.mentorshipId === null;
     if (resource.authorId !== user.id && !isModerator) {
       throw forbidden('NOT_RESOURCE_AUTHOR', 'Seul l’auteur peut supprimer cette ressource.');
     }
     await this.prisma.resource.delete({ where: { id } });
+    if (resource.authorId !== user.id) {
+      await recordAudit(this.prisma, user, {
+        action: 'RESOURCE_REMOVED',
+        targetType: 'RESOURCE',
+        targetId: id,
+        summary: `Ressource publique retirée : « ${resource.title} »`,
+      });
+    }
     return { ok: true };
   }
 

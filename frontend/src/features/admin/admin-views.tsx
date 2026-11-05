@@ -32,10 +32,11 @@ import {
 } from '@/lib/labels';
 import type { MentorshipRequestStatus, Role, SessionStatus, VerificationStatus } from '@/lib/types';
 import { useAdminMutations, useAdminOverview, useAdminUsers } from './api';
+import { isStaff } from '@/lib/utils';
 
 function useAdminGuard() {
   const { data: me } = useMe();
-  return { me, allowed: me?.role === 'ADMIN' };
+  return { me, allowed: isStaff(me?.role) };
 }
 
 function Tile({ label, value, icon: Icon }: { label: string; value: number; icon: typeof Users }) {

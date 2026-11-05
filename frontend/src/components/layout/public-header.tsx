@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/misc';
 import { homeFor, useMe } from '@/features/auth/api';
 import { allPhotos } from '@/lib/photos';
-import { cn } from '@/lib/utils';
+import { cn, isStaff } from '@/lib/utils';
 import { Logo } from './logo';
 import { NotificationBell } from './notification-bell';
 import { UserMenu } from './user-menu';
@@ -71,7 +71,7 @@ export function PublicHeader() {
               <Button asChild size="sm" className="hidden sm:inline-flex">
                 <Link href={homeFor(me)}>Mon espace</Link>
               </Button>
-              {me.role !== 'ADMIN' && (
+              {!isStaff(me.role) && (
                 <NotificationBell tone={overHero || pathname === '/' ? 'dark' : 'light'} />
               )}
               <UserMenu me={me} compact />

@@ -15,6 +15,7 @@ export const roleLabels: Record<Role, string> = {
   MENTEE: 'Mentoré·e',
   MENTOR: 'Mentor',
   ADMIN: 'Administrateur',
+  SUPER_ADMIN: 'Super-administrateur',
 };
 
 export const modalityLabels: Record<Modality, string> = {

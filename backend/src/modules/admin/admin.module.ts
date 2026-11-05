@@ -6,6 +6,7 @@ import { CurrentUser, Roles } from '../../common/auth/decorators.js';
 import type { AuthUser } from '../../common/auth/auth-user.js';
 import { conflict, forbidden, notFound } from '../../common/errors.js';
 import { Role, UserStatus, VerificationStatus } from '../../generated/prisma/enums.js';
+import { recordAudit } from '../../common/audit.js';
 import { AdminDomainsController, AdminDomainsService } from './admin-domains.js';
 
 export class AdminUsersQuery {
@@ -89,7 +90,7 @@ export class AdminService {
       throw forbidden('SELF_MODERATION', 'Vous ne pouvez pas modifier votre propre statut.');
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, status: true },
+      select: { id: true, status: true, role: true, firstName: true, lastName: true },
     });
     if (!user) throw notFound('USER_NOT_FOUND', 'Utilisateur introuvable.');
     if (user.status === 'DELETED') {
@@ -98,7 +99,19 @@ export class AdminService {
         'Ce compte a été supprimé par son titulaire : il ne peut pas être réactivé.',
       );
     }
+    if (user.role === 'SUPER_ADMIN' || (user.role === 'ADMIN' && admin.role !== 'SUPER_ADMIN')) {
+      throw forbidden(
+        'STAFF_PROTECTED',
+        'Seul un super-administrateur peut suspendre un membre de l’équipe.',
+      );
+    }
     const updated = await this.prisma.$transaction(async (tx) => {
+      await recordAudit(tx, admin, {
+        action: dto.status === 'SUSPENDED' ? 'USER_SUSPENDED' : 'USER_REACTIVATED',
+        targetType: 'USER',
+        targetId: userId,
+        summary: `${user.firstName} ${user.lastName} : compte ${dto.status === 'SUSPENDED' ? 'suspendu' : 'réactivé'}`,
+      });
       const u = await tx.user.update({
         where: { id: userId },
         data: { status: dto.status },
@@ -116,12 +129,22 @@ export class AdminService {
     return updated;
   }
 
-  async moderateMentor(userId: string, dto: UpdateMentorModerationDto) {
+  async moderateMentor(admin: AuthUser, userId: string, dto: UpdateMentorModerationDto) {
     const profile = await this.prisma.mentorProfile.findUnique({
       where: { userId },
-      select: { id: true },
+      select: { id: true, user: { select: { firstName: true, lastName: true } } },
     });
     if (!profile) throw notFound('MENTOR_NOT_FOUND', 'Profil mentor introuvable.');
+    const changes = [
+      dto.verificationStatus && `vérification : ${dto.verificationStatus}`,
+      dto.isPublished !== undefined && (dto.isPublished ? 'publié' : 'retiré de l’annuaire'),
+    ].filter(Boolean);
+    await recordAudit(this.prisma, admin, {
+      action: 'MENTOR_MODERATED',
+      targetType: 'MENTOR',
+      targetId: userId,
+      summary: `${profile.user.firstName} ${profile.user.lastName} : ${changes.join(', ') || 'aucun changement'}`,
+    });
     return this.prisma.mentorProfile.update({
       where: { userId },
       data: { verificationStatus: dto.verificationStatus, isPublished: dto.isPublished },
@@ -156,8 +179,12 @@ export class AdminController {
   }
 
   @Patch('mentors/:id')
-  moderateMentor(@Param('id') id: string, @Body() dto: UpdateMentorModerationDto) {
-    return this.admin.moderateMentor(id, dto);
+  moderateMentor(
+    @CurrentUser() admin: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: UpdateMentorModerationDto,
+  ) {
+    return this.admin.moderateMentor(admin, id, dto);
   }
 }
 

@@ -16,6 +16,7 @@ import { CurrentUser, Public } from '../../common/auth/decorators.js';
 import type { AuthenticatedRequest, AuthUser } from '../../common/auth/auth-user.js';
 import { DomainError, notFound, unprocessable } from '../../common/errors.js';
 import { PrismaService } from '../../database/prisma.service.js';
+import { isStaff } from '../../common/audit.js';
 
 /** Taille maximale acceptée (le navigateur envoie une image recadrée d'environ 50 à 150 Ko). */
 export const AVATAR_MAX_BYTES = 1024 * 1024;
@@ -115,7 +116,7 @@ export class AvatarService {
 
   private async canSeePrivate(ownerId: string, viewer: AuthUser | undefined) {
     if (!viewer) return false;
-    if (viewer.id === ownerId || viewer.role === 'ADMIN') return true;
+    if (viewer.id === ownerId || isStaff(viewer.role)) return true;
     const pair = [
       { mentorId: viewer.id, menteeId: ownerId },
       { mentorId: ownerId, menteeId: viewer.id },

@@ -14,9 +14,11 @@ import {
   Min,
 } from 'class-validator';
 import { PrismaService } from '../../database/prisma.service.js';
-import { Roles } from '../../common/auth/decorators.js';
+import { Roles, CurrentUser } from '../../common/auth/decorators.js';
 import { conflict, isConstraintViolation, notFound } from '../../common/errors.js';
 import { cleanTags } from '../../common/text.js';
+import { recordAudit } from '../../common/audit.js';
+import type { AuthUser } from '../../common/auth/auth-user.js';
 
 const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
 const KEBAB = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -116,16 +118,23 @@ export class AdminDomainsService {
     });
   }
 
-  async create(dto: CreateDomainDto) {
+  async create(actor: AuthUser, dto: CreateDomainDto) {
     const last = await this.prisma.expertiseDomain.findFirst({
       orderBy: { sortOrder: 'desc' },
       select: { sortOrder: true },
     });
     try {
-      return await this.prisma.expertiseDomain.create({
+      const created = await this.prisma.expertiseDomain.create({
         data: { ...dto, topics: cleanTags(dto.topics), sortOrder: (last?.sortOrder ?? -1) + 1 },
         select: domainSelect,
       });
+      await recordAudit(this.prisma, actor, {
+        action: 'DOMAIN_CREATED',
+        targetType: 'DOMAIN',
+        targetId: created.id,
+        summary: `Domaine créé : « ${created.name} »`,
+      });
+      return created;
     } catch (error) {
       if (isConstraintViolation(error)) {
         throw conflict('DOMAIN_SLUG_TAKEN', 'Un domaine utilise déjà ce slug.');
@@ -134,14 +143,23 @@ export class AdminDomainsService {
     }
   }
 
-  async update(id: string, dto: UpdateDomainDto) {
+  async update(actor: AuthUser, id: string, dto: UpdateDomainDto) {
     const exists = await this.prisma.expertiseDomain.count({ where: { id } });
     if (!exists) throw notFound('DOMAIN_NOT_FOUND', 'Domaine introuvable.');
-    return this.prisma.expertiseDomain.update({
+    const updated = await this.prisma.expertiseDomain.update({
       where: { id },
       data: { ...dto, topics: dto.topics ? cleanTags(dto.topics) : undefined },
       select: domainSelect,
     });
+    const what =
+      dto.isActive === false ? 'désactivé' : dto.isActive === true ? 'réactivé' : 'modifié';
+    await recordAudit(this.prisma, actor, {
+      action: 'DOMAIN_UPDATED',
+      targetType: 'DOMAIN',
+      targetId: id,
+      summary: `Domaine ${what} : « ${updated.name} »`,
+    });
+    return updated;
   }
 }
 
@@ -158,12 +176,12 @@ export class AdminDomainsController {
   }
 
   @Post()
-  create(@Body() dto: CreateDomainDto) {
-    return this.domains.create(dto);
+  create(@CurrentUser() actor: AuthUser, @Body() dto: CreateDomainDto) {
+    return this.domains.create(actor, dto);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateDomainDto) {
-    return this.domains.update(id, dto);
+  update(@CurrentUser() actor: AuthUser, @Param('id') id: string, @Body() dto: UpdateDomainDto) {
+    return this.domains.update(actor, id, dto);
   }
 }

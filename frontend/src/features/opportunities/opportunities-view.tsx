@@ -26,7 +26,7 @@ import { formatDate, fullName } from '@/lib/format';
 import { opportunityTypeLabels } from '@/lib/labels';
 import { photos } from '@/lib/photos';
 import type { Opportunity, OpportunityType } from '@/lib/types';
-import { cn } from '@/lib/utils';
+import { cn, isStaff } from '@/lib/utils';
 import { useMyOpportunities, useOpportunities, useOpportunityMutations } from './api';
 import { OpportunityDialog } from './opportunity-dialog';
 
@@ -181,7 +181,7 @@ export function OpportunitiesView() {
     remote,
     page,
   });
-  const canPublish = me?.role === 'MENTOR' || me?.role === 'ADMIN';
+  const canPublish = me?.role === 'MENTOR' || isStaff(me?.role);
 
   return (
     <>

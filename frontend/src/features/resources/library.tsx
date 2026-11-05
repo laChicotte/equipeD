@@ -12,7 +12,7 @@ import { useDomains } from '@/features/catalog/api';
 import { resourceKindLabels } from '@/lib/labels';
 import { photos } from '@/lib/photos';
 import type { ResourceKind } from '@/lib/types';
-import { cn } from '@/lib/utils';
+import { cn, isStaff } from '@/lib/utils';
 import { useLibrary } from './api';
 import { ResourceCard } from './resource-card';
 import { ResourceDialog } from './resource-dialog';
@@ -30,7 +30,7 @@ export function Library() {
   const [page, setPage] = useState(1);
   const [publishing, setPublishing] = useState(false);
   const lib = useLibrary({ q: query.length >= 2 ? query : undefined, domain, kind, page });
-  const canPublish = me?.role === 'MENTOR' || me?.role === 'ADMIN';
+  const canPublish = me?.role === 'MENTOR' || isStaff(me?.role);
 
   return (
     <>

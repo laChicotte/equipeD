@@ -13,14 +13,14 @@ import { useOpportunities } from '@/features/opportunities/api';
 import { formatDate, fullName } from '@/lib/format';
 import { opportunityTypeLabels, roleLabels, situationLabels } from '@/lib/labels';
 import type { MentorCard } from '@/lib/types';
-import { cn } from '@/lib/utils';
+import { cn, isStaff } from '@/lib/utils';
 
 const panel = 'overflow-hidden rounded-lg bg-surface shadow-card ring-1 ring-border/70';
 
 function ProfileCard() {
   const { data: me } = useMe();
   const profile = useProfile(!!me);
-  const dash = useDashboard(!!me && me.role !== 'ADMIN');
+  const dash = useDashboard(!!me && !isStaff(me.role));
   if (!me) return null;
 
   const subtitle =

@@ -23,6 +23,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { ResourcesModule } from './modules/resources/resources.module.js';
 import { OpportunitiesModule } from './modules/opportunities/opportunities.module.js';
 import { CertificatesModule } from './modules/certificates/certificates.module.js';
+import { SuperAdminModule } from './modules/superadmin/superadmin.module.js';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { CertificatesModule } from './modules/certificates/certificates.module.j
     ResourcesModule,
     OpportunitiesModule,
     CertificatesModule,
+    SuperAdminModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: AllExceptionsFilter },

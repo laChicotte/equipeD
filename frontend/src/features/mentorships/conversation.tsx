@@ -24,7 +24,17 @@ function groupMessages(messages: Message[], tz: string) {
   return days;
 }
 
-export function Conversation({ mentorship, me }: { mentorship: MentorshipSummary; me: Me }) {
+export function Conversation({
+  mentorship,
+  me,
+  className,
+  hideHeader = false,
+}: {
+  mentorship: MentorshipSummary;
+  me: Me;
+  className?: string;
+  hideHeader?: boolean;
+}) {
   const messages = useMessages(mentorship.id);
   const send = useSendMessage(mentorship.id);
   const markRead = useMarkRead(mentorship.id);
@@ -71,19 +81,26 @@ export function Conversation({ mentorship, me }: { mentorship: MentorshipSummary
   };
 
   return (
-    <div className="flex h-[min(68dvh,640px)] min-h-[420px] flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-card">
-      <div className="flex items-center gap-3 border-b border-border px-4 py-3 sm:px-5">
-        <Avatar person={other} size="sm" />
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold">
-            {other.firstName} {other.lastName}
-          </p>
-          <p className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Lock className="size-3" aria-hidden />
-            Conversation privée · visible de vous deux uniquement
-          </p>
+    <div
+      className={cn(
+        'flex h-[min(68dvh,640px)] min-h-[420px] flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-card',
+        className,
+      )}
+    >
+      {!hideHeader && (
+        <div className="flex items-center gap-3 border-b border-border px-4 py-3 sm:px-5">
+          <Avatar person={other} size="sm" />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold">
+              {other.firstName} {other.lastName}
+            </p>
+            <p className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Lock className="size-3" aria-hidden />
+              Conversation privée · visible de vous deux uniquement
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       <div
         ref={listRef}

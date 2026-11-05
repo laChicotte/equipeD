@@ -30,6 +30,7 @@ import { forbidden, notFound, unprocessable } from '../../common/errors.js';
 import { paginate, PaginationQuery } from '../../common/pagination.js';
 import type { Prisma } from '../../generated/prisma/client.js';
 import { OpportunityType } from '../../generated/prisma/enums.js';
+import { isStaff, recordAudit } from '../../common/audit.js';
 
 const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
 const emptyToUndefined = ({ value }: { value: unknown }) => {
@@ -239,7 +240,7 @@ export class OpportunitiesService {
     });
     if (!item) throw notFound('OPPORTUNITY_NOT_FOUND', 'Opportunité introuvable.');
     const isOpen = !item.archivedAt && (!item.deadline || item.deadline >= new Date());
-    const canSeeClosed = viewer && (viewer.role === 'ADMIN' || viewer.id === item.authorId);
+    const canSeeClosed = viewer && (isStaff(viewer.role) || viewer.id === item.authorId);
     if (!isOpen && !canSeeClosed) {
       throw notFound('OPPORTUNITY_NOT_FOUND', 'Cette opportunité n’est plus disponible.');
     }
@@ -285,13 +286,21 @@ export class OpportunitiesService {
   async update(user: AuthUser, id: string, dto: UpdateOpportunityDto) {
     const item = await this.prisma.opportunity.findUnique({
       where: { id },
-      select: { authorId: true },
+      select: { authorId: true, title: true },
     });
     if (!item) throw notFound('OPPORTUNITY_NOT_FOUND', 'Opportunité introuvable.');
-    if (item.authorId !== user.id && user.role !== 'ADMIN') {
+    if (item.authorId !== user.id && !isStaff(user.role)) {
       throw forbidden('NOT_OPPORTUNITY_AUTHOR', 'Seul l’auteur peut modifier cette opportunité.');
     }
     const { archived, deadline, ...fields } = dto;
+    if (item.authorId !== user.id && archived) {
+      await recordAudit(this.prisma, user, {
+        action: 'OPPORTUNITY_ARCHIVED',
+        targetType: 'OPPORTUNITY',
+        targetId: id,
+        summary: `Opportunité archivée par l’équipe : « ${item.title} »`,
+      });
+    }
     return this.prisma.opportunity.update({
       where: { id },
       data: {

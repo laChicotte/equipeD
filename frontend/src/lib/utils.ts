@@ -6,3 +6,8 @@ export function cn(...inputs: ClassValue[]): string {
 }
 
 export const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+
+/** Membre de l'équipe de la plateforme (administrateur ou super-administrateur). */
+export function isStaff(role: string | undefined | null): boolean {
+  return role === 'ADMIN' || role === 'SUPER_ADMIN';
+}

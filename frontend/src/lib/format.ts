@@ -89,3 +89,11 @@ export function initials(p: { firstName: string; lastName: string }): string {
 export function plural(n: number, singular: string, pluralForm?: string): string {
   return `${n} ${n > 1 ? (pluralForm ?? `${singular}s`) : singular}`;
 }
+
+/** Minuscules sans accents, pour une recherche tolérante (« developpement » trouve « Développement »). */
+export function normalizeText(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase();
+}

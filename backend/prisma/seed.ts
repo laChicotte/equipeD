@@ -340,7 +340,7 @@ async function upsertUser(
   key: string,
   firstName: string,
   lastName: string,
-  role: 'MENTOR' | 'MENTEE' | 'ADMIN',
+  role: 'MENTOR' | 'MENTEE' | 'ADMIN' | 'SUPER_ADMIN',
   passwordHash: string,
 ) {
   return prisma.user.upsert({
@@ -499,6 +499,8 @@ async function main() {
   }
 
   await upsertUser('admin', 'Équipe', 'Modération', 'ADMIN', passwordHash);
+  // Responsable de la plateforme (fictif) : pilotage, équipe, journal d'audit, certificats.
+  await upsertUser('superadmin', 'Direction', 'Plateforme', 'SUPER_ADMIN', passwordHash);
 
   // Un mentorat déjà actif (Mohamed ↔ Thierno) pour que les tableaux de bord ne soient pas vides.
   // Le parcours principal de démo (Aminata → Fatoumata) reste volontairement vierge.

@@ -1,4 +1,4 @@
-# Checklist de livraison — état réel au 4 novembre 2026
+# Checklist de livraison — état réel au 5 novembre 2026
 
 > Document honnête : il ne décrit comme opérationnel que ce qui a été **exécuté et vérifié**.
 > À mettre à jour par l'équipe frontend au fur et à mesure (section « Frontend »).
@@ -7,7 +7,7 @@
 
 | Livrable | État | Fichier |
 |---|---|---|
-| Prototype fonctionnel ou démontrable | Backend ✅ · Frontend 🚧 en cours (autre poste) | `backend/`, `frontend/` |
+| Prototype fonctionnel ou démontrable | ✅ Backend et frontend | `backend/`, `frontend/` |
 | Présentation du projet | ✅ | `docs/jury/presentation-projet.md` |
 | Démonstration du parcours utilisateur | ✅ scénario écrit · à répéter avec le frontend | `docs/jury/scenario-demo.md` |
 | Note de pérennisation | ✅ | `docs/jury/note-perennisation.md` |
@@ -55,6 +55,8 @@
 - [x] Espace de mentorat : conversation, objectifs et jalons, séances, ressources partagées, clôture avec bilan
 - [x] Bibliothèque de ressources (/ressources) et opportunités (/opportunites), publication par les mentors
 - [x] Cloche de notifications in-app
+- [x] Messagerie dédiée (/messages) : toutes les conversations, non-lus, recherche, conversation ouverte ; vue mobile en deux temps
+- [x] Espace super-administrateur : pilotage chiffré (indicateurs et activité sur 30 jours), équipe (nommer ou retirer un administrateur), journal d’audit, révocation motivée des certificats, modération des contenus
 - [x] Photo de profil : ajout, recadrage dans le navigateur, retrait ; visibilité limitée (publique pour un mentor publié, sinon aux personnes liées)
 - [x] Mon compte : informations, mot de passe, déconnexion de tous les appareils, export JSON, suppression
 - [x] Administration : vue d’ensemble, comptes, mentors, domaines
@@ -68,8 +70,8 @@
 | Typecheck backend | ✅ | `pnpm --filter backend typecheck` |
 | Lint (oxlint) | ✅ 0 avertissement | `pnpm --filter backend lint` |
 | Format (Prettier) | ✅ | `npx prettier --check "backend/{src,test,prisma}/**/*.ts"` |
-| Tests unitaires | ✅ 8/8 | `pnpm --filter backend test` |
-| Tests e2e sur un vrai PostgreSQL | ✅ **108/108** (12 fichiers, environ 40 s) | `pnpm --filter backend test:e2e` |
+| Tests unitaires | ✅ 7/7 | `pnpm --filter backend test` |
+| Tests e2e sur un vrai PostgreSQL | ✅ **113/113** (13 fichiers, environ 40 s) | `pnpm --filter backend test:e2e` |
 | Build | ✅ | `pnpm --filter backend build` |
 | CI GitHub Actions | ⏳ configurée (`.github/workflows/ci.yml`), à confirmer au premier push | |
 

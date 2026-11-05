@@ -5,11 +5,12 @@ Hackathon « Talents connectés », Conakry, 4–7 novembre 2026. Monolithe modu
 ## À lire en premier
 1. `TDR_Hackathon_Talents_Connectes_Mentorat_2026.md` : termes de référence, **source métier prioritaire**.
 2. `PROMPT_CLAUDE_CODE_HACKATHON_MENTORAT_2026.md` : cahier de mission technique et produit.
-3. `docs/HANDOFF_FRONTEND.md` : état réel, contrat d'API implémenté, plan frontend et système de design.
+3. `docs/HANDOFF_FRONTEND.md` : état réel et contrat d'API implémenté.
+4. `docs/architecture/overview.md`, `docs/product/mvp.md`, `docs/design/design-system.md` : architecture, périmètre produit, système de design.
 
 ## Structure
 - `backend/` : NestJS 12 (ESM, TypeScript 6, Vitest, oxlint), Prisma 7.10.1 (générateur `prisma-client`, adaptateur `pg`, client généré dans `backend/src/generated/`, ignoré par git), PostgreSQL 17.
-  - `src/modules/*` : auth, domains, profile, mentors, matching, mentorship-requests, mentorships, scheduling (availability, sessions et évaluations), messages, goals, resources, notifications, dashboard, admin, health.
+  - `src/modules/*` : auth, domains, profile (dont photo de profil), mentors, matching, mentorship-requests, mentorships, scheduling (availability, sessions et évaluations), messages, goals, resources, opportunities, certificates, notifications, dashboard, admin, superadmin, health.
   - `src/common` : gardes (session globale, rôles), middleware CSRF par Origin, filtre d'erreurs, ValidationPipe (422).
   - `prisma/migrations/*_integrity_constraints` : index partiels et contraintes d'exclusion (anti double réservation). **Ne pas les supprimer.**
 - `frontend/` : Next.js 16.4.5, App Router, React 19.3, Tailwind 4. Lire `frontend/AGENTS.md` (breaking changes de Next 16).
@@ -25,13 +26,15 @@ pnpm db:demo-reset    # remet à zéro le parcours d'Aminata
 pnpm dev:backend      # http://localhost:4000/api/v1 — Swagger : /api/docs
 pnpm dev:frontend     # http://localhost:3000
 pnpm --filter backend test      # tests unitaires (Vitest)
-pnpm --filter backend test:e2e  # 108 tests e2e sur talents_connectes_test (recréée à chaque fois ; copier backend/.env.test.example vers .env.test)
+pnpm --filter backend test:e2e  # 113 tests e2e sur talents_connectes_test (recréée à chaque fois ; copier backend/.env.test.example vers .env.test)
 pnpm --filter backend typecheck
 pnpm --filter backend lint
 ```
-Comptes de démo (dev uniquement) : `<prenom>@demo.talents-connectes.test`, mot de passe `Mentorat2026!` (aminata, mohamed, fatoumata, thierno, mariama, sekou, aissatou, lansana, admin).
+Comptes de démo (dev uniquement) : `<prenom>@demo.talents-connectes.test`, mot de passe `Mentorat2026!` (aminata, mohamed, fatoumata, thierno, mariama, sekou, aissatou, lansana, admin, superadmin).
 
 ## Décisions structurantes
+- Rôles : MENTEE, MENTOR, ADMIN, SUPER_ADMIN. Le super-administrateur hérite de tous les droits ADMIN (RolesGuard) et seul lui accède à `/superadmin/*` (pilotage, équipe, journal d'audit, révocation des certificats). Aucun endpoint ne permet de devenir SUPER_ADMIN.
+- Plus de capacité maximale par mentor ; certificat d'accompagnement délivré à la clôture d'un mentorat avec au moins une séance réalisée (instantané figé, vérifiable via `/certificats/<code>`).
 - **NestJS est la seule autorité** sur la logique métier et l'accès à PostgreSQL. Le frontend passe par un rewrite Next.js `/api/v1/*` → API (même origine).
 - Authentification : jeton de session opaque dans un cookie `tc_session` HttpOnly, SameSite=Lax (Secure en production). Seul le hash HMAC-SHA256 est stocké (`auth_sessions`), ce qui permet la révocation. Mots de passe en Argon2id. Pas de JWT.
 - CSRF : vérification de l'en-tête `Origin` sur les méthodes modifiantes (liste `WEB_ORIGINS`).
@@ -46,8 +49,8 @@ Comptes de démo (dev uniquement) : `<prenom>@demo.talents-connectes.test`, mot 
 - Pas de faux boutons, pas de données factices présentées comme réelles, pas de statistiques inventées.
 - **Git : Claude ne fait ni `git add`, ni `git commit`, ni `git push`.** Il crée la branche, code, vérifie, puis propose les commandes à Bakary. Aucune attribution à Claude dans les commits ni dans les documents.
 
-## État au 4 novembre 2026
-- Backend P0 et P1 complets (chat, objectifs, évaluation des séances, ressources, notifications, compte, clôture de mentorat, admin avec gestion des domaines, opportunités, export et suppression de compte, photo de profil, certificats d’accompagnement vérifiables). Plus de capacité maximale par mentor. Vérifiés par 8 tests unitaires et **108 tests e2e** sur un vrai PostgreSQL (double réservation concurrente, accès d'un tiers, transitions invalides, CSRF…).
+## État au 5 novembre 2026
+- Backend P0 et P1 complets (chat, objectifs, évaluation des séances, ressources, notifications, compte, clôture de mentorat, admin avec gestion des domaines, opportunités, export et suppression de compte, photo de profil, certificats d’accompagnement vérifiables). Plus de capacité maximale par mentor. Vérifiés par 8 tests unitaires et **113 tests e2e** sur un vrai PostgreSQL (double réservation concurrente, accès d'un tiers, transitions invalides, CSRF…).
 - CI GitHub Actions : `.github/workflows/ci.yml` (backend : typecheck, lint, tests unitaires et e2e, build).
 - Livrables du jury : `docs/jury/` (présentation, scénario de démo, note de pérennisation, pitch, checklist).
 - Frontend : complet et relié à l'API (accueil, annuaire, fiche mentor, demandes, séances avec évaluation, espace de mentorat avec ressources et clôture, ressources, opportunités, notifications, compte, administration). Direction visuelle inspirée de NOVA : Lexend pour les titres, Schibsted Grotesk pour le texte, bleu encre, turquoise et ambre, photos sous licence libre (crédits dans `frontend/public/images/credits.json`).

@@ -11,6 +11,7 @@ import type { AuthUser } from '../../common/auth/auth-user.js';
 import { forbidden, unprocessable } from '../../common/errors.js';
 import { hashPassword, verifyPassword } from '../auth/password.js';
 import { NotificationsService } from '../notifications/notifications.module.js';
+import { isStaff } from '../../common/audit.js';
 
 export class DeleteAccountDto {
   @IsString()
@@ -118,7 +119,7 @@ export class PrivacyService {
   }
 
   async deleteAccount(user: AuthUser, dto: DeleteAccountDto) {
-    if (user.role === 'ADMIN') {
+    if (isStaff(user.role)) {
       throw forbidden(
         'ADMIN_CANNOT_SELF_DELETE',
         'Un compte administrateur doit être retiré par un autre administrateur.',

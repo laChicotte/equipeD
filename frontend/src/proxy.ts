@@ -24,5 +24,6 @@ export const config = {
     '/disponibilites/:path*',
     '/admin/:path*',
     '/compte/:path*',
+    '/messages/:path*',
   ],
 };

@@ -40,6 +40,9 @@ pnpm dev:frontend                               # interface sur :3000
 
 ## Points forts à montrer si le jury pose la question
 
+- **Pilotage :** se connecter en `superadmin@demo.talents-connectes.test` → Pilotage (indicateurs réels, activité sur 30 jours, offre et demande par domaine), Journal d’audit (les actions faites pendant la démo y apparaissent), Certificats.
+- **Messagerie :** icône « Messages » dans la barre du haut : toutes les conversations au même endroit.
+
 - **Sécurité :** se connecter en tant que Mohamed et tenter d'ouvrir l'URL de la conversation d'Aminata → « Accès refusé ».
 - **Mobile :** passer l'outil de développement en largeur 375 px ; la navigation passe en barre d'onglets.
 - **API :** documentation Swagger sur `http://localhost:4000/api/docs`.
@@ -49,7 +52,7 @@ pnpm dev:frontend                               # interface sur :3000
 | Incident | Repli |
 |---|---|
 | Pas d'Internet | Rien n'en dépend : tout tourne en local (PostgreSQL dans Docker, API et interface sur le PC). Le lien de réunion n'est qu'affiché. |
-| Le frontend plante | Montrer le même parcours via Swagger (`/api/docs`) avec les deux comptes, ou lancer `pnpm --filter backend test:e2e` (108 tests en environ 45 s) |
+| Le frontend plante | Montrer le même parcours via Swagger (`/api/docs`) avec les deux comptes, ou lancer `pnpm --filter backend test:e2e` (113 tests en environ 45 s) |
 | Base dans un état inattendu | `pnpm db:demo-reset` (moins de 10 s) puis reprendre à l'étape 0:20 |
 | Docker ne démarre pas | Ouvrir Docker Desktop, attendre l'état « running », puis `pnpm db:up` ; prévoir une vidéo enregistrée du parcours |
 | Ordinateur de démo défaillant | Deuxième PC préparé à l'identique (clone du dépôt, même seed) |

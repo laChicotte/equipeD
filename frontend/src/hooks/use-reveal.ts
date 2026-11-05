@@ -9,7 +9,9 @@ import { useEffect } from 'react';
  */
 export function useReveal(deps: unknown[] = []) {
   useEffect(() => {
-    const targets = document.querySelectorAll<HTMLElement>('[data-reveal]:not(.is-in), .shutter:not(.is-in)');
+    const targets = document.querySelectorAll<HTMLElement>(
+      '[data-reveal]:not(.is-in), .shutter:not(.is-in)',
+    );
     if (!('IntersectionObserver' in window)) {
       targets.forEach((el) => el.classList.add('is-in'));
       return;

@@ -15,7 +15,7 @@ import {
 import { homeFor, useLogout } from '@/features/auth/api';
 import { roleLabels } from '@/lib/labels';
 import type { Me } from '@/lib/types';
-import { cn } from '@/lib/utils';
+import { cn, isStaff } from '@/lib/utils';
 
 export function UserMenu({
   me,
@@ -76,9 +76,9 @@ export function UserMenu({
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => router.push(homeFor(me))}>
           <LayoutDashboard aria-hidden />
-          {me.role === 'ADMIN' ? 'Administration' : 'Tableau de bord'}
+          {isStaff(me.role) ? 'Administration' : 'Tableau de bord'}
         </DropdownMenuItem>
-        {me.role !== 'ADMIN' && (
+        {!isStaff(me.role) && (
           <DropdownMenuItem onSelect={() => router.push('/onboarding')}>
             <UserRound aria-hidden />
             Modifier mon profil

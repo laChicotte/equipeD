@@ -1,6 +1,6 @@
 // Types alignés sur le contrat d'API réellement implémenté (docs/HANDOFF_FRONTEND.md §4).
 
-export type Role = 'MENTEE' | 'MENTOR' | 'ADMIN';
+export type Role = 'MENTEE' | 'MENTOR' | 'ADMIN' | 'SUPER_ADMIN';
 export type Modality = 'REMOTE' | 'IN_PERSON' | 'HYBRID';
 export type VerificationStatus = 'UNVERIFIED' | 'PENDING' | 'VERIFIED' | 'REJECTED';
 export type MenteeSituation =

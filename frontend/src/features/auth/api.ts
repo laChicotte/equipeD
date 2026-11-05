@@ -27,7 +27,7 @@ export interface RegisterInput {
   password: string;
   firstName: string;
   lastName: string;
-  role: Exclude<Role, 'ADMIN'>;
+  role: Exclude<Role, 'ADMIN' | 'SUPER_ADMIN'>;
 }
 
 export function useLogin() {
@@ -67,6 +67,7 @@ export function useLogout() {
 
 /** Page d'arrivée après connexion, selon le rôle et l'état du profil. */
 export function homeFor(me: Me): string {
+  if (me.role === 'SUPER_ADMIN') return '/admin/pilotage';
   if (me.role === 'ADMIN') return '/admin';
   if (!me.hasProfile) return '/onboarding';
   return '/tableau-de-bord';

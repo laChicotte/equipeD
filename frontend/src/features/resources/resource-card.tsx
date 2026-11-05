@@ -19,6 +19,7 @@ import { formatDate, fullName } from '@/lib/format';
 import { resourceKindLabels } from '@/lib/labels';
 import type { Me, Resource, ResourceKind } from '@/lib/types';
 import { useDeleteResource } from './api';
+import { isStaff } from '@/lib/utils';
 
 const KIND_ICONS: Record<ResourceKind, LucideIcon> = {
   ARTICLE: FileText,
@@ -33,7 +34,7 @@ export function ResourceCard({ resource, me }: { resource: Resource; me?: Me | n
   const remove = useDeleteResource();
   const Icon = KIND_ICONS[resource.kind];
   const canDelete =
-    !!me && (me.id === resource.author.id || (me.role === 'ADMIN' && !resource.mentorshipId));
+    !!me && (me.id === resource.author.id || (isStaff(me.role) && !resource.mentorshipId));
 
   return (
     <article className="flex h-full flex-col rounded-lg bg-surface p-5 ring-1 ring-border transition-shadow duration-300 hover:shadow-raised">

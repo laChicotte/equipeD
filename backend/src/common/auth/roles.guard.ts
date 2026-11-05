@@ -17,7 +17,10 @@ export class RolesGuard implements CanActivate {
     ]);
     if (!roles || roles.length === 0) return true;
     const user = context.switchToHttp().getRequest<AuthenticatedRequest>().user;
-    if (!user || !roles.includes(user.role)) {
+    const allowed =
+      !!user &&
+      (roles.includes(user.role) || (user.role === 'SUPER_ADMIN' && roles.includes('ADMIN')));
+    if (!allowed) {
       throw forbidden('ROLE_FORBIDDEN', "Votre rôle ne permet pas d'effectuer cette action.");
     }
     return true;

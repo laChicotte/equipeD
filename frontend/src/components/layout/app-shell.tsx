@@ -1,6 +1,11 @@
 'use client';
 
 import {
+  Award,
+  ChartColumn,
+  Flag,
+  ScrollText,
+  UsersRound,
   House,
   UserSearch,
   BookOpen,
@@ -10,6 +15,7 @@ import {
   CalendarPlus,
   Inbox,
   LayoutDashboard,
+  MessageSquareText,
   Search,
   Send,
   ShieldCheck,
@@ -21,10 +27,10 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Skeleton } from '@/components/ui/misc';
-import { useMe } from '@/features/auth/api';
+import { homeFor, useMe } from '@/features/auth/api';
 import { useDashboard } from '@/features/mentorships/api';
 import type { Me } from '@/lib/types';
-import { cn } from '@/lib/utils';
+import { cn, isStaff } from '@/lib/utils';
 import { DemoBanner } from './demo-banner';
 import { Logo } from './logo';
 import { PublicFooter, PublicHeader } from './public-header';
@@ -43,7 +49,37 @@ interface NavItem {
 }
 
 function navFor(me: Me): NavItem[] {
-  if (me.role === 'ADMIN') {
+  if (me.role === 'SUPER_ADMIN') {
+    return [
+      { href: '/admin/pilotage', label: 'Pilotage', short: 'Pilotage', icon: ChartColumn },
+      { href: '/admin/comptes', label: 'Comptes', short: 'Comptes', icon: UserCog },
+      { href: '/admin/mentors', label: 'Mentors', short: 'Mentors', icon: ShieldCheck },
+      { href: '/admin/equipe', label: 'Équipe', short: 'Équipe', icon: UsersRound },
+      { href: '/admin/journal', label: 'Journal d’audit', short: 'Journal', icon: ScrollText },
+      {
+        href: '/admin/certificats',
+        label: 'Certificats',
+        short: 'Certificats',
+        icon: Award,
+        desktopOnly: true,
+      },
+      {
+        href: '/admin/contenus',
+        label: 'Contenus',
+        short: 'Contenus',
+        icon: Flag,
+        desktopOnly: true,
+      },
+      {
+        href: '/admin/domaines',
+        label: 'Domaines',
+        short: 'Domaines',
+        icon: Shapes,
+        desktopOnly: true,
+      },
+    ];
+  }
+  if (isStaff(me.role)) {
     return [
       {
         href: '/admin',
@@ -82,14 +118,21 @@ function navFor(me: Me): NavItem[] {
         badge: 'requests',
       },
       {
-        href: '/mentorats',
-        label: 'Mes mentorés',
-        short: 'Mentorés',
-        icon: Users,
+        href: '/messages',
+        label: 'Messagerie',
+        short: 'Messages',
+        icon: MessageSquareText,
         badge: 'messages',
       },
+      { href: '/mentorats', label: 'Mes mentorés', short: 'Mentorés', icon: Users },
       { href: '/disponibilites', label: 'Disponibilités', short: 'Créneaux', icon: CalendarPlus },
-      { href: '/seances', label: 'Séances', short: 'Séances', icon: CalendarDays },
+      {
+        href: '/seances',
+        label: 'Séances',
+        short: 'Séances',
+        icon: CalendarDays,
+        desktopOnly: true,
+      },
       {
         href: '/ressources',
         label: 'Ressources',
@@ -111,13 +154,14 @@ function navFor(me: Me): NavItem[] {
     { href: '/mentors', label: 'Trouver un mentor', short: 'Mentors', icon: UserSearch },
     { href: '/demandes', label: 'Mes demandes', short: 'Demandes', icon: Send },
     {
-      href: '/mentorats',
-      label: 'Mes mentorats',
-      short: 'Mentorats',
-      icon: Users,
+      href: '/messages',
+      label: 'Messagerie',
+      short: 'Messages',
+      icon: MessageSquareText,
       badge: 'messages',
     },
-    { href: '/seances', label: 'Séances', short: 'Séances', icon: CalendarDays },
+    { href: '/mentorats', label: 'Mes mentorats', short: 'Mentorats', icon: Users },
+    { href: '/seances', label: 'Séances', short: 'Séances', icon: CalendarDays, desktopOnly: true },
     {
       href: '/ressources',
       label: 'Ressources',
@@ -164,7 +208,7 @@ function TopNav({
   return (
     <header className="sticky top-0 z-30 border-b border-border/70 print:hidden bg-surface/90 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-[1240px] items-center gap-3 px-4 sm:px-6">
-        <Logo href={me.role === 'ADMIN' ? '/admin' : '/tableau-de-bord'} className="text-ink-900" />
+        <Logo href={homeFor(me)} className="text-ink-900" />
 
         {/* Navigation centrale en pastilles */}
         <nav aria-label="Navigation de l’espace" className="mx-auto hidden min-w-0 lg:block">
@@ -229,7 +273,7 @@ function TopNav({
           />
         </form>
         <div className="flex shrink-0 items-center gap-0.5">
-          {me.role !== 'ADMIN' && <NotificationBell />}
+          {!isStaff(me.role) && <NotificationBell />}
           <UserMenu me={me} compact />
         </div>
       </div>
@@ -303,7 +347,7 @@ export function ShellSkeleton() {
 
 function AuthenticatedLayout({ me, children }: { me: Me; children: ReactNode }) {
   const items = navFor(me);
-  const counts = useBadgeCounts(me.role !== 'ADMIN' && me.hasProfile);
+  const counts = useBadgeCounts(!isStaff(me.role) && me.hasProfile);
   return (
     <div className="flex min-h-dvh flex-col bg-background">
       <DemoBanner />
@@ -325,8 +369,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const { data: me, isPending, isError } = useMe();
 
-  const needsOnboarding =
-    !!me && me.role !== 'ADMIN' && !me.hasProfile && pathname !== '/onboarding';
+  const needsOnboarding = !!me && !isStaff(me.role) && !me.hasProfile && pathname !== '/onboarding';
 
   useEffect(() => {
     if (isPending) return;
@@ -367,7 +410,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 export function AdaptiveShell({ children }: { children: ReactNode }) {
   const { data: me, isPending } = useMe();
   if (isPending) return <ShellSkeleton />;
-  if (me && (me.role === 'ADMIN' || me.hasProfile)) {
+  if (me && (isStaff(me.role) || me.hasProfile)) {
     return <AuthenticatedLayout me={me}>{children}</AuthenticatedLayout>;
   }
   return (

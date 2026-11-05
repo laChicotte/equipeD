@@ -20,6 +20,8 @@ enum Role {
   MENTEE
   MENTOR
   ADMIN
+  /// Responsable de la plateforme : droits d'administrateur, plus la gestion de l'équipe, le journal d'audit et la révocation des certificats.
+  SUPER_ADMIN
 }
 
 enum UserStatus {
@@ -151,6 +153,7 @@ model User {
 
   certificatesAsMentor MentorshipCertificate[] @relation("CertificateMentor")
   certificatesAsMentee MentorshipCertificate[] @relation("CertificateMentee")
+  auditEntries         AuditLog[]
 
   @@index([role, status])
   @@map("users")
@@ -358,6 +361,8 @@ model MentorshipCertificate {
   issuedAt          DateTime  @default(now()) @map("issued_at") @db.Timestamptz(3)
   /// Renseignée si le compte du mentor est supprimé : le certificat n'est plus valide.
   revokedAt         DateTime? @map("revoked_at") @db.Timestamptz(3)
+  /// Motif de la révocation (suppression du compte ou décision de l'équipe).
+  revokedReason     String?   @map("revoked_reason") @db.VarChar(300)
 
   mentorship Mentorship @relation(fields: [mentorshipId], references: [id], onDelete: Cascade)
   mentor     User       @relation("CertificateMentor", fields: [mentorId], references: [id], onDelete: Cascade)
@@ -365,6 +370,25 @@ model MentorshipCertificate {
 
   @@index([mentorId, issuedAt])
   @@map("mentorship_certificates")
+}
+
+/// Journal d'audit des actions de l'équipe (modération, rôles, certificats). Jamais le contenu des conversations.
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?  @map("actor_id")
+  /// Nom de l'auteur au moment de l'action (conservé si le compte disparaît).
+  actorName  String   @map("actor_name") @db.VarChar(170)
+  action     String   @db.VarChar(60)
+  targetType String   @map("target_type") @db.VarChar(40)
+  targetId   String?  @map("target_id")
+  summary    String   @db.VarChar(300)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([action, createdAt])
+  @@map("audit_logs")
 }
 
 // ─── Disponibilités & séances ────────────────────────────────────────────────

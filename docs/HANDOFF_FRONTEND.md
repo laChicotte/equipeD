@@ -488,3 +488,11 @@ frontend/src/
 - Aucune mention d'attribution à Claude dans les commits ni dans les documents.
 - Ne modifie pas `backend/` sans concertation. Si un endpoint manque, décris le besoin (route, entrée, sortie) dans `docs/BACKEND_REQUESTS.md`.
 - Ne jamais committer de `.env` (seuls les fichiers `.env.example` sont versionnés).
+
+## Ajouts du 5 novembre 2026
+
+- **Photo de profil** : `PUT /profile/me/avatar` (corps binaire JPEG, PNG ou WebP, 1 Mo maximum), `DELETE /profile/me/avatar`, `GET /users/:id/avatar?v=<date>` (public pour un mentor publié, sinon la personne, l'équipe ou une personne liée). Les personnes renvoyées par l'API portent `avatarUpdatedAt`.
+- **Certificats** : `GET /certificates/:code` (public), `GET /mentors/:id/certificates` (public), `GET /certificates/me`. La clôture d'un mentorat renvoie `certificate: { code, issuedAt } | null`.
+- **Fiche mentor** : `mentoredCount` (personnes distinctes accompagnées, tous domaines), `certificatesCount` ; plus de `maxMentees` ni de `acceptingMentees`.
+- **Super-administrateur** (`@Roles('SUPER_ADMIN')`) : `GET /superadmin/metrics`, `GET /superadmin/team`, `PATCH /superadmin/users/:id/role` (`ADMIN`, `MENTOR` ou `MENTEE`), `GET /superadmin/audit?action=&page=`, `GET /superadmin/certificates`, `POST /superadmin/certificates/:code/revoke` (`{ reason }`). Erreurs : `SELF_ROLE_CHANGE`, `SUPER_ADMIN_PROTECTED`, `USER_HAS_ACTIVE_MENTORING`, `CERTIFICATE_ALREADY_REVOKED`, `STAFF_PROTECTED` (un admin ne peut pas suspendre un membre de l'équipe).
+- **Frontend** : `/messages` (messagerie), `/certificats/[code]`, `/admin/pilotage`, `/admin/equipe`, `/admin/journal`, `/admin/certificats`, `/admin/contenus`.
