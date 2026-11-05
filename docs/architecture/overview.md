@@ -53,7 +53,8 @@ données. Le frontend n'accède jamais à la base ; il n'implémente aucune règ
 | `notifications` | Notifications in-app |
 | `dashboard` | Indicateurs par rôle |
 | `admin` | Comptes, suspension, vérification et publication des mentors, domaines |
-| `superadmin` | Pilotage, équipe d'administration, journal d'audit, révocation des certificats |
+| `platform` | Pilotage, équipe d'administration, journal d'audit, révocation des certificats, rapport d'impact (routes `/admin/*`) |
+| `verification` | Vérification des profils mentors et candidatures de mentorés pour devenir mentor (justificatifs privés, décision motivée) |
 | `health` | Santé de l'API et de la base |
 
 Code commun (`backend/src/common`) : gardes, décorateurs `@Public()` / `@Roles()`, middleware
@@ -65,7 +66,7 @@ CSRF, filtre d'erreurs, pipe de validation, pagination, recherche normalisée, `
 2. **Middleware CSRF** : pour `POST`, `PUT`, `PATCH`, `DELETE`, l'en-tête `Origin` doit figurer dans `WEB_ORIGINS`.
 3. **Limitation de débit** (`@nestjs/throttler`) : globale, plus stricte sur la connexion et les messages.
 4. **Garde de session** (globale) : le jeton du cookie est haché (HMAC-SHA256) et recherché dans `auth_sessions` ; session révoquée, expirée ou compte suspendu ⇒ 401. Routes `@Public()` : la session est lue si elle existe, sans être exigée.
-5. **Garde de rôle** : `@Roles('MENTOR')`, `@Roles('ADMIN')`… Le super-administrateur satisfait toute exigence `ADMIN`.
+5. **Garde de rôle** : `@Roles('MENTOR')`, `@Roles('ADMIN')`… Trois rôles seulement : MENTEE, MENTOR, ADMIN.
 6. **Validation** des DTO (class-validator) ⇒ 422 avec le détail par champ.
 7. **Service** : contrôle d'appartenance (participant du mentorat, auteur, mentor concerné…), puis transaction Prisma.
 8. Erreurs au format stable : `{ statusCode, code, message, details?, path, timestamp }`.
@@ -119,7 +120,7 @@ Exemple vérifié par les tests : 8 réservations simultanées du même créneau
 
 ## 9. Tests et vérifications
 
-- **113 tests e2e** sur un vrai PostgreSQL (base `talents_connectes_test` recréée à chaque exécution) et 7 tests unitaires (Vitest).
+- **142 tests e2e** sur un vrai PostgreSQL (base `talents_connectes_test` recréée à chaque exécution) et 15 tests unitaires (Vitest).
 - Typecheck et lint (oxlint côté API, ESLint côté web), build de production du frontend.
 - CI GitHub Actions : `.github/workflows/ci.yml`.
 

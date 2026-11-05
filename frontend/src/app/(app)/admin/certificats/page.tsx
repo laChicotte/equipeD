@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { CertificatesAdminView } from '@/features/superadmin/views';
+import { CertificatesAdminView } from '@/features/platform/views';
 
 export const metadata: Metadata = { title: 'Certificats' };
 

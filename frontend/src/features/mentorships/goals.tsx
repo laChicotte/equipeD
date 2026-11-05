@@ -1,6 +1,6 @@
 'use client';
 
-import { CalendarClock, MessageSquareQuote, Plus, Target, Trash2, X } from 'lucide-react';
+import { CalendarClock, MessageSquareQuote, Plus, Route, Target, Trash2, X } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { EmptyState, ErrorState } from '@/components/feedback/states';
@@ -17,6 +17,7 @@ import { goalStatusLabels } from '@/lib/labels';
 import type { Goal, GoalStatus, Me, MentorshipSummary } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useGoalMutations, useGoals } from './api';
+import { GuidedPathDialog, GuidedPathHint } from './guided-paths';
 
 function CreateGoalDialog({
   mentorshipId,
@@ -394,6 +395,7 @@ function GoalCard({
 export function GoalsPanel({ mentorship, me }: { mentorship: MentorshipSummary; me: Me }) {
   const goals = useGoals(mentorship.id);
   const [creating, setCreating] = useState(false);
+  const [guided, setGuided] = useState(false);
   const readOnly = mentorship.status !== 'ACTIVE';
 
   if (goals.isError) return <ErrorState error={goals.error} onRetry={() => void goals.refetch()} />;
@@ -407,12 +409,19 @@ export function GoalsPanel({ mentorship, me }: { mentorship: MentorshipSummary; 
   return (
     <div className="grid gap-4">
       {!readOnly && goals.data.length > 0 && (
-        <div className="flex justify-end">
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button variant="secondary" onClick={() => setGuided(true)}>
+            <Route aria-hidden />
+            Parcours guidé
+          </Button>
           <Button onClick={() => setCreating(true)}>
             <Plus aria-hidden />
             Nouvel objectif
           </Button>
         </div>
+      )}
+      {!readOnly && goals.data.length === 0 && (
+        <GuidedPathHint mentorship={mentorship} onOpen={() => setGuided(true)} />
       )}
       {goals.data.length === 0 ? (
         <EmptyState
@@ -425,10 +434,16 @@ export function GoalsPanel({ mentorship, me }: { mentorship: MentorshipSummary; 
                 « {mentorship.initialGoal} »
               </p>
               {!readOnly && (
-                <Button onClick={() => setCreating(true)}>
-                  <Plus aria-hidden />
-                  Créer un objectif
-                </Button>
+                <div className="flex flex-wrap justify-center gap-2">
+                  <Button onClick={() => setCreating(true)}>
+                    <Plus aria-hidden />
+                    Créer un objectif
+                  </Button>
+                  <Button variant="secondary" onClick={() => setGuided(true)}>
+                    <Route aria-hidden />
+                    Partir d’un parcours guidé
+                  </Button>
+                </div>
               )}
             </div>
           }
@@ -439,6 +454,14 @@ export function GoalsPanel({ mentorship, me }: { mentorship: MentorshipSummary; 
         ))
       )}
       <CreateGoalDialog mentorshipId={mentorship.id} open={creating} onOpenChange={setCreating} />
+      {!readOnly && (
+        <GuidedPathDialog
+          mentorship={mentorship}
+          goals={goals.data}
+          open={guided}
+          onOpenChange={setGuided}
+        />
+      )}
     </div>
   );
 }

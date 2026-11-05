@@ -6,20 +6,23 @@ import type { Me, Role } from '@/lib/types';
 
 export const meKey = ['auth', 'me'] as const;
 
+/** Requête de session, partagée par `useMe` et par l'observateur passif de la racine. */
+export const meQuery = {
+  queryKey: meKey,
+  queryFn: async (): Promise<Me | null> => {
+    try {
+      return await api<Me>('/auth/me');
+    } catch (error) {
+      if (isApiError(error) && error.statusCode === 401) return null;
+      throw error;
+    }
+  },
+  staleTime: 60_000,
+};
+
 /** Utilisateur connecté, ou `null` si la session est absente (401). */
 export function useMe() {
-  return useQuery({
-    queryKey: meKey,
-    queryFn: async () => {
-      try {
-        return await api<Me>('/auth/me');
-      } catch (error) {
-        if (isApiError(error) && error.statusCode === 401) return null;
-        throw error;
-      }
-    },
-    staleTime: 60_000,
-  });
+  return useQuery(meQuery);
 }
 
 export interface RegisterInput {
@@ -27,7 +30,7 @@ export interface RegisterInput {
   password: string;
   firstName: string;
   lastName: string;
-  role: Exclude<Role, 'ADMIN' | 'SUPER_ADMIN'>;
+  role: Exclude<Role, 'ADMIN'>;
 }
 
 export function useLogin() {
@@ -67,7 +70,6 @@ export function useLogout() {
 
 /** Page d'arrivée après connexion, selon le rôle et l'état du profil. */
 export function homeFor(me: Me): string {
-  if (me.role === 'SUPER_ADMIN') return '/admin/pilotage';
   if (me.role === 'ADMIN') return '/admin';
   if (!me.hasProfile) return '/onboarding';
   return '/tableau-de-bord';

@@ -120,7 +120,7 @@ function CompleteDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         title="Clôturer le mentorat"
-        description={`Le mentorat avec ${mentorship.counterpart.firstName} passera en lecture seule. Les séances à venir seront annulées et ${mentorship.counterpart.firstName} sera prévenu·e. Si au moins une séance a été réalisée, le mentor reçoit un certificat d’accompagnement vérifiable.`}
+        description={`Le mentorat avec ${mentorship.counterpart.firstName} passera en lecture seule (vous pourrez toujours échanger par message). Les séances à venir seront annulées et ${mentorship.counterpart.firstName} sera prévenu·e. Si au moins une séance a été réalisée, le mentor reçoit un certificat d’accompagnement vérifiable.`}
       >
         <Field
           label="Bilan de l’accompagnement"
@@ -260,8 +260,10 @@ export function Workspace() {
           <div className="min-w-0 flex-1">
             <p className="font-semibold">
               Mentorat {m.status === 'COMPLETED' ? 'clôturé' : 'interrompu'}
-              {m.endedAt && <> le {formatDate(m.endedAt)}</>} : il reste consultable en lecture
-              seule.
+              {m.endedAt && <> le {formatDate(m.endedAt)}</>} : il reste consultable
+              {m.status === 'COMPLETED'
+                ? ', et vous pouvez toujours échanger par message.'
+                : ' en lecture seule.'}
             </p>
             {m.endNote && <p className="mt-1 text-[15px] text-ink-100">Bilan : « {m.endNote} »</p>}
           </div>

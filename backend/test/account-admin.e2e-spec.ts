@@ -125,11 +125,16 @@ describe('Compte, clôture de mentorat et administration des domaines', () => {
       const [notif] = (await mentor.agent.get(`${API}/notifications`).expect(200)).body;
       expect(notif.type).toBe('MENTORSHIP_COMPLETED');
 
-      // Lecture seule après clôture.
+      // Après clôture, la conversation reste ouverte (les deux restent en contact)…
       await mentee.agent.get(`${API}/mentorships/${mentorshipId}/messages`).expect(200);
-      const write = await mentee.agent
+      await mentee.agent
         .post(`${API}/mentorships/${mentorshipId}/messages`)
         .send({ content: 'Encore une question' })
+        .expect(201);
+      // … mais l'espace de travail (objectifs) passe en lecture seule.
+      const write = await mentee.agent
+        .post(`${API}/mentorships/${mentorshipId}/goals`)
+        .send({ title: 'Nouvel objectif après clôture' })
         .expect(409);
       expect(write.body.code).toBe('MENTORSHIP_NOT_ACTIVE');
 

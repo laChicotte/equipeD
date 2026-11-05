@@ -110,6 +110,12 @@ export function LoginForm() {
             </button>
           </div>
         </Field>
+        <Link
+          href="/mot-de-passe-oublie"
+          className="-mt-2 justify-self-end text-sm font-medium text-accent hover:underline"
+        >
+          Mot de passe oublié ?
+        </Link>
         <Button type="submit" size="lg" loading={login.isPending} className="mt-1 w-full">
           Se connecter
           {!login.isPending && <ArrowRight aria-hidden />}

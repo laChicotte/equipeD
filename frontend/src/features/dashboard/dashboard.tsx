@@ -15,6 +15,7 @@ import {
   UserSearch,
   Users,
 } from 'lucide-react';
+import { previewText } from '@/features/messages/chat-parts';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -87,7 +88,7 @@ function MentorshipRow({ m }: { m: MentorshipSummary }) {
           </div>
           <p className="truncate text-xs text-muted-foreground">
             {m.lastMessage
-              ? `${m.lastMessage.content} · ${formatRelative(m.lastMessage.createdAt)}`
+              ? `${previewText(m.lastMessage)} · ${formatRelative(m.lastMessage.createdAt)}`
               : m.initialGoal}
           </p>
         </div>

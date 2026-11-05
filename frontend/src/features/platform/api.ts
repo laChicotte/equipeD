@@ -30,6 +30,9 @@ export interface Metrics {
   feedback: { average: number | null; count: number };
   certificates: { valid: number; revoked: number };
   messages: { total: number; last7d: number };
+  goals: { total: number; completed: number; inProgress: number };
+  workshops: { held: number; upcoming: number; hours: number; participations: number };
+  calls: { audio: number; video: number; audioMinutes: number; videoMinutes: number };
   domains: {
     id: string;
     name: string;
@@ -97,25 +100,25 @@ export const auditActionLabels: Record<string, string> = {
 
 export function useMetrics() {
   return useQuery({
-    queryKey: ['superadmin', 'metrics'],
-    queryFn: () => api<Metrics>('/superadmin/metrics'),
+    queryKey: ['platform', 'metrics'],
+    queryFn: () => api<Metrics>('/admin/metrics'),
     refetchInterval: 60_000,
   });
 }
 
 export function useTeam() {
   return useQuery({
-    queryKey: ['superadmin', 'team'],
-    queryFn: () => api<TeamMember[]>('/superadmin/team'),
+    queryKey: ['platform', 'team'],
+    queryFn: () => api<TeamMember[]>('/admin/team'),
   });
 }
 
 export function useAudit(action: string, page: number) {
   return useQuery({
-    queryKey: ['superadmin', 'audit', action, page],
+    queryKey: ['platform', 'audit', action, page],
     queryFn: () =>
       api<{ items: AuditEntry[]; total: number; page: number; totalPages: number }>(
-        '/superadmin/audit',
+        '/admin/audit',
         {
           query: { action, page, pageSize: 30 },
         },
@@ -125,21 +128,21 @@ export function useAudit(action: string, page: number) {
 
 export function useAdminCertificates() {
   return useQuery({
-    queryKey: ['superadmin', 'certificates'],
-    queryFn: () => api<AdminCertificate[]>('/superadmin/certificates'),
+    queryKey: ['platform', 'certificates'],
+    queryFn: () => api<AdminCertificate[]>('/admin/certificates'),
   });
 }
 
-export function useSuperAdminMutations() {
+export function usePlatformMutations() {
   const qc = useQueryClient();
   const refresh = () => {
-    void qc.invalidateQueries({ queryKey: ['superadmin'] });
+    void qc.invalidateQueries({ queryKey: ['platform'] });
     void qc.invalidateQueries({ queryKey: ['admin'] });
   };
   return {
     changeRole: useMutation({
       mutationFn: ({ id, role }: { id: string; role: 'ADMIN' | 'MENTOR' | 'MENTEE' }) =>
-        api<{ id: string; role: Role }>(`/superadmin/users/${id}/role`, {
+        api<{ id: string; role: Role }>(`/admin/users/${id}/role`, {
           method: 'PATCH',
           body: { role },
         }),
@@ -147,7 +150,7 @@ export function useSuperAdminMutations() {
     }),
     revokeCertificate: useMutation({
       mutationFn: ({ code, reason }: { code: string; reason: string }) =>
-        api<unknown>(`/superadmin/certificates/${code}/revoke`, {
+        api<unknown>(`/admin/certificates/${code}/revoke`, {
           method: 'POST',
           body: { reason },
         }),

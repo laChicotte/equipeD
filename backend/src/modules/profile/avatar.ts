@@ -93,8 +93,8 @@ export class AvatarService {
   /**
    * Règle de visibilité :
    *  - photo d'un mentor publié dans l'annuaire : publique (comme sa fiche) ;
-   *  - sinon : la personne elle-même, un administrateur, ou quelqu'un lié par une demande
-   *    ou un mentorat. Tout autre cas répond 404 (on ne révèle pas l'existence de la photo).
+   *  - sinon : la personne elle-même, un administrateur, ou quelqu'un lié par une demande,
+   *    un mentorat ou un groupe d'accompagnement. Tout autre cas répond 404 (on ne révèle pas l'existence de la photo).
    */
   async read(ownerId: string, viewer: AuthUser | undefined) {
     const owner = await this.prisma.user.findUnique({
@@ -121,11 +121,15 @@ export class AvatarService {
       { mentorId: viewer.id, menteeId: ownerId },
       { mentorId: ownerId, menteeId: viewer.id },
     ];
-    const [requests, mentorships] = await Promise.all([
+    const [requests, mentorships, sharedGroups] = await Promise.all([
       this.prisma.mentorshipRequest.count({ where: { OR: pair } }),
       this.prisma.mentorship.count({ where: { OR: pair } }),
+      // Membres d'un même groupe d'accompagnement.
+      this.prisma.groupMember.count({
+        where: { userId: ownerId, group: { members: { some: { userId: viewer.id } } } },
+      }),
     ]);
-    return requests + mentorships > 0;
+    return requests + mentorships + sharedGroups > 0;
   }
 }
 

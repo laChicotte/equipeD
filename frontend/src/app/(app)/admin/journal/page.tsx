@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { AuditView } from '@/features/superadmin/views';
+import { AuditView } from '@/features/platform/views';
 
 export const metadata: Metadata = { title: 'Journal d’audit' };
 

@@ -15,7 +15,6 @@ export const roleLabels: Record<Role, string> = {
   MENTEE: 'Mentoré·e',
   MENTOR: 'Mentor',
   ADMIN: 'Administrateur',
-  SUPER_ADMIN: 'Super-administrateur',
 };
 
 export const modalityLabels: Record<Modality, string> = {
@@ -67,7 +66,8 @@ export const goalStatusLabels: Record<GoalStatus, string> = {
   COMPLETED: 'Atteint',
 };
 
-export const LANGUAGES = ['Français', 'Anglais', 'Pular', 'Malinké', 'Soussou'] as const;
+/** Langues proposées sur la plateforme (les langues nationales ne sont pas proposées). */
+export const LANGUAGES = ['Français', 'Anglais'] as const;
 
 export const CAMPUS_FRANCE_NOTICE = 'Conseil et orientation, sans garantie d’admission ni de visa.';
 

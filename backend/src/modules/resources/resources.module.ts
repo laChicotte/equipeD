@@ -8,13 +8,18 @@ import {
   Param,
   Post,
   Query,
+  Req,
+  Res,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiConsumes, ApiTags } from '@nestjs/swagger';
+import type { Response } from 'express';
 import { Transform } from 'class-transformer';
 import { IsEnum, IsOptional, IsString, IsUrl, Length, MaxLength } from 'class-validator';
 import { PrismaService } from '../../database/prisma.service.js';
 import { CurrentUser, Public, Roles } from '../../common/auth/decorators.js';
-import type { AuthUser } from '../../common/auth/auth-user.js';
+import type { AuthenticatedRequest, AuthUser } from '../../common/auth/auth-user.js';
 import { forbidden, notFound, unprocessable } from '../../common/errors.js';
 import { paginate, PaginationQuery } from '../../common/pagination.js';
 import type { Prisma } from '../../generated/prisma/client.js';
@@ -22,6 +27,12 @@ import { ResourceKind } from '../../generated/prisma/enums.js';
 import { MentorshipAccessService } from '../mentorships/mentorship-access.service.js';
 import { NotificationsService } from '../notifications/notifications.module.js';
 import { isStaff, recordAudit } from '../../common/audit.js';
+import {
+  documentUpload,
+  readUploadedDocument,
+  sendStoredFile,
+  type UploadedDocument,
+} from './resource-file.js';
 
 const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
 const emptyToUndefined = ({ value }: { value: unknown }) => {
@@ -88,6 +99,7 @@ const resourceSelect = {
   description: true,
   url: true,
   createdAt: true,
+  file: { select: { fileName: true, mimeType: true, size: true } },
   author: {
     select: {
       id: true,
@@ -139,10 +151,16 @@ export class ResourcesService {
   }
 
   /** Publication dans la bibliothèque publique : mentors et administrateurs. */
-  async publish(user: AuthUser, dto: CreateResourceDto) {
-    const data = await this.validate(dto);
+  async publish(user: AuthUser, dto: CreateResourceDto, upload?: UploadedDocument) {
+    const file = this.checkFile(upload);
+    const data = await this.validate(dto, !!file);
     return this.prisma.resource.create({
-      data: { ...data, authorId: user.id, mentorshipId: null },
+      data: {
+        ...data,
+        authorId: user.id,
+        mentorshipId: null,
+        ...(file ? { hasFile: true, file: { create: file } } : {}),
+      },
       select: resourceSelect,
     });
   }
@@ -157,11 +175,22 @@ export class ResourcesService {
   }
 
   /** Partage privé dans un mentorat actif ; l'autre participant est notifié. */
-  async shareInMentorship(user: AuthUser, mentorshipId: string, dto: CreateResourceDto) {
+  async shareInMentorship(
+    user: AuthUser,
+    mentorshipId: string,
+    dto: CreateResourceDto,
+    upload?: UploadedDocument,
+  ) {
     const access = await this.access.assertActiveParticipant(user, mentorshipId);
-    const data = await this.validate(dto);
+    const file = this.checkFile(upload);
+    const data = await this.validate(dto, !!file);
     const resource = await this.prisma.resource.create({
-      data: { ...data, authorId: user.id, mentorshipId },
+      data: {
+        ...data,
+        authorId: user.id,
+        mentorshipId,
+        ...(file ? { hasFile: true, file: { create: file } } : {}),
+      },
       select: resourceSelect,
     });
     await this.notifications.notify({
@@ -201,11 +230,45 @@ export class ResourcesService {
     return { ok: true };
   }
 
-  private async validate(dto: CreateResourceDto) {
-    if (!dto.url && !dto.description) {
-      throw unprocessable('RESOURCE_EMPTY', 'Ajoutez un lien ou un contenu à la ressource.', [
-        { field: 'url', messages: ['Renseignez un lien ou une description.'] },
-      ]);
+  /**
+   * Document joint : celui d'une ressource partagée dans un mentorat n'est visible que de ses
+   * deux participants ; celui de la bibliothèque est public, comme sa fiche.
+   */
+  async download(id: string, viewer: AuthUser | undefined) {
+    const resource = await this.prisma.resource.findUnique({
+      where: { id },
+      select: {
+        mentorshipId: true,
+        author: { select: { status: true } },
+        file: { select: { fileName: true, mimeType: true, size: true, data: true } },
+      },
+    });
+    const missing = notFound('RESOURCE_FILE_NOT_FOUND', 'Document introuvable.');
+    if (!resource?.file) throw missing;
+    if (resource.mentorshipId) {
+      if (!viewer) throw missing;
+      try {
+        await this.access.assertParticipant(viewer, resource.mentorshipId);
+      } catch {
+        throw missing; // on ne révèle pas l'existence d'un document privé
+      }
+    } else if (resource.author.status !== 'ACTIVE' && !(viewer && isStaff(viewer.role))) {
+      throw missing;
+    }
+    return { ...resource.file, isPublic: resource.mentorshipId === null };
+  }
+
+  private checkFile(upload?: UploadedDocument) {
+    return upload ? readUploadedDocument(upload) : null;
+  }
+
+  private async validate(dto: CreateResourceDto, hasFile = false) {
+    if (!dto.url && !dto.description && !hasFile) {
+      throw unprocessable(
+        'RESOURCE_EMPTY',
+        'Ajoutez un document, un lien ou un contenu à la ressource.',
+        [{ field: 'url', messages: ['Joignez un document, un lien ou une description.'] }],
+      );
     }
     if (dto.domainId) {
       const exists = await this.prisma.expertiseDomain.count({
@@ -241,6 +304,27 @@ export class ResourcesController {
     return this.resources.publish(user, dto);
   }
 
+  /** Publication avec document joint (multipart : champs de la ressource + « file »). */
+  @Roles('MENTOR', 'ADMIN')
+  @Post('resources/upload')
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(documentUpload())
+  publishWithFile(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: CreateResourceDto,
+    @UploadedFile() file?: UploadedDocument,
+  ) {
+    return this.resources.publish(user, dto, file);
+  }
+
+  /** Téléchargement du document joint (toujours en pièce jointe, jamais affiché dans la page). */
+  @Public()
+  @Get('resources/:id/file')
+  async download(@Param('id') id: string, @Req() req: AuthenticatedRequest, @Res() res: Response) {
+    const file = await this.resources.download(id, req.user);
+    sendStoredFile(res, file, { isPublic: file.isPublic });
+  }
+
   @Delete('resources/:id')
   remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.resources.remove(user, id);
@@ -258,6 +342,19 @@ export class ResourcesController {
     @Body() dto: CreateResourceDto,
   ) {
     return this.resources.shareInMentorship(user, id, dto);
+  }
+
+  /** Partage privé avec document joint (multipart : champs de la ressource + « file »). */
+  @Post('mentorships/:mentorshipId/resources/upload')
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(documentUpload())
+  shareWithFile(
+    @CurrentUser() user: AuthUser,
+    @Param('mentorshipId') id: string,
+    @Body() dto: CreateResourceDto,
+    @UploadedFile() file?: UploadedDocument,
+  ) {
+    return this.resources.shareInMentorship(user, id, dto, file);
   }
 }
 

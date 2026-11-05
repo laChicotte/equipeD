@@ -34,7 +34,13 @@ function buildInclude(userId: string, now: Date) {
     messages: {
       orderBy: { createdAt: 'desc' },
       take: 1,
-      select: { content: true, createdAt: true, senderId: true },
+      select: {
+        content: true,
+        createdAt: true,
+        senderId: true,
+        callId: true,
+        file: { select: { fileName: true, mimeType: true } },
+      },
     },
     _count: { select: { messages: { where: { readAt: null, senderId: { not: userId } } } } },
   } satisfies Prisma.MentorshipInclude;
@@ -106,7 +112,8 @@ export class MentorshipsService {
         userId: access.counterpartId,
         type: 'MENTORSHIP_COMPLETED',
         title: `${user.firstName} ${user.lastName} a clôturé votre mentorat`,
-        body: note ?? 'Le mentorat reste consultable en lecture seule.',
+        body:
+          note ?? 'Le mentorat reste consultable et vous pouvez continuer à échanger par message.',
         link: `/mentorats/${id}`,
       });
       if (closed.certificate) {

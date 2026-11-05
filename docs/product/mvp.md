@@ -16,7 +16,6 @@ mentors et mentorés, facilite le conseil et suit les objectifs, **par chat ou v
 | Mentoré | Étudiant, jeune diplômé, entrepreneur, porteur de projet, personne en reconversion | Trouver la bonne personne, être accompagné, avancer sur un objectif concret |
 | Mentor | Professionnel expérimenté, cadre, expert, entrepreneur | Transmettre sans être débordé, faire reconnaître son engagement |
 | Administrateur | Équipe de la plateforme | Vérifier les mentors, modérer, gérer le catalogue |
-| Super-administrateur | Responsable de la plateforme | Piloter l'activité, gérer l'équipe, garantir la confiance (audit, certificats) |
 
 ## 3. Parcours
 
@@ -33,9 +32,13 @@ mentors et mentorés, facilite le conseil et suit les objectifs, **par chat ou v
 3. Confirme les séances (lien de visio généré), échange, commente les objectifs, partage des ressources.
 4. Clôture un mentorat : s'il compte au moins une séance réalisée, reçoit un **certificat d'accompagnement** vérifiable.
 
-### Administrateur et super-administrateur
-- Admin : comptes (suspension avec révocation des sessions), vérification et publication des mentors, domaines.
-- Super-admin : tout ce que fait l'admin, plus pilotage chiffré, nomination et retrait d'administrateurs, journal d'audit, révocation motivée des certificats, modération des contenus publics.
+### Administrateur
+- Comptes (suspension avec révocation des sessions), domaines, modération des contenus publics.
+- Vérification des profils : examen des justificatifs des mentors (badge « Profil vérifié ») et des candidatures de mentorés qui souhaitent devenir mentors, décision motivée.
+- Pilotage chiffré, rapport d'impact, nomination et retrait d'administrateurs, journal d'audit, révocation motivée des certificats.
+
+### Évolution d'un mentoré vers le rôle de mentor
+- Un mentoré accompagné peut candidater (« Devenir mentor ») : profil mentor complet, motivation, justificatifs. Il reste mentoré pendant l'examen ; une fois accepté, son compte devient mentor (profil publié et vérifié) et son historique est conservé.
 
 ## 4. Priorités
 
@@ -44,7 +47,7 @@ mentors et mentorés, facilite le conseil et suit les objectifs, **par chat ou v
 | **P0** | Authentification, rôles, profils, catalogue, annuaire, fiche, demande et décision, créneaux et réservation sans conflit, tableaux de bord, seed | ✅ |
 | **P1** | Messagerie privée, objectifs et jalons, évaluations, ressources, notifications, administration | ✅ |
 | **P2** | Suggestions expliquées, visio externe, opportunités, confidentialité (export, suppression) | ✅ |
-| Ajouts | Photo de profil, certificats, super-administration, messagerie dédiée | ✅ |
+| Ajouts | Photo de profil, certificats, administration unique (pilotage, équipe, audit), vérification des profils, mentoré devenant mentor, messagerie dédiée | ✅ |
 | Hors périmètre | Emails, réinitialisation du mot de passe, PWA, chat temps réel, calendriers externes | Prévu (voir la note de pérennisation) |
 
 ## 5. Critères d'acceptation (vérifiés par les tests e2e)

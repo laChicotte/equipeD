@@ -16,14 +16,19 @@ import { MentorshipRequestsModule } from './modules/mentorship-requests/mentorsh
 import { MentorshipsModule } from './modules/mentorships/mentorships.module.js';
 import { SchedulingModule } from './modules/scheduling/scheduling.module.js';
 import { MessagesModule } from './modules/messages/messages.module.js';
+import { GroupsModule } from './modules/groups/groups.module.js';
+import { RealtimeModule } from './modules/realtime/realtime.module.js';
+import { CallsModule } from './modules/calls/calls.module.js';
 import { GoalsModule } from './modules/goals/goals.module.js';
+import { GuidedPathsModule } from './modules/guided-paths/guided-paths.module.js';
 import { DashboardModule } from './modules/dashboard/dashboard.module.js';
 import { AdminModule } from './modules/admin/admin.module.js';
 import { NotificationsModule } from './modules/notifications/notifications.module.js';
 import { ResourcesModule } from './modules/resources/resources.module.js';
 import { OpportunitiesModule } from './modules/opportunities/opportunities.module.js';
 import { CertificatesModule } from './modules/certificates/certificates.module.js';
-import { SuperAdminModule } from './modules/superadmin/superadmin.module.js';
+import { PlatformModule } from './modules/platform/platform.module.js';
+import { VerificationModule } from './modules/verification/verification.module.js';
 
 @Module({
   imports: [
@@ -44,14 +49,19 @@ import { SuperAdminModule } from './modules/superadmin/superadmin.module.js';
     MentorshipsModule,
     SchedulingModule,
     MessagesModule,
+    GroupsModule,
+    RealtimeModule,
+    CallsModule,
     GoalsModule,
+    GuidedPathsModule,
     DashboardModule,
     AdminModule,
     NotificationsModule,
     ResourcesModule,
     OpportunitiesModule,
     CertificatesModule,
-    SuperAdminModule,
+    PlatformModule,
+    VerificationModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: AllExceptionsFilter },

@@ -7,11 +7,19 @@ import { ErrorState } from '@/components/feedback/states';
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/misc';
+import { useCalls } from '@/features/calls/call-provider';
+import {
+  AttachButton,
+  Attachment,
+  CallButtons,
+  CallLog,
+  PendingFile,
+} from '@/features/messages/chat-parts';
 import { errorMessage } from '@/lib/api';
 import { dayKey, formatLongDate, formatTime } from '@/lib/format';
 import type { Me, Message, MentorshipSummary } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { useMarkRead, useMessages, useSendMessage } from './api';
+import { useMarkRead, useMessages, useSendFileMessage, useSendMessage } from './api';
 
 function groupMessages(messages: Message[], tz: string) {
   const days: { key: string; label: string; items: Message[] }[] = [];
@@ -37,13 +45,18 @@ export function Conversation({
 }) {
   const messages = useMessages(mentorship.id);
   const send = useSendMessage(mentorship.id);
+  const sendFile = useSendFileMessage(mentorship.id);
   const markRead = useMarkRead(mentorship.id);
+  const { startCall, available } = useCalls();
   const [draft, setDraft] = useState('');
+  const [file, setFile] = useState<File | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lastCount = useRef(0);
-  const active = mentorship.status === 'ACTIVE';
+  // La conversation reste ouverte après la clôture : seul un mentorat annulé la ferme.
+  const active = mentorship.status !== 'CANCELLED';
   const other = mentorship.counterpart;
+  const sending = send.isPending || sendFile.isPending;
 
   // Accusés de lecture : marque comme lus les messages reçus non lus.
   const unreadIncoming = messages.data?.some((m) => m.senderId !== me.id && !m.readAt) ?? false;
@@ -61,16 +74,25 @@ export function Conversation({
     lastCount.current = count;
   }, [messages.data?.length]);
 
+  const done = () => {
+    setDraft('');
+    setFile(null);
+    if (textareaRef.current) textareaRef.current.style.height = 'auto';
+    textareaRef.current?.focus();
+  };
+
   const submit = () => {
     const content = draft.trim();
-    if (!content || send.isPending) return;
-    send.mutate(content, {
-      onSuccess: () => {
-        setDraft('');
-        textareaRef.current?.focus();
-      },
-      onError: (e) => toast.error(errorMessage(e)),
-    });
+    if (sending) return;
+    if (file) {
+      sendFile.mutate(
+        { file, content: content || undefined },
+        { onSuccess: done, onError: (e) => toast.error(errorMessage(e)) },
+      );
+      return;
+    }
+    if (!content) return;
+    send.mutate(content, { onSuccess: done, onError: (e) => toast.error(errorMessage(e)) });
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -99,6 +121,7 @@ export function Conversation({
               Conversation privée · visible de vous deux uniquement
             </p>
           </div>
+          <CallButtons mentorshipId={mentorship.id} peer={other} disabled={!active} />
         </div>
       )}
 
@@ -141,8 +164,24 @@ export function Conversation({
               </div>
               <ul className="grid gap-1.5">
                 {day.items.map((m, i) => {
+                  if (m.call) {
+                    return (
+                      <CallLog
+                        key={m.id}
+                        message={m}
+                        meId={me.id}
+                        tz={me.timezone}
+                        onCallBack={
+                          active && available
+                            ? (kind) => startCall(mentorship.id, kind, other)
+                            : undefined
+                        }
+                      />
+                    );
+                  }
                   const mine = m.senderId === me.id;
-                  const nextSame = day.items[i + 1]?.senderId === m.senderId;
+                  const next = day.items[i + 1];
+                  const nextSame = next?.senderId === m.senderId && !next.call;
                   return (
                     <li
                       key={m.id}
@@ -154,14 +193,14 @@ export function Conversation({
                     >
                       <div
                         className={cn(
-                          'max-w-[min(80%,70ch)]',
+                          'flex max-w-[min(80%,70ch)] flex-col',
                           mine ? 'items-end' : 'items-start',
-                          'flex flex-col',
                         )}
                       >
-                        <p
+                        <div
                           className={cn(
-                            'rounded-[14px] px-3.5 py-2 text-[15px] leading-relaxed break-words whitespace-pre-wrap',
+                            'rounded-[14px] text-[15px] leading-relaxed break-words whitespace-pre-wrap',
+                            m.file ? 'p-1.5' : 'px-3.5 py-2',
                             mine
                               ? 'rounded-br-[4px] bg-ink-900 text-white'
                               : 'rounded-bl-[4px] border border-border bg-surface text-foreground',
@@ -170,8 +209,17 @@ export function Conversation({
                           <span className="sr-only">
                             {mine ? 'Vous : ' : `${other.firstName} : `}
                           </span>
-                          {m.content}
-                        </p>
+                          {m.file && (
+                            <Attachment
+                              file={m.file}
+                              url={`/api/v1/messages/${m.id}/file`}
+                              mine={mine}
+                            />
+                          )}
+                          {m.content && (
+                            <p className={cn(m.file && 'px-2 pt-1.5 pb-0.5')}>{m.content}</p>
+                          )}
+                        </div>
                         {!nextSame && (
                           <span className="mt-1 flex items-center gap-1 px-1 text-[11px] text-muted-foreground">
                             {formatTime(m.createdAt, me.timezone)}
@@ -200,49 +248,54 @@ export function Conversation({
       </div>
 
       {active ? (
-        <form
-          className="flex items-end gap-2 border-t border-border bg-surface p-3"
-          onSubmit={(e) => {
-            e.preventDefault();
-            submit();
-          }}
-        >
-          <label htmlFor="message" className="sr-only">
-            Votre message
-          </label>
-          <textarea
-            id="message"
-            ref={textareaRef}
-            rows={1}
-            value={draft}
-            maxLength={2000}
-            onChange={(e) => {
-              setDraft(e.target.value);
-              e.target.style.height = 'auto';
-              e.target.style.height = `${Math.min(e.target.scrollHeight, 160)}px`;
+        <>
+          {file && <PendingFile file={file} onRemove={() => setFile(null)} />}
+          <form
+            className="flex items-end gap-1.5 border-t border-border bg-surface p-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              submit();
             }}
-            onKeyDown={onKeyDown}
-            placeholder={`Écrire à ${other.firstName}…`}
-            className="max-h-40 min-h-11 flex-1 resize-none rounded-md border border-border bg-surface px-3.5 py-2.5 text-[15px] leading-relaxed outline-none transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-focus"
-          />
-          <Button
-            type="submit"
-            size="icon"
-            aria-label="Envoyer"
-            disabled={!draft.trim()}
-            loading={send.isPending}
           >
-            {!send.isPending && <SendHorizontal aria-hidden />}
-          </Button>
-        </form>
+            <AttachButton onPick={setFile} disabled={sending} />
+            <label htmlFor="message" className="sr-only">
+              Votre message
+            </label>
+            <textarea
+              id="message"
+              ref={textareaRef}
+              rows={1}
+              value={draft}
+              maxLength={2000}
+              onChange={(e) => {
+                setDraft(e.target.value);
+                e.target.style.height = 'auto';
+                e.target.style.height = `${Math.min(e.target.scrollHeight, 160)}px`;
+              }}
+              onKeyDown={onKeyDown}
+              placeholder={
+                file ? 'Ajouter une légende (facultatif)…' : `Écrire à ${other.firstName}…`
+              }
+              className="max-h-40 min-h-11 flex-1 resize-none rounded-md border border-border bg-surface px-3.5 py-2.5 text-[15px] leading-relaxed outline-none transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-focus"
+            />
+            <Button
+              type="submit"
+              size="icon"
+              aria-label="Envoyer"
+              disabled={!draft.trim() && !file}
+              loading={sending}
+            >
+              {!sending && <SendHorizontal aria-hidden />}
+            </Button>
+          </form>
+          <p className="hidden bg-surface px-4 pb-2 text-[11px] text-muted-foreground sm:block">
+            Entrée pour envoyer · Maj + Entrée pour un saut de ligne · Trombone pour un fichier ou
+            une photo (10 Mo)
+          </p>
+        </>
       ) : (
         <p className="border-t border-border bg-surface-muted px-4 py-3 text-center text-sm text-muted-foreground">
-          Ce mentorat est terminé : la conversation est en lecture seule.
-        </p>
-      )}
-      {active && (
-        <p className="hidden bg-surface px-4 pb-2 text-[11px] text-muted-foreground sm:block">
-          Entrée pour envoyer · Maj + Entrée pour un saut de ligne
+          Ce mentorat a été annulé : la conversation est fermée.
         </p>
       )}
     </div>

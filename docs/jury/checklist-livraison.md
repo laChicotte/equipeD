@@ -44,7 +44,12 @@
 - [x] Visio : salle Jitsi Meet générée automatiquement à la confirmation (service externe, présenté comme tel ; pas de WebRTC maison)
 - [x] Espace d’opportunités (stages, emplois, appels à projets, bourses, formations, événements), avec archivage et échéances
 - [x] Confidentialité : export JSON de ses données, suppression du compte par anonymisation (l’historique de l’autre participant est préservé)
-- [ ] Emails transactionnels, PWA
+- [x] Parcours guidés par domaine (dont Campus France : projet d’études, dossier, entretien, démarches)
+- [x] Ateliers thématiques de groupe (planification, réponses des membres, salle de visio, notifications)
+- [x] Rapport d’impact exportable (CSV) et imprimable depuis le pilotage
+- [x] Réinitialisation du mot de passe par lien à usage unique remis par l’équipe
+- [x] PWA installable (manifeste, icônes, page hors ligne)
+- [ ] Emails transactionnels
 
 ## Frontend
 - [x] Accueil : hero plein écran (diaporama), recherche de mentors en direct, chiffres réels, domaines, parcours, mentors, confiance
@@ -56,7 +61,7 @@
 - [x] Bibliothèque de ressources (/ressources) et opportunités (/opportunites), publication par les mentors
 - [x] Cloche de notifications in-app
 - [x] Messagerie dédiée (/messages) : toutes les conversations, non-lus, recherche, conversation ouverte ; vue mobile en deux temps
-- [x] Espace super-administrateur : pilotage chiffré (indicateurs et activité sur 30 jours), équipe (nommer ou retirer un administrateur), journal d’audit, révocation motivée des certificats, modération des contenus
+- [x] Administration (rôle unique) : pilotage chiffré (indicateurs et activité sur 30 jours), équipe (nommer ou retirer un administrateur), journal d’audit, révocation motivée des certificats, modération des contenus
 - [x] Photo de profil : ajout, recadrage dans le navigateur, retrait ; visibilité limitée (publique pour un mentor publié, sinon aux personnes liées)
 - [x] Mon compte : informations, mot de passe, déconnexion de tous les appareils, export JSON, suppression
 - [x] Administration : vue d’ensemble, comptes, mentors, domaines
@@ -70,8 +75,9 @@
 | Typecheck backend | ✅ | `pnpm --filter backend typecheck` |
 | Lint (oxlint) | ✅ 0 avertissement | `pnpm --filter backend lint` |
 | Format (Prettier) | ✅ | `npx prettier --check "backend/{src,test,prisma}/**/*.ts"` |
-| Tests unitaires | ✅ 7/7 | `pnpm --filter backend test` |
-| Tests e2e sur un vrai PostgreSQL | ✅ **113/113** (13 fichiers, environ 40 s) | `pnpm --filter backend test:e2e` |
+| Tests unitaires | ✅ 15/15 | `pnpm --filter backend test` |
+| Tests e2e sur un vrai PostgreSQL | ✅ **138/138** (environ 100 s) | `pnpm --filter backend test:e2e` |
+| Scénario de démo dans un navigateur (Playwright) | ✅ 1/1, deux navigateurs, environ 15 s | `pnpm --filter frontend test:e2e` |
 | Build | ✅ | `pnpm --filter backend build` |
 | CI GitHub Actions | ⏳ configurée (`.github/workflows/ci.yml`), à confirmer au premier push | |
 
@@ -89,8 +95,7 @@ Les tests e2e couvrent notamment :
 ## Bugs connus et limites honnêtes
 
 - **Avertissement `pg` « client.query() already executing »** pendant les tests : il est émis à l'intérieur de `@prisma/adapter-pg` 7.10.1 lors de certaines transactions. Il est sans effet fonctionnel (les requêtes sont mises en file), mais à revoir lors d'une montée de version de Prisma.
-- La messagerie fonctionne par **rafraîchissement périodique** (pas de WebSocket) : quelques secondes de latence.
-- Aucun email n'est envoyé (réinitialisation de mot de passe non disponible).
-- Pas de visio native : lien de réunion externe saisi par le mentor.
+- Aucun email n'est envoyé : la réinitialisation du mot de passe passe par un lien remis par l'équipe.
+- Appels audio et vidéo WebRTC dans l'application : état des appels en mémoire (une seule instance de l'API), HTTPS obligatoire hors localhost, relais TURN nécessaire entre réseaux mobiles.
 - Pas de revue de conformité juridique (données personnelles) : à mener avant toute mise en production.
 - Les comptes de démonstration (`@demo.talents-connectes.test`, mot de passe commun) ne doivent **jamais** être chargés en production. La seed les refuse si `NODE_ENV=production`, sauf `SEED_DEMO=true` explicite.

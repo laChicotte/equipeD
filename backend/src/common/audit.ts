@@ -2,9 +2,9 @@ import type { AuthUser } from './auth/auth-user.js';
 import type { Prisma } from '../generated/prisma/client.js';
 import type { Role } from '../generated/prisma/enums.js';
 
-/** Membre de l'équipe de la plateforme : administrateur ou super-administrateur. */
+/** Membre de l'équipe de la plateforme (administrateur). */
 export function isStaff(role: Role | undefined | null): boolean {
-  return role === 'ADMIN' || role === 'SUPER_ADMIN';
+  return role === 'ADMIN';
 }
 
 export type AuditAction =
@@ -16,7 +16,13 @@ export type AuditAction =
   | 'DOMAIN_UPDATED'
   | 'CERTIFICATE_REVOKED'
   | 'RESOURCE_REMOVED'
-  | 'OPPORTUNITY_ARCHIVED';
+  | 'OPPORTUNITY_ARCHIVED'
+  | 'IMPACT_REPORT_EXPORTED'
+  | 'PASSWORD_RESET_LINK_ISSUED'
+  | 'VERIFICATION_APPROVED'
+  | 'VERIFICATION_REJECTED'
+  | 'MENTOR_APPLICATION_APPROVED'
+  | 'MENTOR_APPLICATION_REJECTED';
 
 type AuditClient = Pick<Prisma.TransactionClient, 'auditLog'>;
 

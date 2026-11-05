@@ -13,6 +13,12 @@ export interface AppEnv {
   SWAGGER_ENABLED: boolean;
   /** Base des liens de visio générés à la confirmation (vide = désactivé). */
   MEETING_BASE_URL: string;
+  /** Serveurs STUN pour les appels WebRTC (vide : candidats locaux seulement, suffisant sur un même réseau). */
+  STUN_URLS: string[];
+  /** Serveurs TURN (relais coturn) : indispensables derrière les NAT des réseaux mobiles. */
+  TURN_URLS: string[];
+  /** Secret partagé avec coturn (use-auth-secret) : identifiants TURN temporaires par utilisateur. */
+  TURN_SECRET: string;
 }
 
 export function validateEnv(raw: Record<string, unknown>): AppEnv {
@@ -57,6 +63,26 @@ export function validateEnv(raw: Record<string, unknown>): AppEnv {
     errors.push('MEETING_BASE_URL doit être une URL https (ou vide pour désactiver)');
   }
 
+  const list = (key: string) =>
+    (typeof raw[key] === 'string' ? (raw[key] as string) : '')
+      .split(',')
+      .map((v) => v.trim())
+      .filter(Boolean);
+  const stunUrls = list('STUN_URLS');
+  const turnUrls = list('TURN_URLS');
+  for (const url of stunUrls) {
+    if (!/^stuns?:/.test(url))
+      errors.push(`STUN_URLS : « ${url} » doit commencer par stun: ou stuns:`);
+  }
+  for (const url of turnUrls) {
+    if (!/^turns?:/.test(url))
+      errors.push(`TURN_URLS : « ${url} » doit commencer par turn: ou turns:`);
+  }
+  const turnSecret = typeof raw.TURN_SECRET === 'string' ? raw.TURN_SECRET.trim() : '';
+  if (turnUrls.length > 0 && turnSecret.length < 16) {
+    errors.push('TURN_SECRET (16 caractères au moins) est obligatoire avec TURN_URLS');
+  }
+
   const env: AppEnv = {
     NODE_ENV: nodeEnv as AppEnv['NODE_ENV'],
     PORT: port,
@@ -67,6 +93,9 @@ export function validateEnv(raw: Record<string, unknown>): AppEnv {
     SESSION_SECRET: secret,
     SWAGGER_ENABLED: str('SWAGGER_ENABLED', nodeEnv === 'production' ? 'false' : 'true') === 'true',
     MEETING_BASE_URL: meetingBase,
+    STUN_URLS: stunUrls,
+    TURN_URLS: turnUrls,
+    TURN_SECRET: turnSecret,
   };
 
   if (errors.length > 0) {

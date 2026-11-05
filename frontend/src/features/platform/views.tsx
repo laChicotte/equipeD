@@ -5,6 +5,11 @@ import {
   Award,
   CalendarCheck2,
   Clock,
+  Download,
+  Phone,
+  Presentation,
+  Printer,
+  Target,
   Inbox,
   MessagesSquare,
   ShieldPlus,
@@ -41,7 +46,7 @@ import {
   useAdminCertificates,
   useAudit,
   useMetrics,
-  useSuperAdminMutations,
+  usePlatformMutations,
   useTeam,
   type AdminCertificate,
   type DailyPoint,
@@ -49,17 +54,17 @@ import {
 
 const panel = 'rounded-lg bg-surface shadow-card ring-1 ring-border/70';
 
-function useSuperGuard() {
+function useAdminGuard() {
   const { data: me } = useMe();
-  return { me, allowed: me?.role === 'SUPER_ADMIN' };
+  return { me, allowed: me?.role === 'ADMIN' };
 }
 
 function Guard({ children }: { children: React.ReactNode }) {
-  const { me, allowed } = useSuperGuard();
+  const { me, allowed } = useAdminGuard();
   if (!me) return null;
   if (!allowed)
     return (
-      <AccessDenied message="Cet espace est réservé au super-administrateur de la plateforme." />
+      <AccessDenied message="Cet espace est réservé à l’équipe d’administration de la plateforme." />
     );
   return <>{children}</>;
 }
@@ -191,6 +196,20 @@ export function PilotageView() {
       <PageHeader
         title="Pilotage de la plateforme"
         description="Indicateurs calculés en direct sur la base de données. Aucun contenu de conversation n’est consulté."
+        actions={
+          <span className="flex flex-wrap gap-2 print:hidden">
+            <Button asChild variant="secondary">
+              <a href="/api/v1/admin/impact-report.csv" download>
+                <Download aria-hidden />
+                Rapport d’impact (CSV)
+              </a>
+            </Button>
+            <Button variant="ghost" onClick={() => window.print()}>
+              <Printer aria-hidden />
+              Imprimer ou PDF
+            </Button>
+          </span>
+        }
       />
       {metrics.isError ? (
         <ErrorState error={metrics.error} onRetry={() => void metrics.refetch()} />
@@ -272,6 +291,24 @@ export function PilotageView() {
                   value={m.messages.total}
                   hint={`${m.messages.last7d} ces 7 derniers jours`}
                   icon={MessagesSquare}
+                />
+                <Kpi
+                  label="Objectifs atteints"
+                  value={m.goals.completed}
+                  hint={`sur ${m.goals.total} définis · ${m.goals.inProgress} en cours`}
+                  icon={Target}
+                />
+                <Kpi
+                  label="Ateliers réalisés"
+                  value={m.workshops.held}
+                  hint={`${m.workshops.participations} participation(s) · ${m.workshops.upcoming} à venir`}
+                  icon={Presentation}
+                />
+                <Kpi
+                  label="Appels audio"
+                  value={m.calls.audio}
+                  hint={`${m.calls.audioMinutes} min · vidéo : ${m.calls.video} appel(s), ${m.calls.videoMinutes} min`}
+                  icon={Phone}
                 />
               </div>
 
@@ -394,8 +431,12 @@ export function PilotageView() {
                                 </Badge>
                               )}
                             </td>
-                            <td className="px-3 py-2 text-right font-semibold tabular-nums">{d.mentors}</td>
-                            <td className="px-3 py-2 text-right tabular-nums">{d.menteeInterests}</td>
+                            <td className="px-3 py-2 text-right font-semibold tabular-nums">
+                              {d.mentors}
+                            </td>
+                            <td className="px-3 py-2 text-right tabular-nums">
+                              {d.menteeInterests}
+                            </td>
                             <td className="px-5 py-2 text-right tabular-nums">{d.requests}</td>
                           </tr>
                         );
@@ -419,10 +460,10 @@ export function PilotageView() {
 /* ── Équipe ───────────────────────────────────────────────────────────────── */
 
 export function TeamView() {
-  const { me } = useSuperGuard();
+  const { me } = useAdminGuard();
   const team = useTeam();
   const users = useAdminUsers();
-  const { changeRole } = useSuperAdminMutations();
+  const { changeRole } = usePlatformMutations();
   const [q, setQ] = useState('');
 
   const candidates = useMemo(() => {
@@ -476,9 +517,7 @@ export function TeamView() {
                       {u.email} · depuis le {formatDate(u.createdAt)}
                     </p>
                   </div>
-                  <Badge tone={u.role === 'SUPER_ADMIN' ? 'ink' : 'teal'}>
-                    {roleLabels[u.role]}
-                  </Badge>
+                  <Badge tone="teal">{roleLabels[u.role]}</Badge>
                   {u.role === 'ADMIN' && (
                     <ConfirmButton
                       title={`Retirer ${u.firstName} de l’équipe ?`}
@@ -665,7 +704,7 @@ export function AuditView() {
 /* ── Certificats ──────────────────────────────────────────────────────────── */
 
 function RevokeDialog({ cert, onClose }: { cert: AdminCertificate; onClose: () => void }) {
-  const { revokeCertificate } = useSuperAdminMutations();
+  const { revokeCertificate } = usePlatformMutations();
   const [reason, setReason] = useState('');
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>

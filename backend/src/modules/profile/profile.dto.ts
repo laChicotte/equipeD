@@ -23,6 +23,9 @@ const emptyToUndefined = ({ value }: { value: unknown }) => {
   return v === '' ? undefined : v;
 };
 
+/** Langues d'accompagnement acceptées (les langues nationales ne sont pas proposées). */
+export const MENTOR_LANGUAGES = ['Français', 'Anglais'] as const;
+
 export class UpsertMentorProfileDto {
   @Transform(trim)
   @IsString()
@@ -65,9 +68,8 @@ export class UpsertMentorProfileDto {
 
   @IsArray()
   @ArrayMinSize(1, { message: 'Indiquez au moins une langue.' })
-  @ArrayMaxSize(6)
-  @IsString({ each: true })
-  @Length(2, 30, { each: true })
+  @ArrayMaxSize(MENTOR_LANGUAGES.length)
+  @IsIn(MENTOR_LANGUAGES, { each: true, message: 'Langues acceptées : français ou anglais.' })
   languages!: string[];
 
   @IsArray()

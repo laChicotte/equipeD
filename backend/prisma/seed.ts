@@ -5,11 +5,15 @@
  * - Comptes et profils : FICTIFS, réservés au développement et à la démonstration.
  *   Aucun nom, email ou parcours ne correspond à une personne réelle.
  *   Refusés en production sauf SEED_DEMO=true explicite.
+ * - Photos de profil des comptes de démo : portraits libres de droits (Unsplash), sans lien avec
+ *   les personnes photographiées. Crédits : prisma/demo-avatars/CREDITS.md.
  *
  * Relançable à volonté : upserts sur clés naturelles, créneaux créés seulement s'ils
  * ne chevauchent pas l'existant (contrainte d'exclusion PostgreSQL).
  */
 import 'dotenv/config';
+import { existsSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../src/generated/prisma/client.js';
 import type {
@@ -167,7 +171,7 @@ const MENTORS: DemoMentor[] = [
       'Portfolio',
       'Entretien technique',
     ],
-    languages: ['Français', 'Anglais', 'Soussou'],
+    languages: ['Français', 'Anglais'],
     modalities: ['REMOTE', 'HYBRID'],
     city: 'Conakry',
     domains: ['numerique-technologies', 'orientation-insertion'],
@@ -189,7 +193,7 @@ const MENTORS: DemoMentor[] = [
       'Prévisionnel financier',
       'Développement commercial',
     ],
-    languages: ['Français', 'Pular'],
+    languages: ['Français'],
     modalities: ['IN_PERSON', 'REMOTE'],
     city: 'Conakry',
     domains: ['entrepreneuriat', 'gestion-finance-administration'],
@@ -227,7 +231,7 @@ const MENTORS: DemoMentor[] = [
       'Données',
       'Certifications',
     ],
-    languages: ['Français', 'Anglais', 'Malinké'],
+    languages: ['Français', 'Anglais'],
     modalities: ['REMOTE', 'HYBRID'],
     city: 'Kankan',
     domains: ['numerique-technologies'],
@@ -243,7 +247,7 @@ const MENTORS: DemoMentor[] = [
     organization: 'Maison d’édition (fictive)',
     yearsExperience: 11,
     expertise: ['Écriture', 'Édition', 'Création de contenu', 'Entrepreneuriat culturel'],
-    languages: ['Français', 'Pular'],
+    languages: ['Français'],
     modalities: ['IN_PERSON', 'HYBRID'],
     city: 'Conakry',
     domains: ['culture-industries-creatives', 'developpement-personnel-leadership'],
@@ -340,7 +344,7 @@ async function upsertUser(
   key: string,
   firstName: string,
   lastName: string,
-  role: 'MENTOR' | 'MENTEE' | 'ADMIN' | 'SUPER_ADMIN',
+  role: 'MENTOR' | 'MENTEE' | 'ADMIN',
   passwordHash: string,
 ) {
   return prisma.user.upsert({
@@ -396,6 +400,31 @@ async function seedSlots(mentorId: string, seedIndex: number) {
     created++;
   }
   return created;
+}
+
+/**
+ * Photos de profil des comptes de démo (portraits Unsplash, crédits dans demo-avatars/CREDITS.md).
+ * Posées seulement si le compte n'a pas déjà de photo : une photo changée depuis l'interface
+ * n'est jamais écrasée par une nouvelle seed.
+ */
+async function seedDemoAvatars(accounts: [key: string, userId: string][]) {
+  let added = 0;
+  for (const [key, userId] of accounts) {
+    const file = new URL(`./demo-avatars/${key}.jpg`, import.meta.url);
+    if (!existsSync(file)) continue;
+    const existing = await prisma.userAvatar.findUnique({
+      where: { userId },
+      select: { userId: true },
+    });
+    if (existing) continue;
+    const data = new Uint8Array(await readFile(file));
+    await prisma.$transaction([
+      prisma.userAvatar.create({ data: { userId, mimeType: 'image/jpeg', data } }),
+      prisma.user.update({ where: { id: userId }, data: { avatarUpdatedAt: new Date() } }),
+    ]);
+    added++;
+  }
+  return added;
 }
 
 async function main() {
@@ -499,8 +528,8 @@ async function main() {
   }
 
   await upsertUser('admin', 'Équipe', 'Modération', 'ADMIN', passwordHash);
-  // Responsable de la plateforme (fictif) : pilotage, équipe, journal d'audit, certificats.
-  await upsertUser('superadmin', 'Direction', 'Plateforme', 'SUPER_ADMIN', passwordHash);
+  // Ancien compte de démo « super-administrateur » : le rôle a été supprimé (un seul rôle ADMIN).
+  await prisma.user.deleteMany({ where: { email: email('superadmin') } });
 
   // Un mentorat déjà actif (Mohamed ↔ Thierno) pour que les tableaux de bord ne soient pas vides.
   // Le parcours principal de démo (Aminata → Fatoumata) reste volontairement vierge.
@@ -836,11 +865,14 @@ async function main() {
     });
   }
 
+  const photosAjoutées = await seedDemoAvatars([...mentorIds, ...menteeIds]);
+
   const counts = {
     domaines: await prisma.expertiseDomain.count(),
     mentors: await prisma.user.count({ where: { role: 'MENTOR' } }),
     mentorés: await prisma.user.count({ where: { role: 'MENTEE' } }),
     créneauxAjoutés: slotCount,
+    photosAjoutées,
   };
   console.log('Seed terminée :', counts);
   console.log(`Comptes de démonstration (dev uniquement) — mot de passe commun : ${DEMO_PASSWORD}`);

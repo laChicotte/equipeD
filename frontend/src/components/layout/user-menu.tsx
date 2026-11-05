@@ -1,6 +1,14 @@
 'use client';
 
-import { ChevronDown, LayoutDashboard, LogOut, Settings, UserRound } from 'lucide-react';
+import {
+  ChevronDown,
+  Download,
+  GraduationCap,
+  LayoutDashboard,
+  LogOut,
+  Settings,
+  UserRound,
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Avatar } from '@/components/ui/avatar';
@@ -13,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/misc';
 import { homeFor, useLogout } from '@/features/auth/api';
+import { useInstallPrompt } from '@/lib/pwa';
 import { roleLabels } from '@/lib/labels';
 import type { Me } from '@/lib/types';
 import { cn, isStaff } from '@/lib/utils';
@@ -28,6 +37,7 @@ export function UserMenu({
 }) {
   const router = useRouter();
   const logout = useLogout();
+  const install = useInstallPrompt();
 
   const onLogout = () => {
     logout.mutate(undefined, {
@@ -84,10 +94,26 @@ export function UserMenu({
             Modifier mon profil
           </DropdownMenuItem>
         )}
+        {me.role === 'MENTEE' && (
+          <DropdownMenuItem onSelect={() => router.push('/devenir-mentor')}>
+            <GraduationCap aria-hidden />
+            Devenir mentor
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem onSelect={() => router.push('/compte')}>
           <Settings aria-hidden />
           Mon compte
         </DropdownMenuItem>
+        {install && (
+          <DropdownMenuItem
+            onSelect={() =>
+              void install().then((ok) => ok && toast.success('Application installée.'))
+            }
+          >
+            <Download aria-hidden />
+            Installer l’application
+          </DropdownMenuItem>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={onLogout} className="text-danger-700 [&_svg]:text-danger-700">
           <LogOut aria-hidden />

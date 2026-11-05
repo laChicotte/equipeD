@@ -6,6 +6,8 @@ import { EmptyState, ErrorState, PageHeader } from '@/components/feedback/states
 import { Button } from '@/components/ui/button';
 import { Skeleton, Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/misc';
 import { useMe } from '@/features/auth/api';
+import { useMyWorkshops } from '@/features/groups/api';
+import { WorkshopCard } from '@/features/groups/workshops';
 import type { Me } from '@/lib/types';
 import { useSessions } from './api';
 import { SessionCard } from './session-card';
@@ -66,6 +68,26 @@ function SessionList({ scope, me }: { scope: 'upcoming' | 'past'; me: Me }) {
   );
 }
 
+/** Ateliers à venir de tous mes groupes (masqué s'il n'y en a aucun). */
+function UpcomingWorkshops({ me }: { me: Me }) {
+  const q = useMyWorkshops('upcoming');
+  if (!q.data || q.data.length === 0) return null;
+  return (
+    <section aria-labelledby="titre-ateliers" className="mb-8">
+      <h2 id="titre-ateliers" className="mb-3 text-base font-semibold tracking-tight">
+        Ateliers de groupe à venir
+      </h2>
+      <ul className="grid gap-3">
+        {q.data.map((w) => (
+          <li key={w.id}>
+            <WorkshopCard workshop={w} me={me} />
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 export function SessionsView() {
   const { data: me } = useMe();
   if (!me) return null;
@@ -79,6 +101,7 @@ export function SessionsView() {
             : 'Retrouvez vos séances confirmées et celles en attente de confirmation.'
         }
       />
+      <UpcomingWorkshops me={me} />
       <Tabs defaultValue="upcoming">
         <TabsList>
           <TabsTrigger value="upcoming">À venir</TabsTrigger>

@@ -8,7 +8,9 @@ import {
   Patch,
   Post,
   Query,
+  Res,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { ApiTags } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsIn, IsInt, IsOptional, IsString, Length, Max, Min } from 'class-validator';
@@ -18,6 +20,7 @@ import type { AuthUser } from '../../common/auth/auth-user.js';
 import { conflict, forbidden, notFound } from '../../common/errors.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import { NotificationsService } from '../notifications/notifications.module.js';
+import { buildImpactCsv } from './impact-report.js';
 
 export class ChangeRoleDto {
   /** Nommer administrateur, ou rendre à un administrateur un rôle de mentor ou de mentoré. */
@@ -62,7 +65,7 @@ function fillDays(rows: { day: Date; n: bigint | number }[], from: Date, days: n
 }
 
 @Injectable()
-export class SuperAdminService {
+export class PlatformService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
@@ -95,6 +98,10 @@ export class SuperAdminService {
       requestsDaily,
       sessionsDaily,
       messagesDaily,
+      goalsByStatus,
+      workshops,
+      workshopGoing,
+      calls,
     ] = await Promise.all([
       this.prisma.user.groupBy({
         by: ['role'],
@@ -154,6 +161,20 @@ export class SuperAdminService {
       this.prisma.$queryRaw<{ day: Date; n: bigint }[]>`
         SELECT date_trunc('day', created_at) AS day, count(*) AS n FROM messages
         WHERE created_at >= ${from} GROUP BY 1`,
+      this.prisma.goal.groupBy({ by: ['status'], _count: { _all: true } }),
+      this.prisma.groupWorkshop.findMany({
+        where: { cancelledAt: null },
+        select: { startsAt: true, endsAt: true },
+        take: 20000,
+      }),
+      this.prisma.workshopAttendance.count({
+        where: { response: 'GOING', workshop: { cancelledAt: null, endsAt: { lte: now } } },
+      }),
+      this.prisma.call.findMany({
+        where: { status: 'ENDED', answeredAt: { not: null }, endedAt: { not: null } },
+        select: { kind: true, answeredAt: true, endedAt: true },
+        take: 20000,
+      }),
     ]);
 
     const count = <T extends { _count: { _all: number } }>(rows: T[], pick: (r: T) => string) =>
@@ -171,6 +192,18 @@ export class SuperAdminService {
       (s, x) => s + (x.endsAt.getTime() - x.startsAt.getTime()) / 60_000,
       0,
     );
+    const goals = count(goalsByStatus, (r) => r.status);
+    const heldWorkshops = workshops.filter((w) => w.endsAt <= now);
+    const workshopMinutes = heldWorkshops.reduce(
+      (s, w) => s + (w.endsAt.getTime() - w.startsAt.getTime()) / 60_000,
+      0,
+    );
+    const callMinutes = (kind: 'AUDIO' | 'VIDEO') =>
+      Math.round(
+        calls
+          .filter((c) => c.kind === kind)
+          .reduce((s, c) => s + (c.endedAt!.getTime() - c.answeredAt!.getTime()) / 60_000, 0),
+      );
     const mentors = mentorProfiles.reduce(
       (acc, p) => {
         acc.total += p._count._all;
@@ -215,6 +248,23 @@ export class SuperAdminService {
           .reduce((s, c) => s + c._count._all, 0),
       },
       messages: { total: messagesTotal, last7d: messages7d },
+      goals: {
+        total: Object.values(goals).reduce((a, b) => a + b, 0),
+        completed: goals.COMPLETED ?? 0,
+        inProgress: goals.IN_PROGRESS ?? 0,
+      },
+      workshops: {
+        held: heldWorkshops.length,
+        upcoming: workshops.length - heldWorkshops.length,
+        hours: Math.round((workshopMinutes / 60) * 10) / 10,
+        participations: workshopGoing,
+      },
+      calls: {
+        audio: calls.filter((c) => c.kind === 'AUDIO').length,
+        video: calls.filter((c) => c.kind === 'VIDEO').length,
+        audioMinutes: callMinutes('AUDIO'),
+        videoMinutes: callMinutes('VIDEO'),
+      },
       domains: domains.map((d) => ({
         id: d.id,
         name: d.name,
@@ -235,8 +285,8 @@ export class SuperAdminService {
 
   team() {
     return this.prisma.user.findMany({
-      where: { role: { in: ['ADMIN', 'SUPER_ADMIN'] }, status: { not: 'DELETED' } },
-      orderBy: [{ role: 'desc' }, { createdAt: 'asc' }],
+      where: { role: 'ADMIN', status: { not: 'DELETED' } },
+      orderBy: { createdAt: 'asc' },
       select: {
         id: true,
         firstName: true,
@@ -251,8 +301,8 @@ export class SuperAdminService {
   }
 
   /**
-   * Changement de rôle, réservé au super-administrateur :
-   *  - jamais sur soi-même ni sur un autre super-administrateur ;
+   * Changement de rôle par un administrateur :
+   *  - jamais sur soi-même (il reste donc toujours au moins un administrateur) ;
    *  - un compte avec un mentorat en cours ou une demande en attente ne peut pas devenir administrateur ;
    *  - les sessions de la personne sont révoquées pour que ses droits soient recalculés.
    */
@@ -265,12 +315,6 @@ export class SuperAdminService {
     });
     if (!user || user.status === 'DELETED')
       throw notFound('USER_NOT_FOUND', 'Utilisateur introuvable.');
-    if (user.role === 'SUPER_ADMIN') {
-      throw forbidden(
-        'SUPER_ADMIN_PROTECTED',
-        'Le rôle d’un super-administrateur ne peut pas être modifié ici.',
-      );
-    }
     if (user.role === dto.role) return { id: user.id, role: user.role };
     if (dto.role !== 'ADMIN' && user.role !== 'ADMIN') {
       throw conflict(
@@ -300,7 +344,6 @@ export class SuperAdminService {
       ADMIN: 'administrateur',
       MENTOR: 'mentor',
       MENTEE: 'mentoré',
-      SUPER_ADMIN: 'super-administrateur',
     };
     return this.prisma.$transaction(async (tx) => {
       const updated = await tx.user.update({
@@ -406,15 +449,38 @@ export class SuperAdminService {
   }
 }
 
-@ApiTags('superadmin')
-@Roles('SUPER_ADMIN')
-@Controller('superadmin')
-export class SuperAdminController {
-  constructor(private readonly service: SuperAdminService) {}
+@ApiTags('admin')
+@Roles('ADMIN')
+@Controller('admin')
+export class PlatformController {
+  constructor(
+    private readonly service: PlatformService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   @Get('metrics')
   metrics() {
     return this.service.metrics();
+  }
+
+  /** Rapport d'impact téléchargeable (CSV pour Excel) : comptages agrégés, aucune donnée personnelle. */
+  @Get('impact-report.csv')
+  async impactReport(@CurrentUser() actor: AuthUser, @Res() res: Response) {
+    const csv = buildImpactCsv(await this.service.metrics());
+    await recordAudit(this.prisma, actor, {
+      action: 'IMPACT_REPORT_EXPORTED',
+      targetType: 'REPORT',
+      targetId: null,
+      summary: 'Export du rapport d’impact (CSV)',
+    });
+    const day = new Date().toISOString().slice(0, 10);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="rapport-impact-talents-connectes-${day}.csv"`,
+    );
+    res.setHeader('Cache-Control', 'no-store');
+    res.send(csv);
   }
 
   @Get('team')
@@ -448,7 +514,7 @@ export class SuperAdminController {
 }
 
 @Module({
-  controllers: [SuperAdminController],
-  providers: [SuperAdminService],
+  controllers: [PlatformController],
+  providers: [PlatformService],
 })
-export class SuperAdminModule {}
+export class PlatformModule {}

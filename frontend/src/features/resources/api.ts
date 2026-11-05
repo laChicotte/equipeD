@@ -10,6 +10,8 @@ export interface ResourceInput {
   url?: string;
   kind?: ResourceKind;
   domainId?: string;
+  /** Document joint : envoyé en multipart vers la route /upload. */
+  file?: File;
 }
 
 export interface LibraryFilters {
@@ -47,11 +49,16 @@ export function useMentorshipResources(mentorshipId: string) {
 export function useCreateResource(mentorshipId?: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: ResourceInput) =>
-      api<Resource>(mentorshipId ? `/mentorships/${mentorshipId}/resources` : '/resources', {
-        method: 'POST',
-        body: input,
-      }),
+    mutationFn: ({ file, ...input }: ResourceInput) => {
+      const base = mentorshipId ? `/mentorships/${mentorshipId}/resources` : '/resources';
+      if (!file) return api<Resource>(base, { method: 'POST', body: input });
+      const form = new FormData();
+      for (const [key, value] of Object.entries(input)) {
+        if (value !== undefined && value !== '') form.append(key, value);
+      }
+      form.append('file', file);
+      return api<Resource>(`${base}/upload`, { method: 'POST', body: form });
+    },
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['resources'] }),
   });
 }

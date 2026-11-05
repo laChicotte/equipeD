@@ -24,10 +24,13 @@ export const metadata: Metadata = {
   },
   description:
     'Étudiants, jeunes diplômés, porteurs de projets : trouvez un mentor expérimenté, échangez en privé, planifiez vos séances et suivez vos objectifs.',
+  applicationName: 'Talents Connectés',
+  appleWebApp: { capable: true, title: 'Talents Connectés', statusBarStyle: 'default' },
+  icons: { apple: '/icons/apple-touch-icon.png' },
 };
 
 export const viewport: Viewport = {
-  themeColor: '#172A46',
+  themeColor: '#12342a',
   width: 'device-width',
   initialScale: 1,
 };

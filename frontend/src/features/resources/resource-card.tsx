@@ -2,6 +2,7 @@
 
 import {
   ArrowUpRight,
+  Download,
   FileText,
   Lightbulb,
   PlayCircle,
@@ -19,6 +20,7 @@ import { formatDate, fullName } from '@/lib/format';
 import { resourceKindLabels } from '@/lib/labels';
 import type { Me, Resource, ResourceKind } from '@/lib/types';
 import { useDeleteResource } from './api';
+import { fileKindLabel, formatFileSize, resourceFileUrl } from './files';
 import { isStaff } from '@/lib/utils';
 
 const KIND_ICONS: Record<ResourceKind, LucideIcon> = {
@@ -65,7 +67,19 @@ export function ResourceCard({ resource, me }: { resource: Resource; me?: Me | n
           {formatDate(resource.createdAt)}
         </p>
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-          {resource.url ? (
+          {resource.file ? (
+            <a
+              href={resourceFileUrl(resource.id)}
+              download={resource.file.fileName}
+              className="inline-flex min-w-0 items-center gap-1.5 text-[15px] font-semibold text-teal-700 hover:text-teal-800"
+            >
+              <Download className="size-4 shrink-0" aria-hidden />
+              <span className="min-w-0 truncate">Télécharger</span>
+              <span className="shrink-0 text-[13px] font-medium text-muted-foreground">
+                {fileKindLabel(resource.file.fileName)} · {formatFileSize(resource.file.size)}
+              </span>
+            </a>
+          ) : resource.url ? (
             <a
               href={resource.url}
               target="_blank"

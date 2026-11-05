@@ -22,6 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { NativeSelect } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/misc';
 import { useMe } from '@/features/auth/api';
+import { ResetLinkButton } from '@/features/auth/components/password-reset';
 import { errorMessage } from '@/lib/api';
 import { formatDate, fullName } from '@/lib/format';
 import {
@@ -118,10 +119,11 @@ export function AdminOverviewView() {
             <div className="flex flex-col gap-3 rounded-lg border border-amber-100 bg-amber-50 p-4 sm:flex-row sm:items-center sm:justify-between">
               <p className="flex items-center gap-2 text-sm font-medium text-[#7a4a0f]">
                 <Hourglass className="size-4" aria-hidden />
-                {q.data.pendingVerification} profil(s) mentor en attente de vérification.
+                {q.data.pendingVerification} demande(s) de vérification ou candidature(s) de mentor
+                en attente.
               </p>
               <Button asChild size="sm" variant="secondary">
-                <Link href="/admin/mentors">Vérifier les mentors</Link>
+                <Link href="/admin/verifications">Examiner les demandes</Link>
               </Button>
             </div>
           )}
@@ -155,7 +157,7 @@ export function AdminUsersView() {
     <>
       <PageHeader
         title="Comptes"
-        description="La suspension révoque immédiatement les sessions actives du compte."
+        description="La suspension révoque immédiatement les sessions actives du compte. « Réinitialiser » crée un lien personnel de changement de mot de passe, à remettre à la personne."
         actions={
           <NativeSelect
             aria-label="Filtrer par rôle"
@@ -197,7 +199,7 @@ export function AdminUsersView() {
                     Statut
                   </th>
                   <th scope="col" className="px-5 py-3 text-right">
-                    Action
+                    Actions
                   </th>
                 </tr>
               </thead>
@@ -226,6 +228,9 @@ export function AdminUsersView() {
                       )}
                     </td>
                     <td className="px-5 py-3 text-right">
+                      {u.id !== me.id && u.status === 'ACTIVE' && u.role !== 'ADMIN' && (
+                        <ResetLinkButton user={u} />
+                      )}
                       {u.id !== me.id && (
                         <Button
                           size="sm"

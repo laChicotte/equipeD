@@ -735,8 +735,8 @@ const GUARANTEES = [
   },
   {
     icon: Video,
-    title: 'Salle de visio',
-    text: 'Un lien Jitsi Meet privé est créé à chaque séance confirmée à distance.',
+    title: 'Appels dans l’application',
+    text: 'Appel audio léger, pensé pour les réseaux mobiles, ou vidéo ; une salle de visio est aussi créée pour chaque séance à distance.',
   },
   {
     icon: Target,

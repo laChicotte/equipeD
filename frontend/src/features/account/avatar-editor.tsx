@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog';
 import { useMe } from '@/features/auth/api';
 import { errorMessage } from '@/lib/api';
+import { roleLabels } from '@/lib/labels';
 import { cn } from '@/lib/utils';
 import { useAccountMutations } from './api';
 
@@ -273,34 +274,36 @@ export function AvatarSection() {
   const { removeAvatar } = useAccountMutations();
   if (!me) return null;
   return (
-    <div className="flex flex-wrap items-center gap-5">
-      <Avatar person={me} size="xl" className="size-24 text-3xl" />
-      <div className="grid gap-2">
-        <p className="text-[14px] text-muted-foreground">
-          JPEG, PNG ou WebP. Recadrée en carré dans votre navigateur.
+    <div className="flex flex-wrap items-center gap-4">
+      <Avatar person={me} size="xl" className="size-16 text-xl" />
+      <div className="min-w-0 flex-1 basis-48">
+        <p className="truncate font-display text-[17px] font-semibold text-ink-900">
+          {me.firstName} {me.lastName}
         </p>
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" onClick={picker.open}>
-            <ImagePlus aria-hidden />
-            {me.avatarUpdatedAt ? 'Changer la photo' : 'Ajouter une photo'}
+        <p className="text-[13px] text-muted-foreground">{roleLabels[me.role]}</p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Button type="button" variant="secondary" size="sm" onClick={picker.open}>
+          <ImagePlus aria-hidden />
+          {me.avatarUpdatedAt ? 'Changer la photo' : 'Ajouter une photo'}
+        </Button>
+        {me.avatarUpdatedAt && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            loading={removeAvatar.isPending}
+            onClick={() =>
+              removeAvatar.mutate(undefined, {
+                onSuccess: () => toast.success('Photo retirée'),
+                onError: (e) => toast.error(errorMessage(e)),
+              })
+            }
+          >
+            <Trash2 aria-hidden />
+            Retirer
           </Button>
-          {me.avatarUpdatedAt && (
-            <Button
-              type="button"
-              variant="secondary"
-              loading={removeAvatar.isPending}
-              onClick={() =>
-                removeAvatar.mutate(undefined, {
-                  onSuccess: () => toast.success('Photo retirée'),
-                  onError: (e) => toast.error(errorMessage(e)),
-                })
-              }
-            >
-              <Trash2 aria-hidden />
-              Retirer
-            </Button>
-          )}
-        </div>
+        )}
       </div>
       {picker.element}
     </div>

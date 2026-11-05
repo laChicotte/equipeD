@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
-import type { Dashboard, Goal, Message, MentorshipSummary } from '@/lib/types';
+import type { Dashboard, Goal, GuidedPath, Message, MentorshipSummary } from '@/lib/types';
 
 export function useDashboard(enabled = true) {
   return useQuery({
@@ -64,6 +64,28 @@ export function useSendMessage(mentorshipId: string) {
         old && !old.some((m) => m.id === message.id) ? [...old, message] : old,
       );
       void qc.invalidateQueries({ queryKey: ['mentorships', mentorshipId, 'messages'] });
+      void qc.invalidateQueries({ queryKey: ['mentorships', 'me'] });
+    },
+  });
+}
+
+/** Envoi d'une pièce jointe (document ou photo) avec légende facultative. */
+export function useSendFileMessage(mentorshipId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ file, content }: { file: File; content?: string }) => {
+      const form = new FormData();
+      if (content) form.append('content', content);
+      form.append('file', file);
+      return api<Message>(`/mentorships/${mentorshipId}/messages/upload`, {
+        method: 'POST',
+        body: form,
+      });
+    },
+    onSuccess: (message) => {
+      qc.setQueryData<Message[]>(['mentorships', mentorshipId, 'messages'], (old) =>
+        old && !old.some((m) => m.id === message.id) ? [...old, message] : old,
+      );
       void qc.invalidateQueries({ queryKey: ['mentorships', 'me'] });
     },
   });
@@ -168,6 +190,34 @@ export function useCompleteMentorship(mentorshipId: string) {
       qc.setQueryData(['mentorships', mentorshipId], data);
       void qc.invalidateQueries({ queryKey: ['mentorships'] });
       void qc.invalidateQueries({ queryKey: ['sessions'] });
+      void qc.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
+}
+
+/* ── Parcours guidés ─────────────────────────────────────────────────── */
+
+export function useGuidedPaths(enabled = true) {
+  return useQuery({
+    queryKey: ['guided-paths'],
+    queryFn: () => api<GuidedPath[]>('/guided-paths'),
+    staleTime: 10 * 60_000,
+    enabled,
+  });
+}
+
+export function useApplyGuidedPath(mentorshipId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ pathKey, goalKeys }: { pathKey: string; goalKeys: string[] }) =>
+      api<{ created: Goal[]; skipped: string[] }>(
+        `/mentorships/${mentorshipId}/guided-paths/${pathKey}`,
+        { method: 'POST', body: { goalKeys } },
+      ),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['mentorships', mentorshipId, 'goals'] });
+      void qc.invalidateQueries({ queryKey: ['mentorships', 'me'] });
+      void qc.invalidateQueries({ queryKey: ['mentorships', mentorshipId], exact: true });
       void qc.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });

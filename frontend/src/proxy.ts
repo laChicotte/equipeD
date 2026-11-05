@@ -25,5 +25,6 @@ export const config = {
     '/admin/:path*',
     '/compte/:path*',
     '/messages/:path*',
+    '/devenir-mentor',
   ],
 };

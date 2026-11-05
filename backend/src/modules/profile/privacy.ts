@@ -52,6 +52,10 @@ export class PrivacyService {
       resources,
       opportunities,
       notifications,
+      groups,
+      groupMessages,
+      verificationRequests,
+      workshopResponses,
     ] = await Promise.all([
       this.prisma.user.findUniqueOrThrow({
         where: { id },
@@ -97,6 +101,38 @@ export class PrivacyService {
       this.prisma.resource.findMany({ where: { authorId: id } }),
       this.prisma.opportunity.findMany({ where: { authorId: id } }),
       this.prisma.notification.findMany({ where: { userId: id } }),
+      this.prisma.groupMember.findMany({
+        where: { userId: id },
+        select: {
+          joinedAt: true,
+          group: { select: { id: true, name: true, description: true, ownerId: true } },
+        },
+      }),
+      this.prisma.groupMessage.findMany({
+        where: { senderId: id },
+        select: { groupId: true, content: true, createdAt: true },
+      }),
+      this.prisma.verificationRequest.findMany({
+        where: { userId: id },
+        select: {
+          kind: true,
+          status: true,
+          message: true,
+          profileUrl: true,
+          decisionNote: true,
+          decidedAt: true,
+          createdAt: true,
+          documents: { select: { fileName: true, mimeType: true, size: true, createdAt: true } },
+        },
+      }),
+      this.prisma.workshopAttendance.findMany({
+        where: { userId: id },
+        select: {
+          response: true,
+          respondedAt: true,
+          workshop: { select: { id: true, title: true, startsAt: true, groupId: true } },
+        },
+      }),
     ]);
     const { sessions: authSessions, mentorProfile, ...rest } = account;
     const { searchText: _searchText, ...publicMentorProfile } = mentorProfile ?? { searchText: '' };
@@ -115,6 +151,10 @@ export class PrivacyService {
       resources,
       opportunities,
       notifications,
+      groups,
+      groupMessagesSent: groupMessages,
+      verificationRequests,
+      workshopResponses,
     };
   }
 
@@ -173,6 +213,13 @@ export class PrivacyService {
       await tx.mentorProfile.deleteMany({ where: { userId: id } });
       await tx.menteeProfile.deleteMany({ where: { userId: id } });
       await tx.notification.deleteMany({ where: { userId: id } });
+      // Groupes : ceux qu'elle animait sont supprimés, elle quitte les autres.
+      // Justificatifs de vérification : données personnelles, supprimées avec le compte.
+      await tx.verificationRequest.deleteMany({ where: { userId: id } });
+      await tx.mentoringGroup.deleteMany({ where: { ownerId: id } });
+      await tx.groupMember.deleteMany({ where: { userId: id } });
+      await tx.workshopAttendance.deleteMany({ where: { userId: id } });
+      await tx.passwordResetToken.deleteMany({ where: { userId: id } });
       await tx.authSession.deleteMany({ where: { userId: id } });
       await tx.userAvatar.deleteMany({ where: { userId: id } });
       await tx.mentorshipCertificate.updateMany({

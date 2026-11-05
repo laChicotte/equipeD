@@ -48,14 +48,22 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
     response = await fetch(buildUrl(path, query), {
       method,
       credentials: 'same-origin',
-      // Un Blob (photo de profil) part tel quel, avec son type ; le reste en JSON.
+      // Un Blob (photo de profil) part tel quel, avec son type ; un FormData (document joint)
+      // laisse le navigateur fixer l'en-tête multipart ; le reste part en JSON.
       headers:
-        body instanceof Blob
-          ? { 'Content-Type': body.type || 'application/octet-stream' }
+        body instanceof FormData
+          ? undefined
+          : body instanceof Blob
+            ? { 'Content-Type': body.type || 'application/octet-stream' }
+            : body !== undefined
+              ? { 'Content-Type': 'application/json' }
+              : undefined,
+      body:
+        body instanceof FormData || body instanceof Blob
+          ? body
           : body !== undefined
-            ? { 'Content-Type': 'application/json' }
+            ? JSON.stringify(body)
             : undefined,
-      body: body instanceof Blob ? body : body !== undefined ? JSON.stringify(body) : undefined,
       signal,
     });
   } catch (error) {

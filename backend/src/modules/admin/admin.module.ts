@@ -45,9 +45,8 @@ export class AdminService {
         this.prisma.user.count(),
         this.prisma.user.count({ where: { role: 'MENTOR' } }),
         this.prisma.user.count({ where: { role: 'MENTEE' } }),
-        this.prisma.mentorProfile.count({
-          where: { verificationStatus: { in: ['UNVERIFIED', 'PENDING'] } },
-        }),
+        // Demandes de vérification et candidatures de mentor en attente de décision.
+        this.prisma.verificationRequest.count({ where: { status: 'PENDING' } }),
         this.prisma.mentorshipRequest.groupBy({ by: ['status'], _count: { _all: true } }),
         this.prisma.mentorship.count({ where: { status: 'ACTIVE' } }),
         this.prisma.mentoringSession.groupBy({ by: ['status'], _count: { _all: true } }),
@@ -97,12 +96,6 @@ export class AdminService {
       throw conflict(
         'ACCOUNT_DELETED',
         'Ce compte a été supprimé par son titulaire : il ne peut pas être réactivé.',
-      );
-    }
-    if (user.role === 'SUPER_ADMIN' || (user.role === 'ADMIN' && admin.role !== 'SUPER_ADMIN')) {
-      throw forbidden(
-        'STAFF_PROTECTED',
-        'Seul un super-administrateur peut suspendre un membre de l’équipe.',
       );
     }
     const updated = await this.prisma.$transaction(async (tx) => {

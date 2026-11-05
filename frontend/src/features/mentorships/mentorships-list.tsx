@@ -1,6 +1,7 @@
 'use client';
 
 import { CalendarClock, MessageSquare, Search, Users } from 'lucide-react';
+import { previewText } from '@/features/messages/chat-parts';
 import Link from 'next/link';
 import { EmptyState, ErrorState, PageHeader } from '@/components/feedback/states';
 import { StatusBadge } from '@/components/feedback/status-badge';
@@ -94,7 +95,7 @@ export function MentorshipsList() {
                     <MessageSquare className="size-4 shrink-0 text-teal-700" aria-hidden />
                     <span className="truncate">
                       {m.lastMessage
-                        ? `${m.lastMessage.senderId === me.id ? 'Vous : ' : ''}${m.lastMessage.content}`
+                        ? `${m.lastMessage.senderId === me.id && !m.lastMessage.callId ? 'Vous : ' : ''}${previewText(m.lastMessage)}`
                         : 'Aucun message'}
                     </span>
                     {m.lastMessage && (

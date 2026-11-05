@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { TeamView } from '@/features/superadmin/views';
+import { TeamView } from '@/features/platform/views';
 
 export const metadata: Metadata = { title: 'Équipe' };
 

@@ -1,6 +1,6 @@
 // Types alignés sur le contrat d'API réellement implémenté (docs/HANDOFF_FRONTEND.md §4).
 
-export type Role = 'MENTEE' | 'MENTOR' | 'ADMIN' | 'SUPER_ADMIN';
+export type Role = 'MENTEE' | 'MENTOR' | 'ADMIN';
 export type Modality = 'REMOTE' | 'IN_PERSON' | 'HYBRID';
 export type VerificationStatus = 'UNVERIFIED' | 'PENDING' | 'VERIFIED' | 'REJECTED';
 export type MenteeSituation =
@@ -29,7 +29,12 @@ export type NotificationType =
   | 'GOAL_FEEDBACK'
   | 'RESOURCE_SHARED'
   | 'MENTORSHIP_COMPLETED'
-  | 'CERTIFICATE_ISSUED';
+  | 'CERTIFICATE_ISSUED'
+  | 'GROUP_ADDED'
+  | 'WORKSHOP_SCHEDULED'
+  | 'WORKSHOP_CANCELLED'
+  | 'VERIFICATION_APPROVED'
+  | 'VERIFICATION_REJECTED';
 
 export interface Me {
   id: string;
@@ -214,7 +219,13 @@ export interface MentorshipSummary {
   goalsCount: number;
   goalsCompleted: number;
   averageProgress: number | null;
-  lastMessage: { content: string; createdAt: string; senderId: string } | null;
+  lastMessage: {
+    content: string;
+    createdAt: string;
+    senderId: string;
+    callId: string | null;
+    file: { fileName: string; mimeType: string } | null;
+  } | null;
   unreadCount: number;
   certificate: { code: string; issuedAt: string } | null;
 }
@@ -262,12 +273,31 @@ export interface OwnSlot extends Slot {
   sessions: { id: string; status: SessionStatus; topic: string; mentee: PersonRef }[];
 }
 
+export interface ChatFile {
+  fileName: string;
+  mimeType: string;
+  size: number;
+}
+
+export type CallKind = 'AUDIO' | 'VIDEO';
+export type CallStatus = 'RINGING' | 'ACTIVE' | 'ENDED' | 'MISSED' | 'DECLINED' | 'CANCELLED';
+
 export interface Message {
   id: string;
+  /** Vide si le message ne porte qu'une pièce jointe. */
   content: string;
   createdAt: string;
   readAt: string | null;
   senderId: string;
+  file: ChatFile | null;
+  /** Compte rendu d'appel inscrit dans le fil (le texte est dans `content`). */
+  call: {
+    id: string;
+    kind: CallKind;
+    status: CallStatus;
+    answeredAt: string | null;
+    endedAt: string | null;
+  } | null;
 }
 
 export interface Milestone {
@@ -342,6 +372,8 @@ export interface Resource {
   title: string;
   description: string | null;
   url: string | null;
+  /** Document joint (téléchargeable via /api/v1/resources/:id/file). */
+  file: { fileName: string; mimeType: string; size: number } | null;
   createdAt: string;
   author: AuthorRef;
   domain: DomainRef | null;
@@ -397,4 +429,151 @@ export interface CertificateVerification extends Omit<Certificate, 'mentorId'> {
   mentorId: string;
   valid: boolean;
   mentor: { id: string | null; headline: string | null; avatarUpdatedAt: string | null };
+}
+
+/* ── Groupes d'accompagnement ─────────────────────────────────────────── */
+
+export interface GroupPerson extends PersonRef {
+  role: Role;
+}
+
+export interface GroupMessage {
+  id: string;
+  content: string;
+  createdAt: string;
+  senderId: string;
+  sender: PersonRef;
+  file: ChatFile | null;
+}
+
+export interface GroupSummary {
+  id: string;
+  name: string;
+  description: string | null;
+  isOwner: boolean;
+  createdAt: string;
+  memberCount: number;
+  /** Trois premiers membres, pour la pile d'avatars. */
+  preview: GroupPerson[];
+  lastMessage: GroupMessage | null;
+  unreadCount: number;
+}
+
+export interface GroupDetail {
+  id: string;
+  name: string;
+  description: string | null;
+  ownerId: string;
+  isOwner: boolean;
+  createdAt: string;
+  members: (GroupPerson & { joinedAt: string; isOwner: boolean })[];
+}
+
+export interface GroupCandidate extends GroupPerson {
+  role: 'MENTOR' | 'MENTEE';
+  /** Lien avec le mentor : « Votre mentoré·e », « Mentor · … ». */
+  relation: string;
+}
+
+/* ── Parcours guidés ─────────────────────────────────────────────────── */
+
+export interface GuidedGoalTemplate {
+  key: string;
+  title: string;
+  description: string;
+  milestones: string[];
+}
+
+export interface GuidedPath {
+  key: string;
+  title: string;
+  summary: string;
+  /** Limites de l'accompagnement (ex. Campus France : ni admission ni visa garantis). */
+  notice: string | null;
+  domain: DomainRef;
+  goals: GuidedGoalTemplate[];
+}
+
+/* ── Ateliers de groupe ──────────────────────────────────────────────── */
+
+export type WorkshopResponse = 'GOING' | 'NOT_GOING';
+
+export interface Workshop {
+  id: string;
+  groupId: string;
+  title: string;
+  description: string | null;
+  startsAt: string;
+  endsAt: string;
+  modality: Modality;
+  meetingUrl: string | null;
+  location: string | null;
+  cancelledAt: string | null;
+  createdAt: string;
+  group: { id: string; name: string };
+  createdBy: PersonRef;
+  isOwner: boolean;
+  status: 'UPCOMING' | 'PAST' | 'CANCELLED';
+  goingCount: number;
+  notGoingCount: number;
+  myResponse: WorkshopResponse | null;
+}
+
+/* ── Vérification des profils et candidatures de mentor ──────────────── */
+
+export type VerificationKind = 'MENTOR_VERIFICATION' | 'MENTOR_APPLICATION';
+export type VerificationRequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'WITHDRAWN';
+
+export interface VerificationDocumentMeta {
+  id: string;
+  fileName: string;
+  mimeType: string;
+  size: number;
+  createdAt: string;
+}
+
+export interface VerificationRequest {
+  id: string;
+  kind: VerificationKind;
+  status: VerificationRequestStatus;
+  message: string;
+  profileUrl: string | null;
+  decisionNote: string | null;
+  decidedAt: string | null;
+  createdAt: string;
+  documents: VerificationDocumentMeta[];
+}
+
+export interface MyVerification {
+  requests: VerificationRequest[];
+  mentorProfile: { verificationStatus: VerificationStatus; isPublished: boolean } | null;
+}
+
+export interface AdminVerification extends VerificationRequest {
+  decidedBy: { firstName: string; lastName: string } | null;
+  user: PersonRef & {
+    email: string;
+    role: Role;
+    status: 'ACTIVE' | 'SUSPENDED' | 'DELETED';
+    createdAt: string;
+  };
+  mentorProfile: {
+    headline: string;
+    bio: string;
+    currentPosition: string | null;
+    organization: string | null;
+    yearsExperience: number;
+    expertise: string[];
+    languages: string[];
+    modalities: Modality[];
+    city: string | null;
+    verificationStatus: VerificationStatus;
+    isPublished: boolean;
+    domains: { id: string; name: string }[];
+  } | null;
+  history: {
+    completedMentorshipsAsMentee: number;
+    certificatesAsMentee: number;
+    activeMentorshipsAsMentee: number;
+  };
 }

@@ -2,6 +2,7 @@
 
 import {
   Award,
+  BadgeCheck,
   Bell,
   CalendarCheck2,
   CalendarX2,
@@ -10,8 +11,11 @@ import {
   Flag,
   Inbox,
   MessageSquareText,
+  Presentation,
   ThumbsDown,
+  ShieldX,
   ThumbsUp,
+  UsersRound,
   type LucideIcon,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -38,6 +42,11 @@ export const NOTIFICATION_ICONS: Record<NotificationType, LucideIcon> = {
   RESOURCE_SHARED: FileText,
   MENTORSHIP_COMPLETED: Flag,
   CERTIFICATE_ISSUED: Award,
+  GROUP_ADDED: UsersRound,
+  WORKSHOP_SCHEDULED: Presentation,
+  WORKSHOP_CANCELLED: CalendarX2,
+  VERIFICATION_APPROVED: BadgeCheck,
+  VERIFICATION_REJECTED: ShieldX,
 };
 
 /** Cloche de notifications in-app : badge des non-lus, liste, navigation vers l'écran concerné. */

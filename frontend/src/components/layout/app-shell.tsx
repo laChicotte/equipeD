@@ -2,6 +2,7 @@
 
 import {
   Award,
+  BadgeCheck,
   ChartColumn,
   Flag,
   ScrollText,
@@ -49,13 +50,33 @@ interface NavItem {
 }
 
 function navFor(me: Me): NavItem[] {
-  if (me.role === 'SUPER_ADMIN') {
+  if (isStaff(me.role)) {
     return [
-      { href: '/admin/pilotage', label: 'Pilotage', short: 'Pilotage', icon: ChartColumn },
+      {
+        href: '/admin',
+        label: 'Vue d’ensemble',
+        short: 'Synthèse',
+        icon: LayoutDashboard,
+        exact: true,
+      },
+      { href: '/admin/verifications', label: 'Vérifications', short: 'Vérifs', icon: BadgeCheck },
       { href: '/admin/comptes', label: 'Comptes', short: 'Comptes', icon: UserCog },
       { href: '/admin/mentors', label: 'Mentors', short: 'Mentors', icon: ShieldCheck },
-      { href: '/admin/equipe', label: 'Équipe', short: 'Équipe', icon: UsersRound },
-      { href: '/admin/journal', label: 'Journal d’audit', short: 'Journal', icon: ScrollText },
+      { href: '/admin/pilotage', label: 'Pilotage', short: 'Pilotage', icon: ChartColumn },
+      {
+        href: '/admin/equipe',
+        label: 'Équipe',
+        short: 'Équipe',
+        icon: UsersRound,
+        desktopOnly: true,
+      },
+      {
+        href: '/admin/journal',
+        label: 'Journal d’audit',
+        short: 'Journal',
+        icon: ScrollText,
+        desktopOnly: true,
+      },
       {
         href: '/admin/certificats',
         label: 'Certificats',
@@ -75,34 +96,6 @@ function navFor(me: Me): NavItem[] {
         label: 'Domaines',
         short: 'Domaines',
         icon: Shapes,
-        desktopOnly: true,
-      },
-    ];
-  }
-  if (isStaff(me.role)) {
-    return [
-      {
-        href: '/admin',
-        label: 'Vue d’ensemble',
-        short: 'Synthèse',
-        icon: LayoutDashboard,
-        exact: true,
-      },
-      { href: '/admin/comptes', label: 'Comptes', short: 'Comptes', icon: UserCog },
-      { href: '/admin/mentors', label: 'Mentors', short: 'Mentors', icon: ShieldCheck },
-      { href: '/admin/domaines', label: 'Domaines', short: 'Domaines', icon: Shapes },
-      {
-        href: '/ressources',
-        label: 'Ressources',
-        short: 'Ressources',
-        icon: BookOpen,
-        desktopOnly: true,
-      },
-      {
-        href: '/opportunites',
-        label: 'Opportunités',
-        short: 'Opportunités',
-        icon: Briefcase,
         desktopOnly: true,
       },
     ];

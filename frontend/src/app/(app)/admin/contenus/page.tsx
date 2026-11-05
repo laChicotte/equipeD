@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { ContentView } from '@/features/superadmin/views';
+import { ContentView } from '@/features/platform/views';
 
 export const metadata: Metadata = { title: 'Contenus' };
 

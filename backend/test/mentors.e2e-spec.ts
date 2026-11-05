@@ -40,9 +40,9 @@ describe('Annuaire, fiche mentor et suggestions', () => {
     for (const m of inPerson.body.items) {
       expect(m.modalities.some((x: string) => x === 'IN_PERSON' || x === 'HYBRID')).toBe(true);
     }
-    const pular = await list('?language=pular&pageSize=50');
-    expect(pular.body.items.length).toBeGreaterThan(0);
-    for (const m of pular.body.items) expect(m.languages).toContain('Pular');
+    const english = await list('?language=anglais&pageSize=50');
+    expect(english.body.items.length).toBeGreaterThan(0);
+    for (const m of english.body.items) expect(m.languages).toContain('Anglais');
   });
 
   it('pagine les résultats', async () => {

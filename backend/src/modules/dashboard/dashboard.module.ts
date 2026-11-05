@@ -56,6 +56,23 @@ export class DashboardService {
       }),
     ]);
 
+    // Messages non lus des groupes d'accompagnement (postérieurs à la dernière lecture).
+    const memberships = await this.prisma.groupMember.findMany({
+      where: { userId: user.id },
+      select: { groupId: true, lastReadAt: true },
+    });
+    const unreadGroupMessages = memberships.length
+      ? await this.prisma.groupMessage.count({
+          where: {
+            senderId: { not: user.id },
+            OR: memberships.map((m) => ({
+              groupId: m.groupId,
+              ...(m.lastReadAt ? { createdAt: { gt: m.lastReadAt } } : {}),
+            })),
+          },
+        })
+      : 0;
+
     const mentorExtras = asMentor
       ? await Promise.all([
           this.prisma.mentorshipCertificate.count({
@@ -78,7 +95,7 @@ export class DashboardService {
       activeMentorships,
       upcomingSessions,
       sessionsAwaitingConfirmation: awaitingConfirmation,
-      unreadMessages,
+      unreadMessages: unreadMessages + unreadGroupMessages,
       goals: {
         total: goals.length,
         completed: goals.filter((g) => g.status === 'COMPLETED').length,
