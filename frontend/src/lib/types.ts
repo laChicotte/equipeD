@@ -40,7 +40,8 @@ export type NotificationType =
   | 'VERIFICATION_REJECTED'
   | 'RESOURCE_SUBMITTED'
   | 'RESOURCE_APPROVED'
-  | 'RESOURCE_REJECTED';
+  | 'RESOURCE_REJECTED'
+  | 'RESOURCE_COMMENT';
 
 export interface Me {
   id: string;
@@ -54,6 +55,10 @@ export interface Me {
   onboardedAt: string | null;
   createdAt: string;
   hasProfile: boolean;
+  /** Adresse confirmée par le lien reçu par email. */
+  emailVerified?: boolean;
+  /** Vrai si l'adresse reste à confirmer (envoi d'emails actif). */
+  emailVerificationRequired?: boolean;
   mentorProfileId: string | null;
 }
 
@@ -394,9 +399,48 @@ export interface Resource {
   reviewNote: string | null;
   reviewedAt: string | null;
   downloadCount: number;
+  /** Note moyenne des avis (bibliothèque). */
+  rating?: { average: number | null; count: number };
   createdAt: string;
   author: AuthorRef;
   domain: DomainRef | null;
+}
+
+export interface ResourceDetail extends Resource {
+  rating: { average: number | null; count: number };
+  myReview: { rating: number; comment: string | null } | null;
+  canEdit: boolean;
+  isAuthor: boolean;
+}
+
+export interface ResourcePerson {
+  id: string;
+  firstName: string;
+  lastName: string;
+  avatarUpdatedAt: string | null;
+  role: Role;
+}
+
+export interface ResourceReview {
+  id: string;
+  rating: number;
+  comment: string | null;
+  createdAt: string;
+  updatedAt: string;
+  user: ResourcePerson;
+}
+
+export interface ResourceCommentItem {
+  id: string;
+  parentId: string | null;
+  content: string;
+  createdAt: string;
+  author: ResourcePerson;
+  isResourceAuthor: boolean;
+}
+
+export interface ResourceThread extends ResourceCommentItem {
+  replies: ResourceCommentItem[];
 }
 
 export interface Opportunity {

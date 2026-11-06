@@ -26,7 +26,7 @@ pnpm db:demo-reset    # remet à zéro le parcours d'Aminata
 pnpm dev:backend      # http://localhost:4000/api/v1 — Swagger : /api/docs
 pnpm dev:frontend     # http://localhost:3000
 pnpm --filter backend test      # tests unitaires (Vitest)
-pnpm --filter backend test:e2e  # 151 tests e2e sur talents_connectes_test (recréée à chaque fois ; copier backend/.env.test.example vers .env.test)
+pnpm --filter backend test:e2e  # 161 tests e2e sur talents_connectes_test (recréée à chaque fois ; copier backend/.env.test.example vers .env.test)
 pnpm --filter backend typecheck
 pnpm --filter backend lint
 pnpm --filter backend ai:eval -- gpt-5.4-mini   # banc d'évaluation de l'IA (vrais appels OpenAI, quelques centimes)
@@ -56,11 +56,13 @@ Comptes de démo (dev uniquement) : `<prenom>@demo.talents-connectes.test`, mot 
 - **Git : Claude ne fait ni `git add`, ni `git commit`, ni `git push`.** Il crée la branche, code, vérifie, puis propose les commandes à Bakary. Aucune attribution à Claude dans les commits ni dans les documents.
 
 ## État au 5 novembre 2026
-- Backend P0 et P1 complets (chat, objectifs, évaluation des séances, ressources, notifications, compte, clôture de mentorat, admin avec gestion des domaines, opportunités, export et suppression de compte, photo de profil, certificats d’accompagnement vérifiables). Plus de capacité maximale par mentor. Parcours guidés, ateliers de groupe, rapport d’impact CSV, réinitialisation du mot de passe par lien remis par l’équipe. Vérifiés par 30 tests unitaires et **151 tests e2e** sur un vrai PostgreSQL (double réservation concurrente, accès d'un tiers, transitions invalides, CSRF…).
+- Backend P0 et P1 complets (chat, objectifs, évaluation des séances, ressources, notifications, compte, clôture de mentorat, admin avec gestion des domaines, opportunités, export et suppression de compte, photo de profil, certificats d’accompagnement vérifiables). Plus de capacité maximale par mentor. Parcours guidés, ateliers de groupe, rapport d’impact CSV, réinitialisation du mot de passe par lien remis par l’équipe. Vérifiés par 34 tests unitaires et **161 tests e2e** sur un vrai PostgreSQL (double réservation concurrente, accès d'un tiers, transitions invalides, CSRF…).
 - Hébergement de test gratuit : Render (`render.yaml` + `Dockerfile` racine tout-en-un, `deploy/start.sh`), mode d'emploi dans `docs/deploiement.md`. `TRUST_PROXY=1` derrière Render (IP réelle pour les limites de débit).
 - CI GitHub Actions : `.github/workflows/ci.yml` (backend : typecheck, lint, tests unitaires et e2e, build).
 - Livrables du jury : `docs/jury/` (présentation, scénario de démo, note de pérennisation, pitch, checklist).
 - Frontend : complet et relié à l'API (accueil, annuaire, fiche mentor, demandes, séances avec évaluation, espace de mentorat avec ressources et clôture, ressources, opportunités, notifications, compte, administration). Direction visuelle inspirée de NOVA : Lexend pour les titres, Schibsted Grotesk pour le texte, bleu encre, turquoise et ambre, photos sous licence libre (crédits dans `frontend/public/images/credits.json`).
+- Notifications push (Web Push, `modules/push`, clés VAPID facultatives) : messages et notifications in-app envoyés aux appareils abonnés, abonnement rattaché à la session (la déconnexion coupe les envois).
 - Temps réel : WebSocket `/api/v1/ws` (cookie de session + Origin) pour les nouveaux messages et la signalisation des appels audio/vidéo WebRTC (conversations privées). État des appels en mémoire : une seule instance de l'API. TURN (coturn) optionnel : `docker compose --profile calls`.
 - PWA installable (manifeste, service worker en production uniquement) ; relecture et envoi différé sans réseau ; économie de données (automatique sur 2G, réglable dans Mon compte) ; appels audio plafonnés à 32 kbit/s avec compteur de données.
-- À faire côté backend : emails transactionnels (la réinitialisation passe pour l’instant par un lien remis par l’équipe) ; surveiller l'avertissement `pg` émis par `@prisma/adapter-pg` 7.10.1 dans les transactions.
+- Emails transactionnels (Resend, `modules/mail`, `RESEND_API_KEY` facultative) : mot de passe oublié en libre-service, confirmation de l'adresse à l'inscription (adresse confirmée exigée pour envoyer une demande ou publier), avis de changement de mot de passe. Sans clé : lien remis par l'équipe, aucune confirmation exigée.
+- À surveiller côté backend : l'avertissement `pg` émis par `@prisma/adapter-pg` 7.10.1 dans les transactions.

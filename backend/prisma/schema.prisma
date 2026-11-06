@@ -134,6 +134,7 @@ enum NotificationType {
   RESOURCE_SUBMITTED
   RESOURCE_APPROVED
   RESOURCE_REJECTED
+  RESOURCE_COMMENT
 }
 
 /// Réponse d'un membre à l'invitation à un atelier.
@@ -169,6 +170,8 @@ model User {
   id              String     @id @default(cuid())
   email           String     @unique
   passwordHash    String     @map("password_hash")
+  /// Adresse confirmée par le lien reçu par email (null : pas encore confirmée).
+  emailVerifiedAt DateTime?  @map("email_verified_at") @db.Timestamptz(3)
   firstName       String     @map("first_name") @db.VarChar(80)
   lastName        String     @map("last_name") @db.VarChar(80)
   role            Role
@@ -216,9 +219,13 @@ model User {
   verificationRequests  VerificationRequest[] @relation("VerificationApplicant")
   verificationDecisions VerificationRequest[] @relation("VerificationReviewer")
 
-  workshopsCreated    GroupWorkshop[]
-  workshopAttendances WorkshopAttendance[]
-  passwordResets      PasswordResetToken[]
+  workshopsCreated        GroupWorkshop[]
+  workshopAttendances     WorkshopAttendance[]
+  passwordResets          PasswordResetToken[]
+  pushSubscriptions       PushSubscription[]
+  resourceReviews         ResourceReview[]
+  resourceComments        ResourceComment[]
+  emailVerificationTokens EmailVerificationToken[]
 
   @@index([role, status])
   @@map("users")
@@ -246,15 +253,49 @@ model AuthSession {
   userAgent  String?   @map("user_agent") @db.VarChar(255)
   createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pushSubscriptions PushSubscription[]
 
   @@index([userId])
   @@map("auth_sessions")
 }
 
+/// Abonnement aux notifications push d'un appareil (Web Push). Rattaché à la session :
+/// la déconnexion de l'appareil (session révoquée ou expirée) coupe les notifications.
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  sessionId String   @map("session_id")
+  endpoint  String   @unique @db.VarChar(1000)
+  p256dh    String   @db.VarChar(200)
+  auth      String   @db.VarChar(100)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session AuthSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("push_subscriptions")
+}
+
 /// Lien de réinitialisation du mot de passe, à usage unique et de courte durée.
 /// Émis par l'équipe (aucun email n'est envoyé par la plateforme pour l'instant) : seul le hash
 /// HMAC du jeton est stocké, comme pour les sessions.
+/// Lien de confirmation de l'adresse email (48 h, usage unique ; seul le hash HMAC est stocké).
+model EmailVerificationToken {
+  id        String    @id @default(cuid())
+  userId    String    @map("user_id")
+  tokenHash String    @unique @map("token_hash") @db.Char(64)
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(3)
+  usedAt    DateTime? @map("used_at") @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("email_verification_tokens")
+}
+
 model PasswordResetToken {
   id          String    @id @default(cuid())
   userId      String    @map("user_id")
@@ -575,16 +616,54 @@ model Resource {
   createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt       DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  author     User             @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  mentorship Mentorship?      @relation(fields: [mentorshipId], references: [id], onDelete: Cascade)
-  domain     ExpertiseDomain? @relation(fields: [domainId], references: [id], onDelete: SetNull)
+  author     User              @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  mentorship Mentorship?       @relation(fields: [mentorshipId], references: [id], onDelete: Cascade)
+  domain     ExpertiseDomain?  @relation(fields: [domainId], references: [id], onDelete: SetNull)
   file       ResourceFile?
   cover      ResourceCover?
+  reviews    ResourceReview[]
+  comments   ResourceComment[]
 
   @@index([mentorshipId, createdAt])
   @@index([domainId, createdAt])
   @@index([status, createdAt])
   @@map("resources")
+}
+
+/// Avis sur une ressource de la bibliothèque : une note de 1 à 5 par personne, commentaire facultatif.
+model ResourceReview {
+  id         String   @id @default(cuid())
+  resourceId String   @map("resource_id")
+  userId     String   @map("user_id")
+  rating     Int      @db.SmallInt
+  comment    String?  @db.VarChar(1000)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  resource Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([resourceId, userId])
+  @@index([resourceId, createdAt])
+  @@map("resource_reviews")
+}
+
+/// Questions et discussion publiques autour d'une ressource (réponses sur un niveau).
+model ResourceComment {
+  id         String   @id @default(cuid())
+  resourceId String   @map("resource_id")
+  authorId   String   @map("author_id")
+  parentId   String?  @map("parent_id")
+  content    String   @db.VarChar(2000)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  resource Resource          @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  author   User              @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent   ResourceComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies  ResourceComment[] @relation("CommentReplies")
+
+  @@index([resourceId, createdAt])
+  @@map("resource_comments")
 }
 
 /// Couverture d'une ressource de la bibliothèque (JPEG, PNG ou WebP, 1 Mo au plus, réduite à l'envoi).

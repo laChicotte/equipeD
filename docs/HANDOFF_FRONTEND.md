@@ -651,3 +651,25 @@ Résultat : modèle par défaut `gpt-5.4-mini` (effort de raisonnement `low`). L
 - Équipe : `GET /admin/resources?status=PENDING|PUBLISHED|REJECTED`, `POST /admin/resources/:id/approve`, `POST /admin/resources/:id/reject { note (10–500) }` (409 `RESOURCE_ALREADY_REVIEWED`). Notifications `RESOURCE_SUBMITTED` (équipe), `RESOURCE_APPROVED` / `RESOURCE_REJECTED` (auteur) ; journal d'audit. `GET /admin/overview` renvoie `pendingResources`.
 - Téléchargements comptés (hors auteur et équipe). Migration `20261106150000_resource_library`.
 
+### Notifications push (Web Push, 6 novembre)
+
+- Préviennent une personne qui n'a pas l'application ouverte : nouveaux messages privés et de groupe, et toutes les notifications in-app (demandes, séances, ressources, vérifications…). Le service worker (`public/sw.js`) n'affiche rien si l'application est déjà à l'écran ; un clic ouvre l'écran concerné (`/messages?c=…`, `/messages?g=…`, lien de la notification).
+- `GET /push/config` 🔓 → `{ enabled, publicKey }` ; `POST /push/subscriptions` 🔒 `{ endpoint (https), keys: { p256dh, auth } }` ; `DELETE /push/subscriptions` 🔒 `{ endpoint }`.
+- Un abonnement par appareil, **rattaché à la session** : déconnexion, session expirée ou « déconnecter tous les appareils » coupent les envois. Les abonnements périmés (404/410) sont supprimés. Module `modules/push`, migration `20261106190000_push_subscriptions`.
+- Configuration : `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (`npx web-push generate-vapid-keys`). Sans clés, le push est désactivé et l'interface n'affiche pas l'invitation. Sur le VPS, `deploy/vps/deploy.sh` crée la paire au premier déploiement.
+- Interface : bandeau « Ne manquez aucune réponse » (une fois par appareil) et réglage dans Mon compte → Données et confidentialité. Service worker en production uniquement : en développement, le push n'est pas disponible. iPhone : application installée sur l'écran d'accueil (iOS 16.4 ou plus).
+
+### Fiche ressource : avis, discussion, lecture en ligne (6 novembre)
+
+- Pages : `/ressources/[id]` (fiche) et `/ressources/[id]/lire` (liseuse pdf.js, pages dessinées au défilement, zoom). Cartes de la bibliothèque cliquables, note moyenne affichée.
+- `GET /resources/:id` 🔓 → ressource + `rating { average, count }`, `myReview`, `canEdit`, `isAuthor` (404 si non publiée, sauf auteur et équipe). `GET /resources/:id/view` 🔓 : PDF ou image en ligne (`Content-Disposition: inline`, `nosniff`), sans compter de téléchargement.
+- Avis : `GET /resources/:id/reviews` 🔓 ; `PUT /resources/:id/review { rating (1–5), comment? (≤1000) }` 🔒 (403 `OWN_RESOURCE` sur sa ressource) ; `DELETE /resources/:id/review`.
+- Discussion : `GET /resources/:id/comments` 🔓 → questions avec `replies` (un niveau), `isResourceAuthor` ; `POST /resources/:id/comments { content (2–2000), parentId? }` 🔒 (20/min) → notification `RESOURCE_COMMENT` (et push) à la personne qui partage et à l'auteur de la question ; `DELETE /resource-comments/:id` (auteur du message, de la ressource ou équipe).
+- Couverture après publication : `PUT /resources/:id/cover` (multipart `cover`, vide pour retirer), auteur ou équipe. Migration `20261106210000_resource_reviews_comments`.
+
+### Emails : mot de passe oublié et confirmation de l'adresse (6 novembre)
+
+- Envoi par l'API Resend (`modules/mail`), domaine `wistechnologie.com` déjà vérifié. Variables : `RESEND_API_KEY` (facultative), `MAIL_FROM` (défaut `TalentsConnect <noreply@wistechnologie.com>`), `PUBLIC_APP_URL` (défaut : première origine de `WEB_ORIGINS`). Sans clé : aucun email, lien remis par l'équipe, aucune confirmation exigée.
+- `POST /auth/password-reset/request { email }` 🔓 (3/min) → toujours `{ ok: true, emailEnabled }`, que le compte existe ou non ; au plus 3 liens par heure et par compte ; lien de 2 h vers `/reinitialiser-mot-de-passe?jeton=`. Après réinitialisation ou changement de mot de passe : email d'avertissement.
+- Confirmation : lien de 48 h envoyé à l'inscription vers `/verifier-email?jeton=` ; `POST /auth/email/verify { token }` 🔓 ; `POST /auth/email/resend` 🔒 (3 par heure). `GET /auth/me` ajoute `emailVerified` et `emailVerificationRequired`. Adresse confirmée exigée (403 `EMAIL_NOT_VERIFIED`) pour envoyer une demande de mentorat et publier dans la bibliothèque (hors équipe). Comptes existants et comptes de démo : considérés comme confirmés. Migration `20261106230000_email_verification`.
+

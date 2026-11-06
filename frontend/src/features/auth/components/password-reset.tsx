@@ -2,7 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { ArrowLeft, Check, Copy, KeyRound } from 'lucide-react';
+import { ArrowLeft, Check, Copy, KeyRound, MailCheck } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
@@ -21,45 +21,136 @@ import { AuthHeading, PasswordInput } from './password-input';
 
 /* ── Page « Mot de passe oublié » ─────────────────────────────────────── */
 
+const TEAM_STEPS = [
+  'Contactez l’équipe de la plateforme, sur le stand du programme ou auprès de votre structure, avec l’adresse email de votre compte.',
+  'Après vérification de votre identité, elle vous remet un lien personnel, valable 2 heures et utilisable une seule fois.',
+  'Ouvrez ce lien et choisissez un nouveau mot de passe. Vos anciennes sessions sont alors fermées.',
+];
+
+function TeamSteps() {
+  return (
+    <ol className="mt-6 grid gap-4">
+      {TEAM_STEPS.map((step, i) => (
+        <li key={step} className="flex gap-3.5 text-[14px] leading-relaxed text-foreground">
+          <span
+            className="inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-ink-50 text-[13px] font-semibold text-ink-900 tabular-nums"
+            aria-hidden
+          >
+            {i + 1}
+          </span>
+          {step}
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+const forgotSchema = z.object({
+  email: z.string().trim().toLowerCase().email('Adresse email invalide.'),
+});
+
 /**
- * La plateforme n'envoie pas encore d'emails : on le dit, et on explique la marche à suivre
- * plutôt que d'afficher un faux formulaire « recevoir un lien par email ».
+ * Mot de passe oublié : un lien est envoyé par email. La réponse est la même que l'adresse
+ * corresponde à un compte ou non. Sans service d'email, la marche à suivre passe par l'équipe.
  */
 export function ForgotPassword() {
-  const steps = [
-    'Contactez l’équipe de la plateforme, sur le stand du programme ou auprès de votre structure, avec l’adresse email de votre compte.',
-    'Après vérification de votre identité, elle vous remet un lien personnel, valable 2 heures et utilisable une seule fois.',
-    'Ouvrez ce lien et choisissez un nouveau mot de passe. Vos anciennes sessions sont alors fermées.',
-  ];
+  const [result, setResult] = useState<{ email: string; emailEnabled: boolean } | null>(null);
+  const request = useMutation({
+    mutationFn: (email: string) =>
+      api<{ ok: true; emailEnabled: boolean }>('/auth/password-reset/request', {
+        method: 'POST',
+        body: { email },
+      }),
+  });
+  const form = useForm<z.infer<typeof forgotSchema>>({
+    resolver: zodResolver(forgotSchema),
+    defaultValues: { email: '' },
+  });
+  const onSubmit = form.handleSubmit((v) =>
+    request.mutate(v.email, {
+      onSuccess: (res) => setResult({ email: v.email, emailEnabled: res.emailEnabled }),
+      onError: (e) => applyApiError(e, form.setError, ['email']),
+    }),
+  );
+
+  if (result && !result.emailEnabled) {
+    return (
+      <div>
+        <AuthHeading title="Mot de passe oublié">
+          L’équipe de la plateforme vous aide à récupérer votre compte, en trois étapes.
+        </AuthHeading>
+        <TeamSteps />
+        <Button asChild variant="secondary" size="lg" className="mt-8 w-full">
+          <Link href="/connexion">
+            <ArrowLeft aria-hidden />
+            Retour à la connexion
+          </Link>
+        </Button>
+      </div>
+    );
+  }
+
+  if (result) {
+    return (
+      <div className="text-center">
+        <span className="mx-auto inline-flex size-14 items-center justify-center rounded-full bg-success-50 text-success-700">
+          <MailCheck className="size-6" aria-hidden />
+        </span>
+        <AuthHeading title="Vérifiez votre boîte mail">
+          Si un compte existe pour <strong className="text-ink-900">{result.email}</strong>, un lien
+          pour choisir un nouveau mot de passe vient de lui être envoyé. Il est valable 2 heures.
+        </AuthHeading>
+        <p className="mt-4 text-[13px] text-muted-foreground">
+          Rien reçu après quelques minutes ? Regardez dans les courriers indésirables, ou réessayez.
+        </p>
+        <div className="mt-8 grid gap-2">
+          <Button asChild size="lg" className="w-full">
+            <Link href="/connexion">Retour à la connexion</Link>
+          </Button>
+          <Button variant="ghost" size="lg" className="w-full" onClick={() => setResult(null)}>
+            Utiliser une autre adresse
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       <AuthHeading title="Mot de passe oublié">
-        L’équipe de la plateforme vous aide à récupérer votre compte, en trois étapes.
+        Indiquez l’adresse email de votre compte : nous vous envoyons un lien pour choisir un
+        nouveau mot de passe.
       </AuthHeading>
-      <ol className="mt-8 grid gap-5">
-        {steps.map((step, i) => (
-          <li key={step} className="flex gap-3.5 text-[15px] leading-relaxed text-foreground">
-            <span
-              className="inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-ink-50 text-[13px] font-semibold text-ink-900 tabular-nums"
-              aria-hidden
-            >
-              {i + 1}
-            </span>
-            {step}
-          </li>
-        ))}
-      </ol>
-      <Button asChild variant="secondary" size="lg" className="mt-8 w-full">
-        <Link href="/connexion">
-          <ArrowLeft aria-hidden />
+      <form onSubmit={onSubmit} noValidate className="mt-8 grid gap-5">
+        <Field label="Adresse email" error={form.formState.errors.email?.message}>
+          <Input
+            type="email"
+            autoComplete="email"
+            inputMode="email"
+            placeholder="vous@exemple.com"
+            {...form.register('email')}
+          />
+        </Field>
+        <Button type="submit" size="lg" loading={request.isPending} className="w-full">
+          Recevoir le lien
+        </Button>
+      </form>
+      <details className="mt-8 border-t border-border pt-4 text-sm">
+        <summary className="cursor-pointer font-medium text-muted-foreground hover:text-foreground">
+          Vous n’avez plus accès à votre boîte mail ?
+        </summary>
+        <TeamSteps />
+      </details>
+      <p className="mt-6 text-center text-sm">
+        <Link href="/connexion" className="font-semibold text-accent hover:underline">
           Retour à la connexion
         </Link>
-      </Button>
+      </p>
     </div>
   );
 }
 
-/* ── Page « Nouveau mot de passe » (lien remis par l'équipe) ──────────── */
+/* ── Page « Nouveau mot de passe » (lien reçu par email ou remis par l'équipe) ── */
 
 const schema = z
   .object({

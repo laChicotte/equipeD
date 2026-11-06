@@ -4,7 +4,9 @@ import { AppConfigService } from '../../config/app-config.service.js';
 import { conflict, isConstraintViolation, unprocessable } from '../../common/errors.js';
 import { generateSessionToken, hashSessionToken } from '../../common/auth/session-token.js';
 import type { AuthUser } from '../../common/auth/auth-user.js';
+import { MailService } from '../mail/mail.module.js';
 import { RealtimeService } from '../realtime/realtime.service.js';
+import { EmailVerificationService } from './email-verification.js';
 import { getDummyHash, hashPassword, verifyPassword } from './password.js';
 import type { ChangePasswordDto, LoginDto, RegisterDto } from './auth.dto.js';
 
@@ -19,6 +21,8 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly config: AppConfigService,
     private readonly realtime: RealtimeService,
+    private readonly mail: MailService,
+    private readonly verification: EmailVerificationService,
   ) {}
 
   async register(dto: RegisterDto, userAgent?: string) {
@@ -40,6 +44,8 @@ export class AuthService {
         },
         select: { id: true },
       });
+      // Lien de confirmation de l'adresse (sans attendre l'envoi).
+      void this.verification.send(user.id);
       return this.issueSession(user.id, userAgent);
     } catch (error) {
       if (isConstraintViolation(error)) {
@@ -101,6 +107,17 @@ export class AuthService {
       }),
     ]);
     this.realtime.disconnectWhere((u) => u.id === user.id && u.sessionId !== user.sessionId);
+    void this.mail.send({
+      to: user.email,
+      subject: 'Votre mot de passe a été modifié · TalentsConnect',
+      heading: 'Mot de passe modifié',
+      paragraphs: [
+        `Bonjour ${user.firstName},`,
+        'Le mot de passe de votre compte TalentsConnect vient d’être changé depuis « Mon compte ». Vos autres appareils ont été déconnectés.',
+      ],
+      footnote:
+        'Ce n’est pas vous ? Utilisez tout de suite « Mot de passe oublié » et prévenez l’équipe de la plateforme.',
+    });
     return { revokedSessions: revoked.count };
   }
 
@@ -136,13 +153,17 @@ export class AuthService {
         timezone: true,
         onboardedAt: true,
         createdAt: true,
+        emailVerifiedAt: true,
         mentorProfile: { select: { id: true } },
         menteeProfile: { select: { id: true } },
       },
     });
-    const { mentorProfile, menteeProfile, ...rest } = user;
+    const { mentorProfile, menteeProfile, emailVerifiedAt, ...rest } = user;
     return {
       ...rest,
+      emailVerified: emailVerifiedAt !== null,
+      /** Vrai si l'adresse reste à confirmer (envoi d'emails actif). */
+      emailVerificationRequired: this.mail.enabled && emailVerifiedAt === null,
       hasProfile: Boolean(mentorProfile ?? menteeProfile),
       mentorProfileId: mentorProfile?.id ?? null,
     };

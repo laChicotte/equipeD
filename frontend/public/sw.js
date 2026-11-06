@@ -7,8 +7,10 @@
  *   contiennent aucune donnée privée : celles-ci sont chargées ensuite par l'application.
  * - Autres pages sans connexion : la page « hors ligne ».
  * - API (/api/…) et WebSocket : jamais touchés par ce fichier.
+ * - Notifications push : affichées quand l'application n'est pas à l'écran ; un clic ouvre
+ *   l'écran concerné (conversation, demande, séance…).
  */
-const VERSION = 'tc-v3';
+const VERSION = 'tc-v4';
 const STATIC_CACHE = `${VERSION}-static`;
 const PAGE_CACHE = `${VERSION}-pages`;
 const OFFLINE_URL = '/hors-ligne.html';
@@ -117,4 +119,47 @@ self.addEventListener('fetch', (event) => {
         }),
     );
   }
+});
+
+// ─── Notifications push ──────────────────────────────────────────────────────
+
+self.addEventListener('push', (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { title: 'TalentsConnect', body: event.data ? event.data.text() : '' };
+  }
+  const url = typeof data.url === 'string' && data.url.startsWith('/') ? data.url : '/';
+  event.waitUntil(
+    (async () => {
+      // Application déjà à l'écran : la cloche et la messagerie s'en chargent, pas de doublon.
+      const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      if (windows.some((w) => w.visibilityState === 'visible' && w.focused)) return;
+      await self.registration.showNotification(data.title || 'TalentsConnect', {
+        body: data.body || '',
+        icon: '/icons/icon-192.png',
+        tag: data.tag,
+        renotify: !!data.tag,
+        data: { url },
+      });
+    })(),
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const target = new URL(event.notification.data?.url || '/', self.location.origin).href;
+  event.waitUntil(
+    (async () => {
+      const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      const existing = windows.find((w) => new URL(w.url).origin === self.location.origin);
+      if (existing) {
+        await existing.focus();
+        if ('navigate' in existing) await existing.navigate(target);
+        return;
+      }
+      await self.clients.openWindow(target);
+    })(),
+  );
 });

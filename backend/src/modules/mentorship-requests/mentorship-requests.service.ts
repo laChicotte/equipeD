@@ -1,3 +1,5 @@
+import { assertEmailVerified } from '../auth/email-verification.js';
+import { MailService } from '../mail/mail.module.js';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service.js';
 import {
@@ -42,12 +44,14 @@ export class MentorshipRequestsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
+    private readonly mail: MailService,
   ) {}
 
   async create(user: AuthUser, dto: CreateMentorshipRequestDto) {
     if (dto.mentorId === user.id) {
       throw unprocessable('SELF_REQUEST', 'Vous ne pouvez pas vous adresser une demande.');
     }
+    await assertEmailVerified(this.prisma, this.mail, user.id);
     const menteeProfile = await this.prisma.menteeProfile.findUnique({
       where: { userId: user.id },
       select: { id: true },

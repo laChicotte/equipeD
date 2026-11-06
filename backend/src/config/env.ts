@@ -35,6 +35,20 @@ export interface AppEnv {
   AI_GLOBAL_DAILY_LIMIT: number;
   /** Questions à l'assistant par personne et par jour. */
   AI_ASSISTANT_DAILY_LIMIT: number;
+  /**
+   * Notifications push (Web Push) : clés VAPID du serveur. Vides : push désactivé, les
+   * notifications restent visibles dans l'application.
+   */
+  VAPID_PUBLIC_KEY: string;
+  VAPID_PRIVATE_KEY: string;
+  /** Contact du serveur pour les services push (mailto: ou https:). */
+  VAPID_SUBJECT: string;
+  /** Emails transactionnels (Resend). Vide : pas d'email, lien de réinitialisation remis par l'équipe. */
+  RESEND_API_KEY: string;
+  /** Expéditeur (domaine vérifié chez Resend). */
+  MAIL_FROM: string;
+  /** Adresse publique du site, pour les liens des emails (défaut : première origine de WEB_ORIGINS). */
+  PUBLIC_APP_URL: string;
 }
 
 export function validateEnv(raw: Record<string, unknown>): AppEnv {
@@ -110,6 +124,14 @@ export function validateEnv(raw: Record<string, unknown>): AppEnv {
   const openAiBase = str('OPENAI_BASE_URL', 'https://api.openai.com/v1').replace(/\/+$/, '');
   if (!/^https?:\/\//.test(openAiBase)) errors.push('OPENAI_BASE_URL doit être une URL');
 
+  const optional = (key: string) =>
+    typeof raw[key] === 'string' ? (raw[key] as string).trim() : '';
+  const vapidPublic = optional('VAPID_PUBLIC_KEY');
+  const vapidPrivate = optional('VAPID_PRIVATE_KEY');
+  if (!!vapidPublic !== !!vapidPrivate) {
+    errors.push('VAPID_PUBLIC_KEY et VAPID_PRIVATE_KEY vont ensemble (ou aucune des deux)');
+  }
+
   const env: AppEnv = {
     NODE_ENV: nodeEnv as AppEnv['NODE_ENV'],
     PORT: port,
@@ -125,6 +147,15 @@ export function validateEnv(raw: Record<string, unknown>): AppEnv {
     TURN_URLS: turnUrls,
     TURN_SECRET: turnSecret,
     OPENAI_API_KEY: typeof raw.OPENAI_API_KEY === 'string' ? raw.OPENAI_API_KEY.trim() : '',
+    VAPID_PUBLIC_KEY: vapidPublic,
+    VAPID_PRIVATE_KEY: vapidPrivate,
+    VAPID_SUBJECT: str('VAPID_SUBJECT', 'mailto:contact@talentsconnect.test'),
+    RESEND_API_KEY: optional('RESEND_API_KEY'),
+    MAIL_FROM: str('MAIL_FROM', 'TalentsConnect <noreply@wistechnologie.com>'),
+    PUBLIC_APP_URL: str('PUBLIC_APP_URL', origins[0] ?? 'http://localhost:3000').replace(
+      /\/+$/,
+      '',
+    ),
     OPENAI_MODEL: str('OPENAI_MODEL', 'gpt-5.4-mini'),
     OPENAI_BASE_URL: openAiBase,
     OPENAI_REASONING_EFFORT: str('OPENAI_REASONING_EFFORT', 'low'),

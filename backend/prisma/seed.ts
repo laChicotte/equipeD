@@ -349,7 +349,16 @@ async function upsertUser(
 ) {
   return prisma.user.upsert({
     where: { email: email(key) },
-    create: { email: email(key), passwordHash, firstName, lastName, role, onboardedAt: new Date() },
+    create: {
+      email: email(key),
+      passwordHash,
+      firstName,
+      lastName,
+      role,
+      onboardedAt: new Date(),
+      // Adresses fictives : considérées comme confirmées (aucun email n'est envoyé).
+      emailVerifiedAt: new Date(),
+    },
     update: { firstName, lastName, role, status: 'ACTIVE' },
     select: { id: true },
   });

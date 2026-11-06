@@ -1,6 +1,7 @@
 'use client';
 
 import { Check, Download, FileCheck2, ShieldCheck, X } from 'lucide-react';
+import Link from 'next/link';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Pagination } from '@/components/admin/data-table';
@@ -134,7 +135,9 @@ export function ResourceReviewQueue() {
                     )}
                   </div>
                   <p className="mt-2 font-display text-[16px] font-semibold text-ink-900">
-                    {r.title}
+                    <Link href={`/ressources/${r.id}`} className="hover:underline">
+                      {r.title}
+                    </Link>
                   </p>
                   {r.workAuthor && (
                     <p className="text-[13px] text-muted-foreground">de {r.workAuthor}</p>

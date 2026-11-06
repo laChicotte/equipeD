@@ -22,6 +22,7 @@ import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
 import { Input, NativeSelect } from '@/components/ui/input';
 import { useMe } from '@/features/auth/api';
+import { PushSetting } from '@/features/notifications/push-settings';
 import { ClearOfflineButton, DataSaverSetting } from '@/features/offline/offline-settings';
 import {
   BecomeMentorSection,
@@ -483,6 +484,14 @@ function SecuritySection() {
 function DataSection({ me }: { me: Me }) {
   return (
     <div className="grid gap-5">
+      <Panel title="Notifications">
+        <ActionRow
+          title="Notifications sur cet appareil"
+          description="Nouveaux messages, demandes, séances et décisions de l’équipe, même quand l’application est fermée. Le contenu reste chiffré jusqu’à votre appareil ; rien n’est envoyé après votre déconnexion."
+        >
+          <PushSetting />
+        </ActionRow>
+      </Panel>
       <Panel title="Connexion faible et hors ligne">
         <ActionRow
           title="Économie de données"

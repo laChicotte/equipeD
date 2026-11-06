@@ -13,10 +13,12 @@ import {
   PlayCircle,
   Shapes,
   ShieldX,
+  Star,
   Trash2,
   Wrench,
   type LucideIcon,
 } from 'lucide-react';
+import Link from 'next/link';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { ConfirmButton } from '@/components/ui/confirm';
@@ -101,8 +103,12 @@ export function ResourceCard({
   const isLibrary = !resource.mentorshipId;
 
   return (
-    <article className="group flex h-full flex-col overflow-hidden rounded-xl bg-surface ring-1 ring-border transition-[box-shadow,transform] duration-300 hover:-translate-y-0.5 hover:shadow-raised">
-      {isLibrary && <ResourceCover resource={resource} className="h-52" />}
+    <article className="group relative flex h-full flex-col overflow-hidden rounded-xl bg-surface ring-1 ring-border transition-[box-shadow,transform] duration-300 hover:-translate-y-0.5 hover:shadow-raised">
+      {isLibrary && (
+        <Link href={`/ressources/${resource.id}`} tabIndex={-1} aria-hidden>
+          <ResourceCover resource={resource} className="h-52" />
+        </Link>
+      )}
       <div className="flex flex-1 flex-col p-5">
         <div className="flex items-center justify-between gap-3">
           <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-teal-800">
@@ -119,10 +125,28 @@ export function ResourceCard({
           )}
         </div>
         <h3 className="mt-3 font-display text-[18px] leading-snug font-semibold tracking-[-0.02em] text-ink-900">
-          {resource.title}
+          {isLibrary ? (
+            <Link
+              href={`/ressources/${resource.id}`}
+              className="after:absolute after:inset-0 hover:text-teal-800 focus-visible:outline-none"
+            >
+              {resource.title}
+            </Link>
+          ) : (
+            resource.title
+          )}
         </h3>
         {resource.workAuthor && (
           <p className="mt-0.5 text-[14px] text-muted-foreground">de {resource.workAuthor}</p>
+        )}
+        {isLibrary && resource.rating && resource.rating.count > 0 && (
+          <p className="mt-1.5 inline-flex items-center gap-1.5 text-[13px]">
+            <Star className="size-3.5 fill-amber-400 text-amber-400" aria-hidden />
+            <span className="font-semibold text-ink-900">
+              {resource.rating.average?.toLocaleString('fr-FR')}
+            </span>
+            <span className="text-muted-foreground">({resource.rating.count} avis)</span>
+          </p>
         )}
         {resource.description && (
           <p className="mt-2 line-clamp-3 text-[14px] leading-relaxed whitespace-pre-line text-foreground">
@@ -163,7 +187,7 @@ export function ResourceCard({
               {resourceLicensePublicLabels[resource.license]}
             </p>
           )}
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="relative z-10 mt-4 flex flex-wrap items-center justify-between gap-3">
             {resource.file ? (
               <a
                 href={resourceFileUrl(resource.id)}

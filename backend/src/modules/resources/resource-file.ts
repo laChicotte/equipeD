@@ -151,6 +151,10 @@ export const libraryUpload = () =>
     { limits: { fileSize: LIBRARY_FILE_MAX_BYTES, files: 2, fields: 20, fieldSize: 8 * 1024 } },
   );
 
+/** Une couverture seule (« cover »), 1 Mo au plus. */
+export const coverUpload = () =>
+  FileInterceptor('cover', { limits: { fileSize: COVER_MAX_BYTES, files: 1, fields: 5 } });
+
 /** Couverture : image PNG, JPEG ou WebP réelle (signature vérifiée), 1 Mo au plus. */
 export function readUploadedCover(upload: UploadedDocument) {
   const fail = (message: string) =>

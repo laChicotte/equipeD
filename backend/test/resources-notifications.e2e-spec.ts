@@ -342,6 +342,93 @@ describe('Ressources et notifications', () => {
     });
   });
 
+  describe('fiche ressource : avis, discussion, lecture, couverture', () => {
+    it('note, discute avec la personne qui partage, lit le PDF et change la couverture', async () => {
+      const mentor = await createMentor(app);
+      const mentee = await createMentee(app);
+      const other = await createMentee(app);
+      const server = app.getHttpServer();
+      const created = await mentor.agent
+        .post(`${API}/resources/upload`)
+        .field('title', 'Guide du premier entretien')
+        .field('kind', 'GUIDE')
+        .field('license', 'AUTHOR')
+        .field('rightsConfirmed', 'true')
+        .attach('file', Buffer.from('%PDF-1.4 guide'), 'guide.pdf')
+        .expect(201);
+      const id = created.body.id as string;
+      await prismaOf(app).resource.update({ where: { id }, data: { status: 'PUBLISHED' } });
+
+      const detail = await request(server).get(`${API}/resources/${id}`).expect(200);
+      expect(detail.body).toMatchObject({
+        id,
+        rating: { average: null, count: 0 },
+        canEdit: false,
+      });
+      const view = await request(server).get(`${API}/resources/${id}/view`).expect(200);
+      expect(view.headers['content-disposition']).toBe('inline');
+      expect(view.headers['content-type']).toContain('application/pdf');
+
+      // Avis : une note par personne, jamais sur sa propre ressource.
+      await mentor.agent.put(`${API}/resources/${id}/review`).send({ rating: 5 }).expect(403);
+      await mentee.agent.put(`${API}/resources/${id}/review`).send({ rating: 6 }).expect(422);
+      await mentee.agent
+        .put(`${API}/resources/${id}/review`)
+        .send({ rating: 4, comment: 'Très clair.' })
+        .expect(200);
+      const rated = await other.agent
+        .put(`${API}/resources/${id}/review`)
+        .send({ rating: 5 })
+        .expect(200);
+      expect(rated.body.rating).toEqual({ average: 4.5, count: 2 });
+      expect(rated.body.myReview.rating).toBe(5);
+      const list = await request(server).get(`${API}/mentors?pageSize=1`).expect(200);
+      expect(list.status).toBe(200);
+      const lib = await request(server).get(`${API}/resources?pageSize=50`).expect(200);
+      const item = lib.body.items.find((r: { id: string }) => r.id === id);
+      expect(item.rating).toEqual({ average: 4.5, count: 2 });
+
+      // Discussion : question, réponse de l'auteur, notifications.
+      await request(server)
+        .post(`${API}/resources/${id}/comments`)
+        .set('Origin', 'http://localhost:3000')
+        .send({ content: 'Anonyme' })
+        .expect(401);
+      const q = await mentee.agent
+        .post(`${API}/resources/${id}/comments`)
+        .send({ content: 'Faut-il apporter un CV imprimé ?' })
+        .expect(201);
+      await mentor.agent
+        .post(`${API}/resources/${id}/comments`)
+        .send({ content: 'Oui, deux exemplaires.', parentId: q.body.id })
+        .expect(201);
+      const thread = await request(server).get(`${API}/resources/${id}/comments`).expect(200);
+      expect(thread.body).toHaveLength(1);
+      expect(thread.body[0].replies[0]).toMatchObject({
+        content: 'Oui, deux exemplaires.',
+        isResourceAuthor: true,
+      });
+      const mentorNotes = await mentor.agent.get(`${API}/notifications`).expect(200);
+      expect(JSON.stringify(mentorNotes.body)).toContain('pose une question');
+      const menteeNotes = await mentee.agent.get(`${API}/notifications`).expect(200);
+      expect(JSON.stringify(menteeNotes.body)).toContain('a répondu');
+      await other.agent.delete(`${API}/resource-comments/${q.body.id}`).expect(403);
+      await mentor.agent.delete(`${API}/resource-comments/${q.body.id}`).expect(200);
+
+      // Couverture modifiable après publication, par l'auteur seulement.
+      const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46]);
+      await mentee.agent
+        .put(`${API}/resources/${id}/cover`)
+        .attach('cover', jpeg, 'c.jpg')
+        .expect(403);
+      await mentor.agent
+        .put(`${API}/resources/${id}/cover`)
+        .attach('cover', jpeg, 'c.jpg')
+        .expect(200);
+      await request(server).get(`${API}/resources/${id}/cover`).expect(200);
+    });
+  });
+
   describe('notifications', () => {
     it('suivent tout le parcours : demande, acceptation, réservation, confirmation, annulation, retour', async () => {
       const mentor = await createMentor(app);

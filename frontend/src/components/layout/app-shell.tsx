@@ -25,6 +25,9 @@ import { OfflineBanner } from '@/features/offline/offline-banner';
 import type { Me } from '@/lib/types';
 import { cn, isStaff } from '@/lib/utils';
 import { AdminShell } from './admin-shell';
+import { PushPrompt } from '@/features/notifications/push-settings';
+import { VerifyEmailBanner } from '@/features/auth/components/verify-email';
+import { usePushSync } from '@/lib/push';
 import { Logo } from './logo';
 import { PublicFooter, PublicHeader } from './public-header';
 import { NotificationBell } from './notification-bell';
@@ -287,6 +290,7 @@ function AuthenticatedLayout({ me, children }: { me: Me; children: ReactNode }) 
 
 function MemberLayout({ me, children }: { me: Me; children: ReactNode }) {
   const items = navFor(me);
+  usePushSync(true);
   const counts = useBadgeCounts(!isStaff(me.role) && me.hasProfile);
   return (
     <div className="flex min-h-dvh flex-col bg-background">
@@ -296,6 +300,8 @@ function MemberLayout({ me, children }: { me: Me; children: ReactNode }) {
         id="contenu"
         className="mx-auto w-full max-w-[1240px] flex-1 px-4 pt-6 pb-28 sm:px-6 lg:pb-12"
       >
+        <VerifyEmailBanner me={me} />
+        <PushPrompt />
         {children}
       </main>
       <MobileTabBar items={items} counts={counts} />

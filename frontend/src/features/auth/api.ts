@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { disablePushOnThisDevice } from '@/lib/push';
 import { api, isApiError } from '@/lib/api';
 import type { Me, Role } from '@/lib/types';
 
@@ -78,7 +79,11 @@ export function useRegister() {
 export function useLogout() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: () => api<{ ok: true }>('/auth/logout', { method: 'POST' }),
+    mutationFn: async () => {
+      // Avant la fin de session : la suppression de l'abonnement exige d'être connecté.
+      await disablePushOnThisDevice();
+      return api<{ ok: true }>('/auth/logout', { method: 'POST' });
+    },
     onSettled: () => {
       qc.setQueryData(meKey, null);
       qc.removeQueries({ predicate: (q) => q.queryKey[0] !== 'domains' && q.queryKey !== meKey });

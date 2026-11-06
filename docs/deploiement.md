@@ -90,6 +90,8 @@ Le site tourne sur le VPS `207.58.174.79` (Ubuntu 24.04, alias SSH `vps-runner`)
 - Caddy (sur l'hôte) : bloc de `deploy/vps/Caddyfile.snippet` ajouté à `/etc/caddy/Caddyfile`, certificats HTTPS automatiques. Sauvegarde : `/etc/caddy/Caddyfile.bak-*-avant-talentsconnect`.
 - Pare-feu ufw : 3478 (TCP/UDP) et 49160-49200/UDP ouverts pour le relais TURN.
 
+Notifications push : `deploy.sh` crée une paire de clés VAPID dans `.env` au premier déploiement qui n'en a pas (une seule fois).
+
 Mettre à jour après un `git push` sur `main` :
 
 ```bash

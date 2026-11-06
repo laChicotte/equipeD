@@ -12,17 +12,22 @@ import {
   Req,
   Res,
   UploadedFile,
+  Put,
   UploadedFiles,
   UseInterceptors,
 } from '@nestjs/common';
 import { ApiConsumes, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import type { Response } from 'express';
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsBoolean,
   IsEnum,
   IsIn,
+  IsInt,
   IsOptional,
+  Max,
+  Min,
   IsString,
   IsUrl,
   Length,
@@ -37,8 +42,11 @@ import type { Prisma } from '../../generated/prisma/client.js';
 import { ResourceKind, ResourceStatus } from '../../generated/prisma/enums.js';
 import { MentorshipAccessService } from '../mentorships/mentorship-access.service.js';
 import { NotificationsService } from '../notifications/notifications.module.js';
+import { assertEmailVerified } from '../auth/email-verification.js';
+import { MailService } from '../mail/mail.module.js';
 import { isStaff, recordAudit } from '../../common/audit.js';
 import {
+  coverUpload,
   documentUpload,
   libraryUpload,
   readUploadedCover,
@@ -148,6 +156,41 @@ export class RejectResourceDto {
   note!: string;
 }
 
+export class ReviewResourceDto {
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(5)
+  rating!: number;
+
+  @Transform(emptyToUndefined)
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000, { message: 'L’avis contient au plus 1000 caractères.' })
+  comment?: string;
+}
+
+export class CommentResourceDto {
+  @Transform(trim)
+  @IsString()
+  @Length(2, 2000, { message: 'Le message doit contenir entre 2 et 2000 caractères.' })
+  content!: string;
+
+  /** Réponse à une question (un seul niveau de réponses). */
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  parentId?: string;
+}
+
+const personSelect = {
+  id: true,
+  firstName: true,
+  lastName: true,
+  avatarUpdatedAt: true,
+  role: true,
+} satisfies Prisma.UserSelect;
+
 const resourceSelect = {
   id: true,
   mentorshipId: true,
@@ -186,6 +229,7 @@ export class ResourcesService {
     private readonly prisma: PrismaService,
     private readonly access: MentorshipAccessService,
     private readonly notifications: NotificationsService,
+    private readonly mail: MailService,
   ) {}
 
   /** Bibliothèque publique : uniquement les ressources validées. */
@@ -216,7 +260,7 @@ export class ResourcesService {
         take: q.pageSize,
       }),
     ]);
-    return paginate(items, total, q);
+    return paginate(this.withRating(items, await this.ratings(items.map((r) => r.id))), total, q);
   }
 
   /** Publications de la personne connectée dans la bibliothèque, quel que soit leur statut. */
@@ -235,6 +279,7 @@ export class ResourcesService {
    */
   async publish(user: AuthUser, dto: CreateResourceDto, upload?: Upload) {
     const staff = isStaff(user.role);
+    if (!staff) await assertEmailVerified(this.prisma, this.mail, user.id);
     const file = upload?.file?.[0] ? readUploadedDocument(upload.file[0]) : null;
     const cover = upload?.cover?.[0] ? readUploadedCover(upload.cover[0]) : null;
     if (file && !staff && file.size > RESOURCE_FILE_MAX_BYTES) {
@@ -424,7 +469,7 @@ export class ResourcesService {
    * Document joint : celui d'une ressource partagée dans un mentorat n'est visible que de ses
    * deux participants ; celui de la bibliothèque est public une fois validé.
    */
-  async download(id: string, viewer: AuthUser | undefined) {
+  async download(id: string, viewer: AuthUser | undefined, count = true) {
     const resource = await this.prisma.resource.findUnique({
       where: { id },
       select: {
@@ -449,6 +494,7 @@ export class ResourcesService {
     }
     // Compteur d'impact : téléchargements de la bibliothèque, hors auteur et équipe.
     if (
+      count &&
       !resource.mentorshipId &&
       resource.status === 'PUBLISHED' &&
       viewer?.id !== resource.authorId &&
@@ -485,6 +531,232 @@ export class ResourcesService {
       fileName: 'couverture',
       isPublic: resource.status === 'PUBLISHED',
     };
+  }
+
+  /** Notes moyennes d'une liste de ressources (une seule requête). */
+  private async ratings(ids: string[]) {
+    if (ids.length === 0) return new Map<string, { average: number | null; count: number }>();
+    const rows = await this.prisma.resourceReview.groupBy({
+      by: ['resourceId'],
+      where: { resourceId: { in: ids } },
+      _avg: { rating: true },
+      _count: { _all: true },
+    });
+    return new Map(
+      rows.map((r) => [
+        r.resourceId,
+        {
+          average: r._avg.rating === null ? null : Math.round(r._avg.rating * 10) / 10,
+          count: r._count._all,
+        },
+      ]),
+    );
+  }
+
+  private withRating<T extends { id: string }>(
+    items: T[],
+    ratings: Map<string, { average: number | null; count: number }>,
+  ) {
+    return items.map((r) => ({ ...r, rating: ratings.get(r.id) ?? { average: null, count: 0 } }));
+  }
+
+  /** Ressource de la bibliothèque visible par cette personne, sinon 404. */
+  private async visibleLibraryItem(id: string, viewer: AuthUser | undefined) {
+    const r = await this.prisma.resource.findUnique({
+      where: { id },
+      select: {
+        ...resourceSelect,
+        authorId: true,
+        author: { select: { ...resourceSelect.author.select, status: true } },
+      },
+    });
+    if (!r || r.mentorshipId || !this.canSeeLibraryItem(r, viewer)) {
+      throw notFound('RESOURCE_NOT_FOUND', 'Ressource introuvable.');
+    }
+    return r;
+  }
+
+  /** Fiche complète : détails, note moyenne, mon avis, droits d'édition. */
+  async detail(id: string, viewer: AuthUser | undefined) {
+    const r = await this.visibleLibraryItem(id, viewer);
+    const [rating, mine] = await Promise.all([
+      this.ratings([id]),
+      viewer
+        ? this.prisma.resourceReview.findUnique({
+            where: { resourceId_userId: { resourceId: id, userId: viewer.id } },
+            select: { rating: true, comment: true },
+          })
+        : null,
+    ]);
+    const { authorId, author, ...rest } = r;
+    const { status: _status, ...publicAuthor } = author;
+    return {
+      ...rest,
+      author: publicAuthor,
+      rating: rating.get(id) ?? { average: null, count: 0 },
+      myReview: mine,
+      canEdit: !!viewer && (viewer.id === authorId || isStaff(viewer.role)),
+      isAuthor: viewer?.id === authorId,
+    };
+  }
+
+  /** Couverture ajoutée ou remplacée après publication (auteur ou équipe). */
+  async setCover(user: AuthUser, id: string, upload?: UploadedDocument) {
+    const r = await this.prisma.resource.findUnique({
+      where: { id },
+      select: { authorId: true, mentorshipId: true },
+    });
+    if (!r || r.mentorshipId) throw notFound('RESOURCE_NOT_FOUND', 'Ressource introuvable.');
+    if (r.authorId !== user.id && !isStaff(user.role)) {
+      throw forbidden(
+        'NOT_RESOURCE_AUTHOR',
+        'Seul l’auteur ou l’équipe peut changer la couverture.',
+      );
+    }
+    if (!upload) {
+      await this.prisma.resourceCover.deleteMany({ where: { resourceId: id } });
+      return { ok: true };
+    }
+    const cover = readUploadedCover(upload);
+    await this.prisma.resourceCover.upsert({
+      where: { resourceId: id },
+      create: { resourceId: id, ...cover },
+      update: { ...cover, createdAt: new Date() },
+    });
+    return { ok: true };
+  }
+
+  async reviews(id: string, viewer: AuthUser | undefined) {
+    await this.visibleLibraryItem(id, viewer);
+    return this.prisma.resourceReview.findMany({
+      where: { resourceId: id },
+      select: {
+        id: true,
+        rating: true,
+        comment: true,
+        createdAt: true,
+        updatedAt: true,
+        user: { select: personSelect },
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: 100,
+    });
+  }
+
+  /** Une note par personne (modifiable) ; jamais sur sa propre ressource. */
+  async rate(user: AuthUser, id: string, dto: ReviewResourceDto) {
+    const r = await this.visibleLibraryItem(id, user);
+    if (r.status !== 'PUBLISHED') {
+      throw conflict('RESOURCE_NOT_PUBLISHED', 'Cette ressource n’est pas encore publiée.');
+    }
+    if (r.authorId === user.id) {
+      throw forbidden('OWN_RESOURCE', 'Vous ne pouvez pas noter votre propre ressource.');
+    }
+    await this.prisma.resourceReview.upsert({
+      where: { resourceId_userId: { resourceId: id, userId: user.id } },
+      create: { resourceId: id, userId: user.id, rating: dto.rating, comment: dto.comment ?? null },
+      update: { rating: dto.rating, comment: dto.comment ?? null },
+    });
+    return this.detail(id, user);
+  }
+
+  async deleteReview(user: AuthUser, id: string) {
+    await this.prisma.resourceReview.deleteMany({ where: { resourceId: id, userId: user.id } });
+    return { ok: true };
+  }
+
+  async comments(id: string, viewer: AuthUser | undefined) {
+    const r = await this.visibleLibraryItem(id, viewer);
+    const rows = await this.prisma.resourceComment.findMany({
+      where: { resourceId: id },
+      select: {
+        id: true,
+        parentId: true,
+        content: true,
+        createdAt: true,
+        author: { select: personSelect },
+      },
+      orderBy: { createdAt: 'asc' },
+      take: 300,
+    });
+    const shape = (c: (typeof rows)[number]) => ({
+      ...c,
+      isResourceAuthor: c.author.id === r.authorId,
+    });
+    return rows
+      .filter((c) => !c.parentId)
+      .reverse()
+      .map((c) => ({
+        ...shape(c),
+        replies: rows.filter((x) => x.parentId === c.id).map(shape),
+      }));
+  }
+
+  /** Question ou réponse : la personne qui a partagé la ressource est prévenue. */
+  async comment(user: AuthUser, id: string, dto: CommentResourceDto) {
+    const r = await this.visibleLibraryItem(id, user);
+    if (r.status !== 'PUBLISHED') {
+      throw conflict('RESOURCE_NOT_PUBLISHED', 'Cette ressource n’est pas encore publiée.');
+    }
+    let parentAuthorId: string | null = null;
+    if (dto.parentId) {
+      const parent = await this.prisma.resourceComment.findFirst({
+        where: { id: dto.parentId, resourceId: id, parentId: null },
+        select: { authorId: true },
+      });
+      if (!parent) throw notFound('COMMENT_NOT_FOUND', 'Question introuvable.');
+      parentAuthorId = parent.authorId;
+    }
+    const created = await this.prisma.resourceComment.create({
+      data: {
+        resourceId: id,
+        authorId: user.id,
+        parentId: dto.parentId ?? null,
+        content: dto.content,
+      },
+      select: { id: true },
+    });
+    const who = `${user.firstName} ${user.lastName}`;
+    const link = `/ressources/${id}#discussion`;
+    const targets = new Set<string>();
+    if (r.authorId !== user.id) targets.add(r.authorId);
+    if (parentAuthorId && parentAuthorId !== user.id) targets.add(parentAuthorId);
+    for (const userId of targets) {
+      await this.notifications.notify({
+        userId,
+        type: 'RESOURCE_COMMENT',
+        title:
+          userId === r.authorId && !dto.parentId
+            ? `${who} pose une question sur « ${r.title} »`
+            : `${who} a répondu à propos de « ${r.title} »`,
+        body: dto.content,
+        link,
+      });
+    }
+    return created;
+  }
+
+  /** Suppression : l'auteur du message, la personne qui a partagé la ressource ou l'équipe. */
+  async deleteComment(user: AuthUser, commentId: string) {
+    const c = await this.prisma.resourceComment.findUnique({
+      where: { id: commentId },
+      select: { authorId: true, resource: { select: { authorId: true } } },
+    });
+    if (!c) throw notFound('COMMENT_NOT_FOUND', 'Message introuvable.');
+    if (c.authorId !== user.id && c.resource.authorId !== user.id && !isStaff(user.role)) {
+      throw forbidden('NOT_COMMENT_AUTHOR', 'Vous ne pouvez pas supprimer ce message.');
+    }
+    await this.prisma.resourceComment.delete({ where: { id: commentId } });
+    return { ok: true };
+  }
+
+  /** Lecture dans la plateforme : uniquement les PDF et les images. */
+  async view(id: string, viewer: AuthUser | undefined) {
+    const file = await this.download(id, viewer, false);
+    if (file.mimeType !== 'application/pdf' && !file.mimeType.startsWith('image/')) {
+      throw unprocessable('NOT_VIEWABLE', 'Ce document se lit après téléchargement.');
+    }
+    return file;
   }
 
   private async validate(dto: CreateResourceDto, hasFile = false) {
@@ -589,6 +861,76 @@ export class ResourcesController {
   @Delete('resources/:id')
   remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.resources.remove(user, id);
+  }
+
+  /** Fiche détaillée d'une ressource de la bibliothèque (note moyenne, mon avis). */
+  @Public()
+  @Get('resources/:id')
+  detail(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    return this.resources.detail(id, req.user);
+  }
+
+  /** Lecture dans la plateforme (PDF ou image, affiché dans la liseuse). */
+  @Public()
+  @Get('resources/:id/view')
+  async view(@Param('id') id: string, @Req() req: AuthenticatedRequest, @Res() res: Response) {
+    const file = await this.resources.view(id, req.user);
+    res
+      .status(200)
+      .type(file.mimeType)
+      .set({
+        'Content-Disposition': 'inline',
+        'Content-Length': String(file.size),
+        'Cache-Control': file.isPublic ? 'public, max-age=300' : 'private, no-store',
+        'X-Content-Type-Options': 'nosniff',
+        'Cross-Origin-Resource-Policy': 'same-origin',
+      })
+      .send(Buffer.from(file.data));
+  }
+
+  /** Couverture ajoutée ou remplacée après publication (multipart « cover » ; vide : retirée). */
+  @Put('resources/:id/cover')
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(coverUpload())
+  setCover(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @UploadedFile() cover?: UploadedDocument,
+  ) {
+    return this.resources.setCover(user, id, cover);
+  }
+
+  @Public()
+  @Get('resources/:id/reviews')
+  reviews(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    return this.resources.reviews(id, req.user);
+  }
+
+  @Put('resources/:id/review')
+  rate(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: ReviewResourceDto) {
+    return this.resources.rate(user, id, dto);
+  }
+
+  @Delete('resources/:id/review')
+  deleteReview(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.resources.deleteReview(user, id);
+  }
+
+  @Public()
+  @Get('resources/:id/comments')
+  comments(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    return this.resources.comments(id, req.user);
+  }
+
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  @Post('resources/:id/comments')
+  comment(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: CommentResourceDto) {
+    return this.resources.comment(user, id, dto);
+  }
+
+  @Delete('resource-comments/:id')
+  deleteComment(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.resources.deleteComment(user, id);
   }
 
   @Get('mentorships/:mentorshipId/resources')

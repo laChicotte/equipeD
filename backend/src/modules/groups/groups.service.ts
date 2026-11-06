@@ -4,6 +4,7 @@ import type { AuthUser } from '../../common/auth/auth-user.js';
 import { conflict, forbidden, notFound, unprocessable } from '../../common/errors.js';
 import { normalizeSearch } from '../../common/text.js';
 import { NotificationsService } from '../notifications/notifications.module.js';
+import { PushService } from '../push/push.module.js';
 import { RealtimeService } from '../realtime/realtime.service.js';
 import { readUploadedDocument, type UploadedDocument } from '../resources/resource-file.js';
 import {
@@ -61,6 +62,7 @@ export class GroupsService {
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
     private readonly realtime: RealtimeService,
+    private readonly push: PushService,
   ) {}
 
   // ─── Accès ────────────────────────────────────────────────────────────────
@@ -364,17 +366,20 @@ export class GroupsService {
     return rows.reverse();
   }
 
-  /** Prévient en direct les autres membres qu'un message est arrivé. */
-  private async broadcast(groupId: string, senderId: string) {
+  /** Prévient les autres membres : en direct dans l'application, et en push sinon. */
+  private async broadcast(groupId: string, sender: AuthUser, text: string) {
     const members = await this.prisma.groupMember.findMany({
-      where: { groupId, userId: { not: senderId } },
-      select: { userId: true },
+      where: { groupId, userId: { not: sender.id } },
+      select: { userId: true, group: { select: { name: true } } },
     });
-    this.realtime.emitToUsers(
-      members.map((m) => m.userId),
-      'group:message',
-      { groupId },
-    );
+    const ids = members.map((m) => m.userId);
+    this.realtime.emitToUsers(ids, 'group:message', { groupId });
+    void this.push.sendToUsers(ids, {
+      title: members[0]?.group.name ?? 'Groupe',
+      body: `${sender.firstName} : ${text}`,
+      url: `/messages?g=${groupId}`,
+      tag: `group-${groupId}`,
+    });
   }
 
   async sendFile(
@@ -404,7 +409,7 @@ export class GroupsService {
       where: { groupId_userId: { groupId, userId: user.id } },
       data: { lastReadAt: message.createdAt },
     });
-    await this.broadcast(groupId, user.id);
+    await this.broadcast(groupId, user, dto.content || `Fichier : ${file.fileName}`);
     return message;
   }
 
@@ -442,7 +447,7 @@ export class GroupsService {
       where: { groupId_userId: { groupId, userId: user.id } },
       data: { lastReadAt: message.createdAt },
     });
-    await this.broadcast(groupId, user.id);
+    await this.broadcast(groupId, user, dto.content);
     return message;
   }
 

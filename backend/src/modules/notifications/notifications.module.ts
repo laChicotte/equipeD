@@ -13,6 +13,7 @@ import {
 import { ApiTags } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsBooleanString, IsInt, IsOptional, Max, Min } from 'class-validator';
+import { PushService } from '../push/push.module.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import { CurrentUser } from '../../common/auth/decorators.js';
 import type { AuthUser } from '../../common/auth/auth-user.js';
@@ -45,7 +46,10 @@ export class ListNotificationsQuery {
 export class NotificationsService {
   private readonly logger = new Logger('Notifications');
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly push: PushService,
+  ) {}
 
   /**
    * Crée une notification après une action métier réussie.
@@ -61,6 +65,13 @@ export class NotificationsService {
           body: input.body?.slice(0, 500) ?? null,
           link: input.link ?? null,
         },
+      });
+      // Sur le téléphone ou l'ordinateur, même application fermée (sans attendre l'envoi).
+      void this.push.sendToUser(input.userId, {
+        title: input.title,
+        body: input.body,
+        url: input.link ?? '/tableau-de-bord',
+        tag: `notif-${input.type}`,
       });
     } catch (error) {
       this.logger.warn(`Notification ${input.type} non créée : ${(error as Error).message}`);

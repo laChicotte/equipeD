@@ -33,6 +33,7 @@ import { CurrentUser } from '../../common/auth/decorators.js';
 import type { AuthUser } from '../../common/auth/auth-user.js';
 import { notFound, unprocessable } from '../../common/errors.js';
 import { MentorshipAccessService } from '../mentorships/mentorship-access.service.js';
+import { PushService } from '../push/push.module.js';
 import { RealtimeService } from '../realtime/realtime.service.js';
 import {
   documentUpload,
@@ -102,7 +103,18 @@ export class MessagesService {
     private readonly prisma: PrismaService,
     private readonly access: MentorshipAccessService,
     private readonly realtime: RealtimeService,
+    private readonly push: PushService,
   ) {}
+
+  /** Prévient l'autre participant, même application fermée (le push regroupe par conversation). */
+  private pushMessage(user: AuthUser, recipientId: string, mentorshipId: string, text: string) {
+    void this.push.sendToUser(recipientId, {
+      title: `${user.firstName} ${user.lastName}`,
+      body: text,
+      url: `/messages?c=${mentorshipId}`,
+      tag: `chat-${mentorshipId}`,
+    });
+  }
 
   async list(user: AuthUser, mentorshipId: string, q: ListMessagesQuery) {
     await this.access.assertParticipant(user, mentorshipId);
@@ -127,6 +139,7 @@ export class MessagesService {
         })
       : await this.prisma.message.create({ data, select: messageSelect });
     this.realtime.emitToUser(access.counterpartId, 'message:new', { mentorshipId });
+    this.pushMessage(user, access.counterpartId, mentorshipId, dto.content);
     return message;
   }
 
@@ -155,6 +168,12 @@ export class MessagesService {
       select: messageSelect,
     });
     this.realtime.emitToUser(access.counterpartId, 'message:new', { mentorshipId });
+    this.pushMessage(
+      user,
+      access.counterpartId,
+      mentorshipId,
+      dto.content || `Fichier : ${file.fileName}`,
+    );
     return message;
   }
 

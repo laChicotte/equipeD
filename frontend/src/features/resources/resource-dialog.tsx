@@ -145,7 +145,7 @@ function FileDrop({
 }
 
 /** Réduit l'image de couverture dans le navigateur (600 px de haut au plus, JPEG) : envoi léger. */
-async function shrinkCover(file: File): Promise<Blob> {
+export async function shrinkCover(file: File): Promise<Blob> {
   const bitmap = await createImageBitmap(file);
   const scale = Math.min(1, 900 / bitmap.height, 700 / bitmap.width);
   const canvas = document.createElement('canvas');

@@ -24,6 +24,8 @@ import { GuidedPathsModule } from './modules/guided-paths/guided-paths.module.js
 import { DashboardModule } from './modules/dashboard/dashboard.module.js';
 import { AdminModule } from './modules/admin/admin.module.js';
 import { NotificationsModule } from './modules/notifications/notifications.module.js';
+import { PushModule } from './modules/push/push.module.js';
+import { MailModule } from './modules/mail/mail.module.js';
 import { ResourcesModule } from './modules/resources/resources.module.js';
 import { OpportunitiesModule } from './modules/opportunities/opportunities.module.js';
 import { CertificatesModule } from './modules/certificates/certificates.module.js';
@@ -57,6 +59,8 @@ import { AiModule } from './modules/ai/ai.module.js';
     GuidedPathsModule,
     DashboardModule,
     AdminModule,
+    PushModule,
+    MailModule,
     NotificationsModule,
     ResourcesModule,
     OpportunitiesModule,

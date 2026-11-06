@@ -5,6 +5,9 @@ import { api } from '@/lib/api';
 import type {
   Paginated,
   Resource,
+  ResourceDetail,
+  ResourceReview,
+  ResourceThread,
   ResourceKind,
   ResourceLicense,
   ResourceStatus,
@@ -122,3 +125,74 @@ export function useResourceDecision() {
 
 export const resourceCoverUrl = (r: Pick<Resource, 'id' | 'cover'>) =>
   r.cover ? `/api/v1/resources/${r.id}/cover?v=${encodeURIComponent(r.cover.createdAt)}` : null;
+
+export const resourceKey = (id: string) => ['resources', 'detail', id] as const;
+
+export function useResource(id: string) {
+  return useQuery({
+    queryKey: resourceKey(id),
+    queryFn: () => api<ResourceDetail>(`/resources/${id}`),
+  });
+}
+
+export function useResourceReviews(id: string) {
+  return useQuery({
+    queryKey: ['resources', 'reviews', id],
+    queryFn: () => api<ResourceReview[]>(`/resources/${id}/reviews`),
+  });
+}
+
+export function useResourceComments(id: string) {
+  return useQuery({
+    queryKey: ['resources', 'comments', id],
+    queryFn: () => api<ResourceThread[]>(`/resources/${id}/comments`),
+  });
+}
+
+export function useRateResource(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { rating: number; comment?: string }) =>
+      api<ResourceDetail>(`/resources/${id}/review`, { method: 'PUT', body }),
+    onSuccess: (detail) => {
+      qc.setQueryData(resourceKey(id), detail);
+      void qc.invalidateQueries({ queryKey: ['resources', 'reviews', id] });
+      void qc.invalidateQueries({ queryKey: ['resources', 'library'] });
+    },
+  });
+}
+
+export function useResourceDiscussion(id: string) {
+  const qc = useQueryClient();
+  const refresh = () => void qc.invalidateQueries({ queryKey: ['resources', 'comments', id] });
+  return {
+    post: useMutation({
+      mutationFn: (body: { content: string; parentId?: string }) =>
+        api(`/resources/${id}/comments`, { method: 'POST', body }),
+      onSuccess: refresh,
+    }),
+    remove: useMutation({
+      mutationFn: (commentId: string) =>
+        api(`/resource-comments/${commentId}`, { method: 'DELETE' }),
+      onSuccess: refresh,
+    }),
+  };
+}
+
+export function useSetCover(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (cover: Blob | null) => {
+      const form = new FormData();
+      if (cover) form.append('cover', cover, 'couverture.jpg');
+      return api(`/resources/${id}/cover`, { method: 'PUT', body: form });
+    },
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['resources'] }),
+  });
+}
+
+export const resourceViewUrl = (id: string) => `/api/v1/resources/${id}/view`;
+
+/** Lecture dans la plateforme : PDF et images. */
+export const isReadable = (file: { mimeType: string } | null) =>
+  !!file && (file.mimeType === 'application/pdf' || file.mimeType.startsWith('image/'));

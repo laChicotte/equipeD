@@ -24,6 +24,7 @@ import { OfflineBanner } from '@/features/offline/offline-banner';
 import type { Me } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Logo } from './logo';
+import { usePushSync } from '@/lib/push';
 import { NotificationBell } from './notification-bell';
 import { UserMenu } from './user-menu';
 
@@ -131,6 +132,7 @@ function SidebarBrand({ action }: { action?: ReactNode }) {
 /** Coque de l'espace d'administration : barre latérale fixe sur ordinateur, tiroir sur mobile. */
 export function AdminShell({ me, children }: { me: Me; children: ReactNode }) {
   const [open, setOpen] = useState(false);
+  usePushSync(true);
 
   // Le tiroir se referme quand on choisit une page (onNavigate) et avec Échap.
   useEffect(() => {
