@@ -1,7 +1,7 @@
-# Présentation du projet — Talents Connectés
+# Présentation du projet — TalentsConnect
 
 > Hackathon « Talents connectés » — Salon international du livre de jeunesse de Conakry (10e édition), Mois du Numérique, 4–7 novembre 2026, CCFG.
-> « Talents Connectés » est un nom de travail, provisoire.
+> Nom de la plateforme : « TalentsConnect ».
 
 ## 1. Le problème
 

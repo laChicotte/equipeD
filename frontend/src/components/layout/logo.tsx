@@ -37,7 +37,7 @@ export function Logo({
         onDark && 'rounded-md bg-white px-2 py-1',
         className,
       )}
-      aria-label="Talents Connectés, accueil"
+      aria-label="TalentsConnect, accueil"
     >
       <LogoMark className={cn('size-9', compactOnMobile ? 'sm:hidden' : 'hidden')} />
       <Image

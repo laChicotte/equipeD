@@ -1,4 +1,4 @@
-# Mettre Talents Connectés en ligne gratuitement (Render)
+# Mettre TalentsConnect en ligne gratuitement (Render)
 
 Objectif : une adresse `https://…onrender.com` à partager avec des testeurs, sans payer de serveur.
 
@@ -25,14 +25,14 @@ Vercel ne convient pas : il ne relaie pas les WebSocket, donc pas de messages en
 1. **Pousser le code sur GitHub** (la branche que Render suivra, par exemple `main`).
 2. Créer un compte sur [render.com](https://render.com), de préférence avec « Sign in with GitHub », et autoriser l'accès au dépôt.
 3. Dans Render : **New → Blueprint**, choisir le dépôt et la branche. Render lit `render.yaml` et propose :
-   - le service `talents-connectes` (Docker, Free) ;
-   - la base `talents-connectes-db` (Free).
+   - le service `talentsconnect` (Docker, Free) ;
+   - la base `talentsconnect-db` (Free).
 4. Render demande la valeur de `OPENAI_API_KEY`.
    - Pour activer l'IA, collez la clé.
    - Sinon, laissez vide : les boutons d'IA et l'assistant restent masqués.
    - **Fixez aussi une limite de dépense dans le compte OpenAI.**
 5. Cliquez sur **Apply**. La première construction prend 10 à 15 minutes.
-6. À la fin, ouvrez l'adresse affichée (`https://talents-connectes-xxxx.onrender.com`).
+6. À la fin, ouvrez l'adresse affichée : `https://talentsconnect.onrender.com`, ou `https://talentsconnect-xxxx.onrender.com` si le nom est déjà pris chez Render.
    - `WEB_ORIGINS` est rempli automatiquement avec cette adresse, grâce à `RENDER_EXTERNAL_URL`.
    - Si vous ajoutez un domaine personnalisé, ajoutez-le aussi à `WEB_ORIGINS`, séparé par une virgule.
 
@@ -70,12 +70,12 @@ Le bandeau « Environnement de démonstration » est activé à la construction 
 ## Tester l'image en local
 
 ```bash
-docker build -t talents-connectes .
+docker build -t talentsconnect .
 docker run --rm -p 3300:3000 \
   -e DATABASE_URL=postgresql://talents:talents_dev_password@host.docker.internal:5450/talents_connectes_preprod \
   -e SESSION_SECRET=$(node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))") \
   -e WEB_ORIGINS=http://localhost:3300 -e SEED_DEMO=true \
-  talents-connectes
+  talentsconnect
 ```
 
 En local, sans HTTPS, le cookie `Secure` de production n'est pas conservé par le navigateur, sauf sur `localhost` (Chrome et Firefox l'acceptent).

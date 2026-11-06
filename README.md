@@ -1,9 +1,7 @@
-# Talents Connectés — plateforme de mentorat
+# TalentsConnect — plateforme de mentorat
 
 Prototype réalisé pour le hackathon **« Talents connectés »** (Salon international du livre de jeunesse de Conakry, Mois du Numérique, 4–7 novembre 2026).
 La plateforme met en relation **mentors** et **mentorés** : recherche par domaine et compétence, demande d'accompagnement motivée, acceptation, planification de séances sans double réservation, conversation privée et suivi d'objectifs.
-
-> « Talents Connectés » est un nom provisoire.
 
 ## Stack
 

@@ -1,4 +1,4 @@
-# Système de design — Talents Connectés
+# Système de design — TalentsConnect
 
 > Les tokens vivent dans `frontend/src/app/globals.css` (bloc `@theme` de Tailwind 4).
 > Les noms historiques des couleurs sont conservés : `ink` = vert forêt, `teal` = terre cuite, `amber` = safran.

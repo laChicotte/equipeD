@@ -417,9 +417,8 @@ function Overview() {
           >
             <p className="text-[clamp(1.0625rem,1rem+0.3vw,1.25rem)] leading-relaxed text-foreground">
               Beaucoup de jeunes ont des idées et de l’ambition, mais pas encore le réseau ni les
-              conseils pour les concrétiser. Talents Connectés réunit tout l’accompagnement :
-              trouver le bon mentor, échanger en privé, planifier les séances et suivre ses
-              objectifs.
+              conseils pour les concrétiser. TalentsConnect réunit tout l’accompagnement : trouver
+              le bon mentor, échanger en privé, planifier les séances et suivre ses objectifs.
             </p>
             <Link
               href="#domaines"

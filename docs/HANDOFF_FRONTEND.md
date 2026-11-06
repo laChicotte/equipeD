@@ -1,4 +1,4 @@
-# Passation frontend — Talents Connectés
+# Passation frontend — TalentsConnect
 
 > Document destiné à la session Claude Code qui construit le **frontend Next.js** sur un autre poste.
 > À lire **en entier** avec `CLAUDE.md`, puis `PROMPT_CLAUDE_CODE_HACKATHON_MENTORAT_2026.md` (cahier de mission)
@@ -9,7 +9,7 @@
 ## 1. Résumé : où en est le projet (4 novembre 2026)
 
 **Produit :** plateforme de mentorat professionnel pour le hackathon « Talents connectés » (Conakry, 4–7 novembre 2026).
-Nom provisoire et remplaçable : « Talents Connectés » (ce n'est ni une marque déposée ni un nom officiel).
+Nom de la plateforme : « TalentsConnect » (en un mot ; le hackathon s'appelle « Talents connectés »).
 
 **Monorepo pnpm :**
 

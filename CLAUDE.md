@@ -1,4 +1,4 @@
-# CLAUDE.md — Talents Connectés (plateforme de mentorat)
+# CLAUDE.md — TalentsConnect (plateforme de mentorat)
 
 Hackathon « Talents connectés », Conakry, 4–7 novembre 2026. Monolithe modulaire, monorepo pnpm.
 

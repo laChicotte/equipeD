@@ -4,8 +4,8 @@ import type { MetadataRoute } from 'next';
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: '/',
-    name: 'Talents Connectés — Mentorat',
-    short_name: 'Talents Connectés',
+    name: 'TalentsConnect — Mentorat',
+    short_name: 'TalentsConnect',
     description:
       'Trouvez un mentor, échangez par messages ou par appel audio, planifiez vos séances et suivez vos objectifs.',
     lang: 'fr',

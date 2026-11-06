@@ -94,7 +94,9 @@ export function AssistantWidget({ role }: { role: Role }) {
           onClick={() => setOpen(true)}
           aria-label="Poser une question à l’assistant"
           className={cn(
-            'fixed right-4 bottom-24 z-40 inline-flex h-12 items-center gap-2 rounded-full bg-ink-900 pr-4 pl-3.5 text-sm font-semibold text-white shadow-raised transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring lg:bottom-6 print:hidden',
+            'fixed right-4 z-40 inline-flex h-12 items-center gap-2 rounded-full bg-ink-900 pr-4 pl-3.5 text-sm font-semibold text-white shadow-raised transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring lg:bottom-6 print:hidden',
+            // Au-dessus de la barre d'onglets mobile ; l'administration n'en a pas.
+            role === 'ADMIN' ? 'bottom-6' : 'bottom-24',
             // Dans la messagerie, le bouton masquerait la zone de saisie sur mobile.
             pathname.startsWith('/messages') && 'hidden lg:inline-flex',
           )}
@@ -117,7 +119,7 @@ export function AssistantWidget({ role }: { role: Role }) {
             <div className="min-w-0 flex-1">
               <p className="font-display text-[15px] font-semibold text-ink-900">Assistant</p>
               <p className="text-xs text-muted-foreground">
-                Questions sur l’utilisation de Talents Connectés
+                Questions sur l’utilisation de TalentsConnect
               </p>
             </div>
             {turns.length > 0 && (

@@ -1,32 +1,34 @@
 import type { Metadata, Viewport } from 'next';
-import { Lexend, Schibsted_Grotesk } from 'next/font/google';
+import localFont from 'next/font/local';
 import { Providers } from '@/components/providers';
 import { dataSaverBootScript } from '@/lib/data-saver-boot';
 import './globals.css';
 
-const schibsted = Schibsted_Grotesk({
+// Polices intégrées au dépôt (licence SIL OFL, fichiers Fontsource) : la construction ne dépend
+// pas de Google Fonts, et aucune requête vers Google n'est faite à l'affichage.
+const schibsted = localFont({
+  src: './fonts/schibsted-grotesk-latin.woff2',
   variable: '--font-schibsted',
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '800'],
+  weight: '400 900',
   display: 'swap',
 });
 
-const lexend = Lexend({
+const lexend = localFont({
+  src: './fonts/lexend-latin.woff2',
   variable: '--font-lexend',
-  subsets: ['latin'],
-  weight: ['500', '600', '700'],
+  weight: '100 900',
   display: 'swap',
 });
 
 export const metadata: Metadata = {
   title: {
-    default: 'Talents Connectés — Trouvez votre mentor en Guinée',
-    template: '%s · Talents Connectés',
+    default: 'TalentsConnect — Trouvez votre mentor en Guinée',
+    template: '%s · TalentsConnect',
   },
   description:
     'Étudiants, jeunes diplômés, porteurs de projets : trouvez un mentor expérimenté, échangez en privé, planifiez vos séances et suivez vos objectifs.',
-  applicationName: 'Talents Connectés',
-  appleWebApp: { capable: true, title: 'Talents Connectés', statusBarStyle: 'default' },
+  applicationName: 'TalentsConnect',
+  appleWebApp: { capable: true, title: 'TalentsConnect', statusBarStyle: 'default' },
   icons: { apple: '/icons/apple-touch-icon.png' },
 };
 

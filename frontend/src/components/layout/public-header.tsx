@@ -177,8 +177,8 @@ export function PublicFooter() {
         <div className="lg:col-span-3">
           <p className="font-semibold text-white">À savoir</p>
           <p className="mt-2 max-w-[34ch]">
-            « Talents Connectés » est un nom provisoire. L’accompagnement Campus France relève du
-            conseil et de l’orientation, sans garantie d’admission ni de visa.
+            L’accompagnement Campus France relève du conseil et de l’orientation, sans garantie
+            d’admission ni de visa.
           </p>
         </div>
         <div className="col-span-2 lg:col-span-3">
@@ -217,7 +217,7 @@ export function PublicFooter() {
           viewBox="0 0 1000 116"
           className="hidden w-full text-white sm:block"
           role="img"
-          aria-label="Talents Connectés"
+          aria-label="TalentsConnect"
         >
           <text
             x="0"
@@ -227,7 +227,7 @@ export function PublicFooter() {
             fill="currentColor"
             style={{ font: '800 118px var(--font-schibsted)', letterSpacing: '-0.05em' }}
           >
-            Talents Connectés
+            TalentsConnect
           </text>
         </svg>
         <p className="mt-4 text-[13px] text-ink-100/80">

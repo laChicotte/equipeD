@@ -1,4 +1,4 @@
-# Architecture — Talents Connectés
+# Architecture — TalentsConnect
 
 > Plateforme de mentorat du hackathon « Talents connectés » (Conakry, novembre 2026).
 > Monolithe modulaire, monorepo pnpm. Ce document décrit ce qui est **réellement implémenté**.

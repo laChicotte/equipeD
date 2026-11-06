@@ -1,26 +1,16 @@
 'use client';
 
 import {
-  Award,
-  BadgeCheck,
-  ChartColumn,
-  Flag,
-  ScrollText,
-  UsersRound,
   House,
   UserSearch,
   BookOpen,
   Briefcase,
   CalendarDays,
-  Shapes,
   CalendarPlus,
   Inbox,
-  LayoutDashboard,
   MessageSquareText,
   Search,
   Send,
-  ShieldCheck,
-  UserCog,
   Users,
   type LucideIcon,
 } from 'lucide-react';
@@ -34,6 +24,7 @@ import { useDashboard } from '@/features/mentorships/api';
 import { OfflineBanner } from '@/features/offline/offline-banner';
 import type { Me } from '@/lib/types';
 import { cn, isStaff } from '@/lib/utils';
+import { AdminShell } from './admin-shell';
 import { DemoBanner } from './demo-banner';
 import { Logo } from './logo';
 import { PublicFooter, PublicHeader } from './public-header';
@@ -52,56 +43,6 @@ interface NavItem {
 }
 
 function navFor(me: Me): NavItem[] {
-  if (isStaff(me.role)) {
-    return [
-      {
-        href: '/admin',
-        label: 'Vue d’ensemble',
-        short: 'Synthèse',
-        icon: LayoutDashboard,
-        exact: true,
-      },
-      { href: '/admin/verifications', label: 'Vérifications', short: 'Vérifs', icon: BadgeCheck },
-      { href: '/admin/comptes', label: 'Comptes', short: 'Comptes', icon: UserCog },
-      { href: '/admin/mentors', label: 'Mentors', short: 'Mentors', icon: ShieldCheck },
-      { href: '/admin/pilotage', label: 'Pilotage', short: 'Pilotage', icon: ChartColumn },
-      {
-        href: '/admin/equipe',
-        label: 'Équipe',
-        short: 'Équipe',
-        icon: UsersRound,
-        desktopOnly: true,
-      },
-      {
-        href: '/admin/journal',
-        label: 'Journal d’audit',
-        short: 'Journal',
-        icon: ScrollText,
-        desktopOnly: true,
-      },
-      {
-        href: '/admin/certificats',
-        label: 'Certificats',
-        short: 'Certificats',
-        icon: Award,
-        desktopOnly: true,
-      },
-      {
-        href: '/admin/contenus',
-        label: 'Contenus',
-        short: 'Contenus',
-        icon: Flag,
-        desktopOnly: true,
-      },
-      {
-        href: '/admin/domaines',
-        label: 'Domaines',
-        short: 'Domaines',
-        icon: Shapes,
-        desktopOnly: true,
-      },
-    ];
-  }
   if (me.role === 'MENTOR') {
     return [
       { href: '/tableau-de-bord', label: 'Tableau de bord', short: 'Accueil', icon: House },
@@ -341,6 +282,11 @@ export function ShellSkeleton() {
 }
 
 function AuthenticatedLayout({ me, children }: { me: Me; children: ReactNode }) {
+  if (isStaff(me.role)) return <AdminShell me={me}>{children}</AdminShell>;
+  return <MemberLayout me={me}>{children}</MemberLayout>;
+}
+
+function MemberLayout({ me, children }: { me: Me; children: ReactNode }) {
   const items = navFor(me);
   const counts = useBadgeCounts(!isStaff(me.role) && me.hasProfile);
   return (
@@ -367,12 +313,16 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { data: me, isPending, isError, fetchStatus } = useMe();
 
   const needsOnboarding = !!me && !isStaff(me.role) && !me.hasProfile && pathname !== '/onboarding';
+  // L'administrateur n'a ni demandes, ni mentorats, ni séances : seulement /admin et son compte.
+  const adminOutside =
+    !!me && isStaff(me.role) && !pathname.startsWith('/admin') && !pathname.startsWith('/compte');
 
   useEffect(() => {
     if (isPending) return;
     if (me === null) router.replace(`/connexion?next=${encodeURIComponent(pathname)}`);
     else if (needsOnboarding) router.replace('/onboarding');
-  }, [isPending, me, needsOnboarding, pathname, router]);
+    else if (adminOutside) router.replace('/admin');
+  }, [isPending, me, needsOnboarding, adminOutside, pathname, router]);
 
   // Sans réseau et sans session gardée sur l'appareil : rien à afficher, on le dit.
   if (isPending && fetchStatus === 'paused') {
@@ -394,7 +344,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </div>
     );
   }
-  if (isPending || !me || needsOnboarding) return <ShellSkeleton />;
+  if (isPending || !me || needsOnboarding || adminOutside) return <ShellSkeleton />;
 
   if (pathname === '/onboarding') {
     return (

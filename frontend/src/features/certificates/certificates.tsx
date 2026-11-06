@@ -72,7 +72,7 @@ export function MentorCertificatesSection({
                 Accompagnement en {c.domainName.toLowerCase()}
               </p>
               <p className="text-[13px] text-foreground">
-                Talents Connectés · Mentoré : {c.menteeName}
+                TalentsConnect · Mentoré : {c.menteeName}
               </p>
               <p className="text-[13px] text-muted-foreground">
                 Délivré le {formatDate(c.issuedAt)} · {stats(c).join(' · ')}
@@ -135,7 +135,7 @@ export function CertificateView({ code }: { code: string }) {
             <ShieldAlert className="size-5" aria-hidden />
           )}
           {c.valid
-            ? `Certificat authentique, délivré par Talents Connectés le ${formatDate(c.issuedAt)}.`
+            ? `Certificat authentique, délivré par TalentsConnect le ${formatDate(c.issuedAt)}.`
             : 'Ce certificat a été révoqué : il n’est plus valide.'}
         </p>
         <div className="flex gap-2">
@@ -175,7 +175,7 @@ export function CertificateView({ code }: { code: string }) {
                 <LogoMark className="size-9" />
               </span>
               <span className="font-display text-[17px] font-bold tracking-[-0.02em]">
-                Talents Connectés
+                TalentsConnect
               </span>
             </div>
             <span
@@ -213,7 +213,7 @@ export function CertificateView({ code }: { code: string }) {
               pour avoir accompagné <span className="font-semibold">{c.menteeName}</span> en{' '}
               <span className="font-semibold">{c.domainName.toLowerCase()}</span>, du{' '}
               {formatDate(c.startedAt)} au {formatDate(c.endedAt)}, dans le cadre du programme de
-              mentorat Talents Connectés.
+              mentorat TalentsConnect.
             </p>
           </div>
 

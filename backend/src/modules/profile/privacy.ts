@@ -273,10 +273,7 @@ export class PrivacyController {
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Get('export')
   async export(@CurrentUser() user: AuthUser, @Res({ passthrough: true }) res: Response) {
-    res.setHeader(
-      'Content-Disposition',
-      'attachment; filename="talents-connectes-mes-donnees.json"',
-    );
+    res.setHeader('Content-Disposition', 'attachment; filename="talentsconnect-mes-donnees.json"');
     res.setHeader('Cache-Control', 'no-store');
     return this.privacy.export(user);
   }

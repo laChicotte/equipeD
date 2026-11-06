@@ -130,7 +130,7 @@ const CASES: Case[] = [
   {
     role: 'MENTEE',
     question: 'Quelle est la capitale du Canada ?',
-    must: [['talents connectes', 'plateforme']],
+    must: [['talentsconnect', 'plateforme']],
     mustNot: ['ottawa'],
   },
   {

@@ -9,7 +9,7 @@
 > « Les termes de référence le disent : les jeunes ont des idées et des ambitions, mais accèdent difficilement aux conseils, aux réseaux et aux expériences. De leur côté, des professionnels sont prêts à transmettre, mais rien n'organise la rencontre ni le suivi. Sans outil, le mentorat reste informel, dépend du réseau qu'on a déjà, et s'essouffle faute de suivi. »
 
 **3. Solution (35 s)**
-> « Talents Connectés est une plateforme de mentorat qui couvre tout le parcours. Le mentoré décrit son objectif et trouve des mentors dans les sept domaines des TDR, avec des suggestions expliquées. Il envoie une demande motivée ; le mentor accepte. Ils planifient une séance sur les créneaux du mentor, sans double réservation possible, échangent dans une conversation privée et suivent des objectifs découpés en jalons. Après chaque séance, ils l'évaluent. »
+> « TalentsConnect est une plateforme de mentorat qui couvre tout le parcours. Le mentoré décrit son objectif et trouve des mentors dans les sept domaines des TDR, avec des suggestions expliquées. Il envoie une demande motivée ; le mentor accepte. Ils planifient une séance sur les créneaux du mentor, sans double réservation possible, échangent dans une conversation privée et suivent des objectifs découpés en jalons. Après chaque séance, ils l'évaluent. »
 
 **4. Démonstration (60 s, en direct ou en vidéo)**
 > Recherche « développement web » → fiche → demande → acceptation → réservation → confirmation → message → objectif. (voir `scenario-demo.md`)

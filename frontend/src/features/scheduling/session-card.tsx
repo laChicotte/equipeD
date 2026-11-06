@@ -174,7 +174,7 @@ function ConfirmDialog({ session, onClose }: { session: Session; onClose: () => 
             <Input
               type="url"
               inputMode="url"
-              placeholder="https://meet.jit.si/talents-connectes-…"
+              placeholder="https://meet.jit.si/talentsconnect-…"
               value={meetingUrl}
               onChange={(e) => setMeetingUrl(e.target.value)}
             />

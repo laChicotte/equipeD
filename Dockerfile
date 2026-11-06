@@ -3,7 +3,7 @@
 # NestJS, qui écoute sur 127.0.0.1:4000 dans le même conteneur. Le cookie de session reste
 # first-party, sans CORS. Voir docs/deploiement.md.
 #
-#   docker build -t talents-connectes .
+#   docker build -t talentsconnect .
 #
 # Pour un serveur à soi, backend/Dockerfile (API seule) et backend/docker-compose.yml restent valables.
 

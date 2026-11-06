@@ -30,7 +30,7 @@ export function setupApp(app: INestApplication): void {
     const doc = SwaggerModule.createDocument(
       app,
       new DocumentBuilder()
-        .setTitle('Talents Connectés — API')
+        .setTitle('TalentsConnect — API')
         .setDescription(
           'API REST de la plateforme de mentorat (authentification par cookie de session HttpOnly).',
         )

@@ -5,12 +5,12 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { DomainIcon } from '@/components/domain-icon';
 import { ErrorState, PageHeader } from '@/components/feedback/states';
+import { DataTable } from '@/components/admin/data-table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
 import { Input, NativeSelect, Textarea } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/misc';
 import { errorMessage, isApiError } from '@/lib/api';
 import type { AdminDomain } from '@/lib/types';
 import { useAdminDomainMutations, useAdminDomains } from './api';
@@ -160,77 +160,103 @@ export function DomainsAdmin() {
       />
       {list.isError ? (
         <ErrorState error={list.error} onRetry={() => void list.refetch()} />
-      ) : list.isPending ? (
-        <Skeleton className="h-96" />
       ) : (
-        <div className="overflow-x-auto rounded-lg bg-surface ring-1 ring-border">
-          <table className="w-full min-w-[720px] border-collapse text-left text-[14px]">
-            <thead>
-              <tr className="border-b border-border text-[13px] text-muted-foreground">
-                <th className="px-5 py-3 font-semibold">Domaine</th>
-                <th className="px-5 py-3 text-right font-semibold">Mentors</th>
-                <th className="px-5 py-3 text-right font-semibold">Mentorés</th>
-                <th className="px-5 py-3 text-right font-semibold">Ressources</th>
-                <th className="px-5 py-3 font-semibold">État</th>
-                <th className="px-5 py-3">
-                  <span className="sr-only">Actions</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {list.data.map((d) => (
-                <tr key={d.id} className="border-b border-border last:border-b-0">
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-3">
-                      <span className="inline-flex size-9 shrink-0 items-center justify-center bg-ink-900 text-amber-400">
-                        <DomainIcon name={d.icon} className="size-4" />
-                      </span>
-                      <div className="min-w-0">
-                        <p className="font-semibold text-ink-900">{d.name}</p>
-                        <p className="text-[13px] text-muted-foreground">/{d.slug}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-5 py-4 text-right tabular-nums">{d._count.mentors}</td>
-                  <td className="px-5 py-4 text-right tabular-nums">{d._count.mentees}</td>
-                  <td className="px-5 py-4 text-right tabular-nums">{d._count.resources}</td>
-                  <td className="px-5 py-4">
-                    <Badge tone={d.isActive ? 'success' : 'neutral'}>
-                      {d.isActive ? 'Actif' : 'Désactivé'}
-                    </Badge>
-                  </td>
-                  <td className="px-5 py-4">
-                    <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => setEditing(d)}>
-                        <Pencil aria-hidden />
-                        Modifier
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        loading={update.isPending && update.variables?.id === d.id}
-                        onClick={() =>
-                          update.mutate(
-                            { id: d.id, patch: { isActive: !d.isActive } },
-                            {
-                              onSuccess: () =>
-                                toast.success(
-                                  d.isActive ? 'Domaine désactivé' : 'Domaine réactivé',
-                                ),
-                              onError: (e) => toast.error(errorMessage(e)),
-                            },
-                          )
-                        }
-                      >
-                        {d.isActive ? 'Désactiver' : 'Réactiver'}
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          caption="Domaines d’accompagnement"
+          loading={list.isPending}
+          rows={list.data ?? []}
+          rowKey={(d) => d.id}
+          searchText={(d) => `${d.name} ${d.slug}`}
+          searchPlaceholder="Rechercher un domaine"
+          empty="Aucun domaine."
+          columns={[
+            {
+              key: 'name',
+              header: 'Domaine',
+              sortValue: (d) => d.name,
+              cell: (d) => (
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-ink-900 text-amber-400">
+                    <DomainIcon name={d.icon} className="size-4" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold text-ink-900">{d.name}</p>
+                    <p className="truncate text-[12px] text-muted-foreground">/{d.slug}</p>
+                  </div>
+                </div>
+              ),
+            },
+            {
+              key: 'mentors',
+              header: 'Mentors',
+              align: 'right',
+              hideBelow: 'sm',
+              sortValue: (d) => d._count.mentors,
+              cell: (d) => <span className="tabular-nums">{d._count.mentors}</span>,
+            },
+            {
+              key: 'mentees',
+              header: 'Mentorés',
+              align: 'right',
+              hideBelow: 'md',
+              sortValue: (d) => d._count.mentees,
+              cell: (d) => <span className="tabular-nums">{d._count.mentees}</span>,
+            },
+            {
+              key: 'resources',
+              header: 'Ressources',
+              align: 'right',
+              hideBelow: 'lg',
+              sortValue: (d) => d._count.resources,
+              cell: (d) => <span className="tabular-nums">{d._count.resources}</span>,
+            },
+            {
+              key: 'state',
+              header: 'État',
+              sortValue: (d) => (d.isActive ? 0 : 1),
+              cell: (d) => (
+                <Badge tone={d.isActive ? 'success' : 'neutral'}>
+                  {d.isActive ? 'Actif' : 'Désactivé'}
+                </Badge>
+              ),
+            },
+            {
+              key: 'actions',
+              header: 'Actions',
+              align: 'right',
+              cell: (d) => (
+                <div className="flex justify-end gap-1 whitespace-nowrap">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setEditing(d)}
+                    aria-label={`Modifier ${d.name}`}
+                  >
+                    <Pencil aria-hidden />
+                    <span className="hidden sm:inline">Modifier</span>
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    loading={update.isPending && update.variables?.id === d.id}
+                    onClick={() =>
+                      update.mutate(
+                        { id: d.id, patch: { isActive: !d.isActive } },
+                        {
+                          onSuccess: () =>
+                            toast.success(d.isActive ? 'Domaine désactivé' : 'Domaine réactivé'),
+                          onError: (e) => toast.error(errorMessage(e)),
+                        },
+                      )
+                    }
+                  >
+                    {d.isActive ? 'Désactiver' : 'Réactiver'}
+                  </Button>
+                </div>
+              ),
+            },
+          ]}
+        />
       )}
       {creating && <DomainDialog open onOpenChange={setCreating} />}
       {editing && (

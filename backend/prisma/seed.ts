@@ -1,5 +1,5 @@
 /**
- * Seed idempotente — Talents Connectés.
+ * Seed idempotente — TalentsConnect.
  *
  * - Domaines : issus de la section 5 des TDR (toujours chargés).
  * - Comptes et profils : FICTIFS, réservés au développement et à la démonstration.

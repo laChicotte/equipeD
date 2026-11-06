@@ -219,7 +219,7 @@ function Discover() {
       </section>
 
       <p className="px-2 text-center text-[12px] leading-relaxed text-muted-foreground">
-        Talents Connectés · Hackathon « Talents connectés », Conakry 2026 · Données de démonstration
+        TalentsConnect · Hackathon « Talents connectés », Conakry 2026 · Données de démonstration
       </p>
     </div>
   );

@@ -26,7 +26,7 @@ const dateFr = (d: Date | string) =>
 export function buildImpactCsv(m: ImpactMetrics): string {
   const roles = m.users.byRole;
   const lines: string[] = [
-    row('Rapport d’impact — Talents Connectés'),
+    row('Rapport d’impact — TalentsConnect'),
     row('Généré le', dateFr(m.generatedAt)),
     row('Source', 'Calculé sur la base de données de la plateforme, sans estimation'),
     '',

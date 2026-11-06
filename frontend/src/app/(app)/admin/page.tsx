@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
-import { AdminOverviewView } from '@/features/admin/admin-views';
+import { AdminDashboard } from '@/features/admin/dashboard';
 
-export const metadata: Metadata = { title: 'Administration' };
+export const metadata: Metadata = { title: 'Tableau de bord · Administration' };
 
 export default function AdminPage() {
-  return <AdminOverviewView />;
+  return <AdminDashboard />;
 }

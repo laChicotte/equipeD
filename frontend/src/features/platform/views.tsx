@@ -4,7 +4,6 @@ import {
   Archive,
   Award,
   CalendarCheck2,
-  Clock,
   Download,
   Phone,
   Presentation,
@@ -23,7 +22,7 @@ import {
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { AccessDenied, EmptyState, ErrorState, PageHeader } from '@/components/feedback/states';
+import { AccessDenied, ErrorState, PageHeader } from '@/components/feedback/states';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -32,6 +31,9 @@ import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
 import { Input, NativeSelect, Textarea } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/misc';
+import { DataTable } from '@/components/admin/data-table';
+import { FunnelChart, TrendChart, formatNumber } from '@/components/admin/charts';
+import { Panel } from '@/components/admin/ui';
 import { useAdminUsers } from '@/features/admin/api';
 import { useMe } from '@/features/auth/api';
 import { formatDuration } from '@/features/certificates/api';
@@ -49,10 +51,9 @@ import {
   usePlatformMutations,
   useTeam,
   type AdminCertificate,
-  type DailyPoint,
 } from './api';
 
-const panel = 'rounded-lg bg-surface shadow-card ring-1 ring-border/70';
+const panel = 'rounded-xl bg-surface shadow-card ring-1 ring-border/70';
 
 function useAdminGuard() {
   const { data: me } = useMe();
@@ -83,7 +84,7 @@ function Kpi({
   icon: LucideIcon;
 }) {
   return (
-    <div className={cn(panel, 'p-4')}>
+    <div className={cn(panel, 'min-w-0 p-3.5 sm:p-4')}>
       <div className="flex items-start justify-between gap-2">
         <span className="text-[13px] font-medium text-muted-foreground">{label}</span>
         <span
@@ -105,89 +106,6 @@ const dayLabel = (iso: string) =>
   new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(
     new Date(iso),
   );
-
-/**
- * Petit graphique à barres (une série, une couleur) : un multiple par mesure plutôt qu'un
- * graphique à double échelle. Survol : info-bulle par barre ; les données existent aussi en tableau.
- */
-function DailyBars({ title, points, unit }: { title: string; points: DailyPoint[]; unit: string }) {
-  const [hover, setHover] = useState<number | null>(null);
-  const max = Math.max(1, ...points.map((p) => p.count));
-  const total = points.reduce((s, p) => s + p.count, 0);
-  const W = 300;
-  const H = 72;
-  const step = W / points.length;
-  const bar = Math.max(2, step - 2);
-  const h = hover === null ? null : points[hover];
-  return (
-    <figure className={cn(panel, 'p-4')}>
-      <figcaption className="flex items-baseline justify-between gap-2">
-        <span className="text-[13px] font-semibold text-ink-900">{title}</span>
-        <span className="text-[12px] text-muted-foreground tabular-nums">
-          {h ? `${dayLabel(h.day)} : ${h.count} ${unit}` : `${total} sur 30 jours`}
-        </span>
-      </figcaption>
-      <svg
-        viewBox={`0 0 ${W} ${H + 2}`}
-        className="mt-3 h-20 w-full"
-        preserveAspectRatio="none"
-        role="img"
-        aria-label={`${title} : ${total} ${unit} sur 30 jours`}
-        onMouseLeave={() => setHover(null)}
-      >
-        <line x1="0" x2={W} y1={H} y2={H} className="stroke-border" strokeWidth="1" />
-        {points.map((p, i) => {
-          const bh = p.count === 0 ? 0 : Math.max(3, (p.count / max) * (H - 4));
-          return (
-            <g key={p.day} onMouseEnter={() => setHover(i)}>
-              <rect x={i * step} y={0} width={step} height={H} fill="transparent" />
-              {bh > 0 && (
-                <rect
-                  x={i * step + 1}
-                  y={H - bh}
-                  width={bar}
-                  height={bh}
-                  rx={Math.min(2, bar / 2)}
-                  className={cn(
-                    'fill-teal-600 transition-opacity',
-                    hover !== null && hover !== i && 'opacity-40',
-                  )}
-                />
-              )}
-            </g>
-          );
-        })}
-      </svg>
-      <div className="mt-1 flex justify-between text-[11px] text-muted-foreground">
-        <span>{dayLabel(points[0]?.day ?? new Date().toISOString())}</span>
-        <span>Aujourd’hui</span>
-      </div>
-    </figure>
-  );
-}
-
-function Funnel({ steps }: { steps: { label: string; value: number }[] }) {
-  const max = Math.max(1, ...steps.map((s) => s.value));
-  return (
-    <ol className="grid gap-2.5">
-      {steps.map((s) => (
-        <li
-          key={s.label}
-          className="grid grid-cols-[minmax(0,180px)_minmax(0,1fr)_48px] items-center gap-3 text-[13px]"
-        >
-          <span className="truncate text-muted-foreground">{s.label}</span>
-          <span className="h-2.5 overflow-hidden rounded-full bg-ink-50">
-            <span
-              className="block h-full rounded-full bg-ink-800"
-              style={{ width: `${(s.value / max) * 100}%` }}
-            />
-          </span>
-          <span className="text-right font-semibold text-ink-900 tabular-nums">{s.value}</span>
-        </li>
-      ))}
-    </ol>
-  );
-}
 
 export function PilotageView() {
   const metrics = useMetrics();
@@ -214,7 +132,7 @@ export function PilotageView() {
       {metrics.isError ? (
         <ErrorState error={metrics.error} onRetry={() => void metrics.refetch()} />
       ) : metrics.isPending ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           {Array.from({ length: 8 }).map((_, i) => (
             <Skeleton key={i} className="h-28" />
           ))}
@@ -229,7 +147,7 @@ export function PilotageView() {
           );
           return (
             <div className="grid gap-6">
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
                 <Kpi
                   label="Membres"
                   value={users}
@@ -320,22 +238,22 @@ export function PilotageView() {
                   Activité des 30 derniers jours
                 </h2>
                 <div className="grid gap-4 md:grid-cols-2">
-                  <DailyBars
-                    title="Inscriptions"
-                    points={m.activity.signups}
-                    unit="inscription(s)"
-                  />
-                  <DailyBars
-                    title="Demandes de mentorat"
-                    points={m.activity.requests}
-                    unit="demande(s)"
-                  />
-                  <DailyBars
-                    title="Séances réalisées"
-                    points={m.activity.sessions}
-                    unit="séance(s)"
-                  />
-                  <DailyBars title="Messages" points={m.activity.messages} unit="message(s)" />
+                  {(
+                    [
+                      ['Inscriptions', m.activity.signups, 'inscription(s)'],
+                      ['Demandes de mentorat', m.activity.requests, 'demande(s)'],
+                      ['Séances réalisées', m.activity.sessions, 'séance(s)'],
+                      ['Messages', m.activity.messages, 'message(s)'],
+                    ] as const
+                  ).map(([title, points, unit]) => (
+                    <Panel
+                      key={title}
+                      title={title}
+                      description={`${formatNumber(points.reduce((a, p) => a + p.count, 0))} sur 30 jours`}
+                    >
+                      <TrendChart points={[...points]} label={title} unit={unit} height={160} />
+                    </Panel>
+                  ))}
                 </div>
                 <details className="mt-3 text-[13px]">
                   <summary className="cursor-pointer font-semibold text-muted-foreground hover:text-ink-900">
@@ -374,18 +292,12 @@ export function PilotageView() {
                 </details>
               </section>
 
-              <div className="grid items-start gap-4 lg:grid-cols-2">
-                <section className={cn(panel, 'p-5')} aria-labelledby="titre-entonnoir">
-                  <h2
-                    id="titre-entonnoir"
-                    className="font-display text-[17px] font-semibold text-ink-900"
-                  >
-                    Du premier contact au certificat
-                  </h2>
-                  <p className="mt-0.5 mb-4 text-[13px] text-muted-foreground">
-                    Volumes cumulés depuis le lancement.
-                  </p>
-                  <Funnel
+              <div className="grid items-start gap-6 lg:grid-cols-2">
+                <Panel
+                  title="Du premier contact au certificat"
+                  description="Volumes cumulés depuis le lancement."
+                >
+                  <FunnelChart
                     steps={[
                       { label: 'Demandes envoyées', value: totalRequests },
                       { label: 'Demandes acceptées', value: m.requests.byStatus.ACCEPTED ?? 0 },
@@ -393,56 +305,71 @@ export function PilotageView() {
                       { label: 'Certificats délivrés', value: m.certificates.valid },
                     ]}
                   />
-                </section>
-                <section className={cn(panel, 'overflow-hidden')} aria-labelledby="titre-domaines">
-                  <h2
-                    id="titre-domaines"
-                    className="px-5 pt-5 font-display text-[17px] font-semibold text-ink-900"
-                  >
-                    Offre et demande par domaine
-                  </h2>
-                  <p className="mt-0.5 px-5 text-[13px] text-muted-foreground">
-                    Repérer les domaines où il manque des mentors.
-                  </p>
-                  <table className="mt-3 w-full text-left text-[13px]">
-                    <thead className="text-muted-foreground">
-                      <tr className="border-b border-border/70">
-                        <th className="px-5 py-2 font-semibold">Domaine</th>
-                        <th className="px-3 py-2 text-right font-semibold">Mentors</th>
-                        <th className="px-3 py-2 text-right font-semibold">Intéressés</th>
-                        <th className="px-5 py-2 text-right font-semibold">Demandes</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border/60">
-                      {m.domains.map((d) => {
-                        const short = d.menteeInterests + d.requests > 0 && d.mentors === 0;
-                        return (
-                          <tr key={d.id}>
-                            <td className="px-5 py-2 text-ink-900">
-                              {d.name}
-                              {!d.isActive && (
-                                <span className="ml-1.5 text-[11px] text-muted-foreground">
-                                  (désactivé)
-                                </span>
-                              )}
-                              {short && (
-                                <Badge tone="warning" className="ml-2">
-                                  Mentors manquants
-                                </Badge>
-                              )}
-                            </td>
-                            <td className="px-3 py-2 text-right font-semibold tabular-nums">
-                              {d.mentors}
-                            </td>
-                            <td className="px-3 py-2 text-right tabular-nums">
-                              {d.menteeInterests}
-                            </td>
-                            <td className="px-5 py-2 text-right tabular-nums">{d.requests}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                </Panel>
+                <section aria-labelledby="titre-domaines" className="grid gap-3">
+                  <div>
+                    <h2
+                      id="titre-domaines"
+                      className="font-display text-[16px] font-semibold text-ink-900"
+                    >
+                      Offre et demande par domaine
+                    </h2>
+                    <p className="text-[13px] text-muted-foreground">
+                      Repérer les domaines où il manque des mentors.
+                    </p>
+                  </div>
+                  <DataTable
+                    caption="Offre et demande par domaine"
+                    rows={m.domains}
+                    rowKey={(d) => d.id}
+                    defaultPageSize={10}
+                    columns={[
+                      {
+                        key: 'name',
+                        header: 'Domaine',
+                        sortValue: (d) => d.name,
+                        cell: (d) => (
+                          <span className="text-ink-900">
+                            {d.name}
+                            {!d.isActive && (
+                              <span className="ml-1.5 text-[11px] text-muted-foreground">
+                                (désactivé)
+                              </span>
+                            )}
+                            {d.menteeInterests + d.requests > 0 && d.mentors === 0 && (
+                              <Badge tone="warning" className="ml-2">
+                                Mentors manquants
+                              </Badge>
+                            )}
+                          </span>
+                        ),
+                      },
+                      {
+                        key: 'mentors',
+                        header: 'Mentors',
+                        align: 'right',
+                        sortValue: (d) => d.mentors,
+                        cell: (d) => (
+                          <span className="font-semibold tabular-nums">{d.mentors}</span>
+                        ),
+                      },
+                      {
+                        key: 'interests',
+                        header: 'Intéressés',
+                        align: 'right',
+                        hideBelow: 'sm',
+                        sortValue: (d) => d.menteeInterests,
+                        cell: (d) => <span className="tabular-nums">{d.menteeInterests}</span>,
+                      },
+                      {
+                        key: 'requests',
+                        header: 'Demandes',
+                        align: 'right',
+                        sortValue: (d) => d.requests,
+                        cell: (d) => <span className="tabular-nums">{d.requests}</span>,
+                      },
+                    ]}
+                  />
                 </section>
               </div>
               <p className="text-[12px] text-muted-foreground">
@@ -488,53 +415,80 @@ export function TeamView() {
         description="Nommez ou retirez des administrateurs. Chaque changement déconnecte la personne et est inscrit au journal d’audit."
       />
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
-        <section className={cn(panel, 'overflow-hidden')} aria-labelledby="titre-equipe">
-          <h2
-            id="titre-equipe"
-            className="border-b border-border/70 px-5 py-3.5 font-display text-[17px] font-semibold text-ink-900"
-          >
+        <section aria-labelledby="titre-equipe" className="grid gap-3">
+          <h2 id="titre-equipe" className="font-display text-[16px] font-semibold text-ink-900">
             Membres de l’équipe
           </h2>
-          {team.isPending ? (
-            <Skeleton className="m-5 h-32" />
-          ) : team.isError ? (
-            <div className="p-5">
-              <ErrorState error={team.error} onRetry={() => void team.refetch()} />
-            </div>
+          {team.isError ? (
+            <ErrorState error={team.error} onRetry={() => void team.refetch()} />
           ) : (
-            <ul className="divide-y divide-border/60">
-              {team.data.map((u) => (
-                <li key={u.id} className="flex flex-wrap items-center gap-3 px-5 py-3.5">
-                  <Avatar person={u} size="md" />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[14px] font-semibold text-ink-900">
-                      {fullName(u)}{' '}
-                      {u.id === me?.id && (
-                        <span className="font-normal text-muted-foreground">(vous)</span>
-                      )}
-                    </p>
-                    <p className="truncate text-[12px] text-muted-foreground">
-                      {u.email} · depuis le {formatDate(u.createdAt)}
-                    </p>
-                  </div>
-                  <Badge tone="teal">{roleLabels[u.role]}</Badge>
-                  {u.role === 'ADMIN' && (
-                    <ConfirmButton
-                      title={`Retirer ${u.firstName} de l’équipe ?`}
-                      description="La personne redevient mentorée et devra compléter son profil à sa prochaine connexion."
-                      confirmLabel="Retirer de l’équipe"
-                      loading={changeRole.isPending && changeRole.variables?.id === u.id}
-                      onConfirm={() =>
-                        run(u.id, 'MENTEE', `${u.firstName} ne fait plus partie de l’équipe`)
-                      }
-                    >
-                      <UserMinus aria-hidden />
-                      Retirer
-                    </ConfirmButton>
-                  )}
-                </li>
-              ))}
-            </ul>
+            <DataTable
+              caption="Membres de l’équipe"
+              loading={team.isPending}
+              rows={team.data ?? []}
+              rowKey={(u) => u.id}
+              searchText={(u) => `${u.firstName} ${u.lastName} ${u.email}`}
+              searchPlaceholder="Nom ou adresse email"
+              columns={[
+                {
+                  key: 'name',
+                  header: 'Membre',
+                  sortValue: (u) => `${u.lastName} ${u.firstName}`,
+                  cell: (u) => (
+                    <div className="flex min-w-0 items-center gap-3">
+                      <Avatar person={u} size="sm" />
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold text-ink-900">
+                          {fullName(u)}{' '}
+                          {u.id === me?.id && (
+                            <span className="font-normal text-muted-foreground">(vous)</span>
+                          )}
+                        </p>
+                        <p className="truncate text-[12px] text-muted-foreground">{u.email}</p>
+                      </div>
+                    </div>
+                  ),
+                },
+                {
+                  key: 'since',
+                  header: 'Depuis',
+                  hideBelow: 'md',
+                  sortValue: (u) => u.createdAt,
+                  cell: (u) => (
+                    <span className="whitespace-nowrap text-muted-foreground">
+                      {formatDate(u.createdAt)}
+                    </span>
+                  ),
+                },
+                {
+                  key: 'role',
+                  header: 'Rôle',
+                  hideBelow: 'sm',
+                  cell: (u) => <Badge tone="ink">{roleLabels[u.role]}</Badge>,
+                },
+                {
+                  key: 'actions',
+                  header: 'Actions',
+                  align: 'right',
+                  cell: (u) =>
+                    u.role === 'ADMIN' &&
+                    u.id !== me?.id && (
+                      <ConfirmButton
+                        title={`Retirer ${u.firstName} de l’équipe ?`}
+                        description="La personne redevient mentorée et devra compléter son profil à sa prochaine connexion."
+                        confirmLabel="Retirer de l’équipe"
+                        loading={changeRole.isPending && changeRole.variables?.id === u.id}
+                        onConfirm={() =>
+                          run(u.id, 'MENTEE', `${u.firstName} ne fait plus partie de l’équipe`)
+                        }
+                      >
+                        <UserMinus aria-hidden />
+                        Retirer
+                      </ConfirmButton>
+                    ),
+                },
+              ]}
+            />
           )}
         </section>
 
@@ -626,76 +580,64 @@ export function AuditView() {
       />
       {audit.isError ? (
         <ErrorState error={audit.error} onRetry={() => void audit.refetch()} />
-      ) : audit.isPending ? (
-        <Skeleton className="h-80" />
-      ) : audit.data.items.length === 0 ? (
-        <EmptyState
-          icon={Clock}
-          title="Aucune action enregistrée"
-          description="Les actions de modération apparaîtront ici dès qu’un membre de l’équipe en effectuera."
-        />
       ) : (
-        <div className={cn(panel, 'overflow-x-auto')}>
-          <table className="w-full min-w-[720px] text-left text-[13px]">
-            <thead className="text-muted-foreground">
-              <tr className="border-b border-border/70">
-                <th className="px-5 py-3 font-semibold">Date</th>
-                <th className="px-3 py-3 font-semibold">Action</th>
-                <th className="px-3 py-3 font-semibold">Détail</th>
-                <th className="px-5 py-3 font-semibold">Par</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/60">
-              {audit.data.items.map((e) => (
-                <tr key={e.id}>
-                  <td className="px-5 py-3 whitespace-nowrap text-muted-foreground">
-                    {new Intl.DateTimeFormat('fr-FR', {
-                      dateStyle: 'short',
-                      timeStyle: 'short',
-                      timeZone: 'Africa/Conakry',
-                    }).format(new Date(e.createdAt))}
-                  </td>
-                  <td className="px-3 py-3 whitespace-nowrap">
-                    <Badge
-                      tone={
-                        e.action === 'CERTIFICATE_REVOKED' || e.action === 'USER_SUSPENDED'
-                          ? 'warning'
-                          : 'neutral'
-                      }
-                    >
-                      {auditActionLabels[e.action] ?? e.action}
-                    </Badge>
-                  </td>
-                  <td className="px-3 py-3 text-ink-900">{e.summary}</td>
-                  <td className="px-5 py-3 whitespace-nowrap">{e.actorName}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {audit.data.totalPages > 1 && (
-            <div className="flex items-center justify-between border-t border-border/70 px-5 py-3 text-[13px]">
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled={page <= 1}
-                onClick={() => setPage((p) => p - 1)}
-              >
-                Précédent
-              </Button>
-              <span className="text-muted-foreground">
-                Page {audit.data.page} sur {audit.data.totalPages} · {audit.data.total} entrées
-              </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled={page >= audit.data.totalPages}
-                onClick={() => setPage((p) => p + 1)}
-              >
-                Suivant
-              </Button>
-            </div>
-          )}
-        </div>
+        <DataTable
+          caption="Journal d’audit"
+          loading={audit.isPending}
+          rows={audit.data?.items ?? []}
+          rowKey={(e) => e.id}
+          empty="Aucune action enregistrée. Les actions de modération apparaîtront ici."
+          server={
+            audit.data && {
+              page: audit.data.page,
+              totalPages: audit.data.totalPages,
+              total: audit.data.total,
+              pageSize: 30,
+              onPageChange: setPage,
+            }
+          }
+          columns={[
+            {
+              key: 'date',
+              header: 'Date',
+              cell: (e) => (
+                <span className="whitespace-nowrap text-muted-foreground tabular-nums">
+                  {new Intl.DateTimeFormat('fr-FR', {
+                    dateStyle: 'short',
+                    timeStyle: 'short',
+                    timeZone: 'Africa/Conakry',
+                  }).format(new Date(e.createdAt))}
+                </span>
+              ),
+            },
+            {
+              key: 'action',
+              header: 'Action',
+              cell: (e) => (
+                <Badge
+                  tone={
+                    e.action === 'CERTIFICATE_REVOKED' || e.action === 'USER_SUSPENDED'
+                      ? 'warning'
+                      : 'neutral'
+                  }
+                >
+                  {auditActionLabels[e.action] ?? e.action}
+                </Badge>
+              ),
+            },
+            {
+              key: 'summary',
+              header: 'Détail',
+              cell: (e) => <span className="text-ink-900">{e.summary}</span>,
+            },
+            {
+              key: 'actor',
+              header: 'Par',
+              hideBelow: 'md',
+              cell: (e) => <span className="whitespace-nowrap">{e.actorName}</span>,
+            },
+          ]}
+        />
       )}
     </Guard>
   );
@@ -759,64 +701,79 @@ export function CertificatesAdminView() {
       />
       {list.isError ? (
         <ErrorState error={list.error} onRetry={() => void list.refetch()} />
-      ) : list.isPending ? (
-        <Skeleton className="h-64" />
-      ) : list.data.length === 0 ? (
-        <EmptyState
-          icon={Award}
-          title="Aucun certificat délivré"
-          description="Ils apparaîtront ici à la clôture des premiers mentorats."
-        />
       ) : (
-        <div className={cn(panel, 'overflow-x-auto')}>
-          <table className="w-full min-w-[760px] text-left text-[13px]">
-            <thead className="text-muted-foreground">
-              <tr className="border-b border-border/70">
-                <th className="px-5 py-3 font-semibold">Code</th>
-                <th className="px-3 py-3 font-semibold">Mentor</th>
-                <th className="px-3 py-3 font-semibold">Accompagnement</th>
-                <th className="px-3 py-3 font-semibold">Délivré</th>
-                <th className="px-3 py-3 font-semibold">État</th>
-                <th className="px-5 py-3">
-                  <span className="sr-only">Actions</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/60">
-              {list.data.map((c) => (
-                <tr key={c.code}>
-                  <td className="px-5 py-3 font-mono font-semibold whitespace-nowrap">
-                    <Link href={`/certificats/${c.code}`} className="text-teal-700 hover:underline">
-                      {c.code}
-                    </Link>
-                  </td>
-                  <td className="px-3 py-3 text-ink-900">{c.mentorName}</td>
-                  <td className="px-3 py-3 text-muted-foreground">
-                    {c.menteeName} · {c.domainName} · {c.completedSessions} séance(s),{' '}
-                    {formatDuration(c.totalMinutes)}
-                  </td>
-                  <td className="px-3 py-3 whitespace-nowrap">{formatDate(c.issuedAt)}</td>
-                  <td className="px-3 py-3">
-                    {c.revokedAt ? (
-                      <span title={c.revokedReason ?? undefined}>
-                        <Badge tone="warning">Révoqué</Badge>
-                      </span>
-                    ) : (
-                      <Badge tone="success">Valide</Badge>
-                    )}
-                  </td>
-                  <td className="px-5 py-3 text-right">
-                    {!c.revokedAt && (
-                      <Button variant="danger-ghost" size="sm" onClick={() => setRevoking(c)}>
-                        Révoquer
-                      </Button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          caption="Certificats d’accompagnement"
+          loading={list.isPending}
+          rows={list.data ?? []}
+          rowKey={(c) => c.code}
+          searchText={(c) => `${c.code} ${c.mentorName} ${c.menteeName} ${c.domainName}`}
+          searchPlaceholder="Code, mentor, mentoré ou domaine"
+          empty="Aucun certificat délivré. Ils apparaîtront à la clôture des premiers mentorats."
+          columns={[
+            {
+              key: 'code',
+              header: 'Code',
+              sortValue: (c) => c.code,
+              cell: (c) => (
+                <Link
+                  href={`/certificats/${c.code}`}
+                  className="font-mono font-semibold whitespace-nowrap text-teal-700 hover:underline"
+                >
+                  {c.code}
+                </Link>
+              ),
+            },
+            {
+              key: 'mentor',
+              header: 'Mentor',
+              sortValue: (c) => c.mentorName,
+              cell: (c) => <span className="text-ink-900">{c.mentorName}</span>,
+            },
+            {
+              key: 'detail',
+              header: 'Accompagnement',
+              hideBelow: 'lg',
+              cell: (c) => (
+                <span className="text-muted-foreground">
+                  {c.menteeName} · {c.domainName} · {c.completedSessions} séance(s),{' '}
+                  {formatDuration(c.totalMinutes)}
+                </span>
+              ),
+            },
+            {
+              key: 'issued',
+              header: 'Délivré',
+              sortValue: (c) => c.issuedAt,
+              hideBelow: 'sm',
+              cell: (c) => <span className="whitespace-nowrap">{formatDate(c.issuedAt)}</span>,
+            },
+            {
+              key: 'state',
+              header: 'État',
+              sortValue: (c) => (c.revokedAt ? 1 : 0),
+              cell: (c) =>
+                c.revokedAt ? (
+                  <span title={c.revokedReason ?? undefined}>
+                    <Badge tone="warning">Révoqué</Badge>
+                  </span>
+                ) : (
+                  <Badge tone="success">Valide</Badge>
+                ),
+            },
+            {
+              key: 'actions',
+              header: 'Actions',
+              align: 'right',
+              cell: (c) =>
+                !c.revokedAt && (
+                  <Button variant="danger-ghost" size="sm" onClick={() => setRevoking(c)}>
+                    Révoquer
+                  </Button>
+                ),
+            },
+          ]}
+        />
       )}
       {revoking && <RevokeDialog cert={revoking} onClose={() => setRevoking(null)} />}
     </Guard>
@@ -826,8 +783,10 @@ export function CertificatesAdminView() {
 /* ── Contenus publics ─────────────────────────────────────────────────────── */
 
 export function ContentView() {
-  const resources = useLibrary({ page: 1 });
-  const opportunities = useOpportunities({ page: 1 });
+  const [resPage, setResPage] = useState(1);
+  const [oppPage, setOppPage] = useState(1);
+  const resources = useLibrary({ page: resPage });
+  const opportunities = useOpportunities({ page: oppPage });
   const del = useDeleteResource();
   const { setArchived } = useOpportunityMutations();
   return (
@@ -836,26 +795,53 @@ export function ContentView() {
         title="Modération des contenus"
         description="Ressources publiques et opportunités publiées par les mentors. Chaque retrait par l’équipe est inscrit au journal."
       />
-      <div className="grid items-start gap-6 lg:grid-cols-2">
-        <section className={cn(panel, 'overflow-hidden')} aria-labelledby="titre-ressources">
-          <h2
-            id="titre-ressources"
-            className="border-b border-border/70 px-5 py-3.5 font-display text-[17px] font-semibold text-ink-900"
-          >
+      <div className="grid gap-8">
+        <section aria-labelledby="titre-ressources" className="grid gap-3">
+          <h2 id="titre-ressources" className="font-display text-[16px] font-semibold text-ink-900">
             Ressources publiques
           </h2>
-          {resources.isPending ? (
-            <Skeleton className="m-5 h-40" />
-          ) : (
-            <ul className="divide-y divide-border/60">
-              {(resources.data?.items ?? []).map((r) => (
-                <li key={r.id} className="flex items-start gap-3 px-5 py-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[14px] font-semibold text-ink-900">{r.title}</p>
-                    <p className="text-[12px] text-muted-foreground">
-                      {fullName(r.author)} · {formatDate(r.createdAt)}
-                    </p>
-                  </div>
+          <DataTable
+            caption="Ressources publiques"
+            loading={resources.isPending}
+            rows={resources.data?.items ?? []}
+            rowKey={(r) => r.id}
+            empty="Aucune ressource publique."
+            server={
+              resources.data && {
+                page: resources.data.page,
+                totalPages: resources.data.totalPages,
+                total: resources.data.total,
+                pageSize: resources.data.pageSize,
+                onPageChange: setResPage,
+              }
+            }
+            columns={[
+              {
+                key: 'title',
+                header: 'Titre',
+                cell: (r) => <span className="font-semibold text-ink-900">{r.title}</span>,
+              },
+              {
+                key: 'author',
+                header: 'Auteur',
+                hideBelow: 'sm',
+                cell: (r) => <span className="whitespace-nowrap">{fullName(r.author)}</span>,
+              },
+              {
+                key: 'date',
+                header: 'Publiée le',
+                hideBelow: 'md',
+                cell: (r) => (
+                  <span className="whitespace-nowrap text-muted-foreground">
+                    {formatDate(r.createdAt)}
+                  </span>
+                ),
+              },
+              {
+                key: 'actions',
+                header: 'Actions',
+                align: 'right',
+                cell: (r) => (
                   <ConfirmButton
                     title="Retirer cette ressource ?"
                     description="Elle disparaît de la bibliothèque. L’action est tracée dans le journal d’audit."
@@ -871,35 +857,52 @@ export function ContentView() {
                     <Trash2 aria-hidden />
                     Retirer
                   </ConfirmButton>
-                </li>
-              ))}
-              {resources.data?.items.length === 0 && (
-                <li className="px-5 py-6 text-[13px] text-muted-foreground">
-                  Aucune ressource publique.
-                </li>
-              )}
-            </ul>
-          )}
+                ),
+              },
+            ]}
+          />
         </section>
-        <section className={cn(panel, 'overflow-hidden')} aria-labelledby="titre-opps">
-          <h2
-            id="titre-opps"
-            className="border-b border-border/70 px-5 py-3.5 font-display text-[17px] font-semibold text-ink-900"
-          >
+        <section aria-labelledby="titre-opps" className="grid gap-3">
+          <h2 id="titre-opps" className="font-display text-[16px] font-semibold text-ink-900">
             Opportunités ouvertes
           </h2>
-          {opportunities.isPending ? (
-            <Skeleton className="m-5 h-40" />
-          ) : (
-            <ul className="divide-y divide-border/60">
-              {(opportunities.data?.items ?? []).map((o) => (
-                <li key={o.id} className="flex items-start gap-3 px-5 py-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[14px] font-semibold text-ink-900">{o.title}</p>
-                    <p className="text-[12px] text-muted-foreground">
-                      {o.organization} · {fullName(o.author)}
-                    </p>
+          <DataTable
+            caption="Opportunités ouvertes"
+            loading={opportunities.isPending}
+            rows={opportunities.data?.items ?? []}
+            rowKey={(o) => o.id}
+            empty="Aucune opportunité ouverte."
+            server={
+              opportunities.data && {
+                page: opportunities.data.page,
+                totalPages: opportunities.data.totalPages,
+                total: opportunities.data.total,
+                pageSize: opportunities.data.pageSize,
+                onPageChange: setOppPage,
+              }
+            }
+            columns={[
+              {
+                key: 'title',
+                header: 'Opportunité',
+                cell: (o) => (
+                  <div className="min-w-0">
+                    <p className="font-semibold text-ink-900">{o.title}</p>
+                    <p className="text-[12px] text-muted-foreground">{o.organization}</p>
                   </div>
+                ),
+              },
+              {
+                key: 'author',
+                header: 'Publiée par',
+                hideBelow: 'sm',
+                cell: (o) => <span className="whitespace-nowrap">{fullName(o.author)}</span>,
+              },
+              {
+                key: 'actions',
+                header: 'Actions',
+                align: 'right',
+                cell: (o) => (
                   <ConfirmButton
                     title="Archiver cette opportunité ?"
                     description="Elle n’est plus visible du public. L’action est tracée dans le journal d’audit."
@@ -918,15 +921,10 @@ export function ContentView() {
                     <Archive aria-hidden />
                     Archiver
                   </ConfirmButton>
-                </li>
-              ))}
-              {opportunities.data?.items.length === 0 && (
-                <li className="px-5 py-6 text-[13px] text-muted-foreground">
-                  Aucune opportunité ouverte.
-                </li>
-              )}
-            </ul>
-          )}
+                ),
+              },
+            ]}
+          />
         </section>
       </div>
     </Guard>

@@ -26,6 +26,7 @@ import { formatDate, fullName, plural } from '@/lib/format';
 import { modalityLabels } from '@/lib/labels';
 import type { AdminVerification, VerificationKind, VerificationRequestStatus } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { Pagination } from '@/components/admin/data-table';
 import { documentUrl, useAdminVerifications, useDecision } from './api';
 import { RequestStatusBadge } from './parts';
 
@@ -272,18 +273,21 @@ function RequestCard({ r }: { r: AdminVerification }) {
 }
 
 /** File d'examen des vérifications de profil et des candidatures de mentor. */
+const PER_PAGE = 5;
+
 export function AdminVerificationsView() {
   const { data: me } = useMe();
   const [status, setStatus] = useState<VerificationRequestStatus>('PENDING');
   const [kind, setKind] = useState<VerificationKind | ''>('');
   const list = useAdminVerifications(status, kind || undefined);
+  const [page, setPage] = useState(1);
   if (!me) return null;
   if (me.role !== 'ADMIN') {
     return <AccessDenied message="Cet espace est réservé à l’équipe d’administration." />;
   }
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="mx-auto max-w-5xl animate-fade-in">
       <PageHeader
         title="Vérifications"
         description="Profils de mentors à vérifier et candidatures de mentorés qui souhaitent devenir mentors."
@@ -300,7 +304,10 @@ export function AdminVerificationsView() {
               type="button"
               role="tab"
               aria-selected={status === t.value}
-              onClick={() => setStatus(t.value)}
+              onClick={() => {
+                setStatus(t.value);
+                setPage(1);
+              }}
               className={cn(
                 'h-9 rounded-full px-4 text-[14px] font-semibold transition-colors',
                 status === t.value
@@ -316,7 +323,10 @@ export function AdminVerificationsView() {
           <span className="sr-only">Type de demande</span>
           <NativeSelect
             value={kind}
-            onChange={(e) => setKind(e.target.value as VerificationKind | '')}
+            onChange={(e) => {
+              setKind(e.target.value as VerificationKind | '');
+              setPage(1);
+            }}
             className="h-10 w-auto"
           >
             <option value="">Toutes les demandes</option>
@@ -344,7 +354,25 @@ export function AdminVerificationsView() {
             }
           />
         ) : (
-          list.data.map((r) => <RequestCard key={r.id} r={r} />)
+          <>
+            {list.data.slice((page - 1) * PER_PAGE, page * PER_PAGE).map((r) => (
+              <RequestCard key={r.id} r={r} />
+            ))}
+            {list.data.length > PER_PAGE && (
+              <div className="overflow-hidden rounded-xl bg-surface ring-1 ring-border/70 [&>div]:border-t-0">
+                <Pagination
+                  page={page}
+                  totalPages={Math.ceil(list.data.length / PER_PAGE)}
+                  total={list.data.length}
+                  pageSize={PER_PAGE}
+                  onPageChange={(p) => {
+                    setPage(p);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                />
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

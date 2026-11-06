@@ -26,7 +26,7 @@ export const ASSISTANT_PAGES: { href: string; label: string; roles: Role[] | 'al
   },
   { href: '/devenir-mentor', label: 'Devenir mentor', roles: ['MENTEE'] },
   { href: '/mot-de-passe-oublie', label: 'Mot de passe oublié', roles: 'all' },
-  { href: '/admin', label: 'Administration', roles: ['ADMIN'] },
+  { href: '/admin', label: 'Tableau de bord (administration)', roles: ['ADMIN'] },
   { href: '/admin/verifications', label: 'Vérifications', roles: ['ADMIN'] },
   { href: '/admin/comptes', label: 'Comptes', roles: ['ADMIN'] },
   { href: '/admin/mentors', label: 'Mentors (administration)', roles: ['ADMIN'] },
@@ -39,10 +39,10 @@ export const ASSISTANT_PAGES: { href: string; label: string; roles: Role[] | 'al
 ];
 
 export const ASSISTANT_KNOWLEDGE = `
-# Talents Connectés : guide complet de la plateforme
+# TalentsConnect : guide complet de la plateforme
 
 ## Présentation
-Talents Connectés est une plateforme de mentorat née du Salon international du livre de jeunesse de Conakry 2026. Elle relie des professionnels expérimentés (mentors) à des étudiants, jeunes diplômés, entrepreneurs, porteurs de projets et personnes en reconversion (mentorés). Elle est gratuite pour les utilisateurs. Elle fonctionne dans un navigateur, sur ordinateur comme sur téléphone, et peut s'installer comme une application.
+TalentsConnect est une plateforme de mentorat née du Salon international du livre de jeunesse de Conakry 2026. Elle relie des professionnels expérimentés (mentors) à des étudiants, jeunes diplômés, entrepreneurs, porteurs de projets et personnes en reconversion (mentorés). Elle est gratuite pour les utilisateurs. Elle fonctionne dans un navigateur, sur ordinateur comme sur téléphone, et peut s'installer comme une application.
 Domaines : Entrepreneuriat et gestion d'entreprise ; Numérique et technologies ; Orientation et insertion professionnelle ; Culture, littérature et industries créatives ; Gestion, finance et administration ; Développement personnel et leadership ; Accompagnement des candidats Campus France (conseil et orientation uniquement, sans garantie d'admission ni de visa).
 
 ## Rôles
@@ -108,7 +108,7 @@ La cloche en haut de l'écran signale les nouvelles demandes, réponses, séance
 - Mentoré qui veut devenir mentor : « Mon compte », section « Devenir mentor » (ou page « Devenir mentor ») : remplir un profil de mentor complet, sa motivation et ses justificatifs. Le compte reste mentoré pendant l'examen et le profil de mentor n'est pas visible. Si l'équipe accepte, le compte devient un compte mentor, publié avec le badge vérifié ; les demandes en attente sont annulées et l'historique est conservé. L'acceptation est impossible tant qu'un mentorat est en cours en tant que mentoré.
 
 ## Administration (réservé aux administrateurs)
-Menu de l'administrateur : Vue d'ensemble, Vérifications, Comptes, Mentors, Pilotage, Équipe, Journal d'audit, Certificats, Contenus, Domaines. Un administrateur n'a ni profil de mentor ni de mentoré et n'intervient pas dans les mentorats.
+L'administrateur a son propre espace, avec une barre latérale (un menu à ouvrir sur mobile) en trois groupes : Suivi (Tableau de bord, Pilotage), Modération (Vérifications, Comptes, Mentors, Contenus, Certificats), Configuration (Domaines, Équipe, Journal d'audit, Mon compte). Le tableau de bord montre les chiffres clés, les demandes à traiter et les dernières actions de l'équipe. Un administrateur n'a ni profil de mentor ni de mentoré, n'intervient pas dans les mentorats et n'a pas accès aux pages Demandes, Messagerie, Mentorats ou Séances.
 - Vérifications : liste des « Vérifications de profil » (mentors) et des « Candidatures mentor » (mentorés qui veulent devenir mentor), filtrable par type et par statut (En attente, Acceptées, Refusées). Pour chaque demande : présentation, domaines, compétences, lien professionnel et justificatifs à ouvrir. Boutons « Vérifier le profil » (ou « Accepter comme mentor » pour une candidature) et « Refuser » avec un motif d'au moins 10 caractères, que la personne reçoit. Une candidature ne peut pas être acceptée tant que la personne a un mentorat en cours en tant que mentoré.
 - Comptes : recherche et filtre par rôle. « Suspendre » ferme immédiatement les sessions du compte ; « Réactiver » le rétablit. « Réinitialiser » crée un lien personnel de changement de mot de passe (2 heures, usage unique), à remettre à la personne après avoir vérifié son identité ; impossible pour un autre administrateur.
 - Mentors : publier ou retirer un profil de mentor de l'annuaire. La vérification est manuelle (entretien, références) : aucune validation automatique de diplômes.

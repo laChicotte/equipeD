@@ -1,4 +1,4 @@
-// Talents Connectés — modèle de données PostgreSQL
+// TalentsConnect — modèle de données PostgreSQL
 // Conventions : modèles/champs en camelCase côté Prisma, tables/colonnes en snake_case côté SQL.
 // Toutes les dates sont stockées en UTC (timestamptz).
 // Contraintes avancées (index partiels, exclusion anti-chevauchement) : voir les migrations SQL.

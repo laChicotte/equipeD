@@ -1,5 +1,5 @@
 /*
- * Service worker de Talents Connectés : application installable et utilisable sans réseau.
+ * Service worker de TalentsConnect : application installable et utilisable sans réseau.
  *
  * - Fichiers statiques versionnés de Next.js, images et icônes : servis depuis le cache après le
  *   premier chargement (moins de données consommées sur réseau mobile).

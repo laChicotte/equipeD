@@ -477,7 +477,7 @@ export class PlatformController {
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader(
       'Content-Disposition',
-      `attachment; filename="rapport-impact-talents-connectes-${day}.csv"`,
+      `attachment; filename="rapport-impact-talentsconnect-${day}.csv"`,
     );
     res.setHeader('Cache-Control', 'no-store');
     res.send(csv);
