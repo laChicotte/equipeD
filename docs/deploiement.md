@@ -79,3 +79,23 @@ docker run --rm -p 3300:3000 \
 ```
 
 En local, sans HTTPS, le cookie `Secure` de production n'est pas conservé par le navigateur, sauf sur `localhost` (Chrome et Firefox l'acceptent).
+
+## Sur un VPS (installation actuelle du hackathon)
+
+Le site tourne sur le VPS `207.58.174.79` (Ubuntu 24.04, alias SSH `vps-runner`), à côté de la pré-production WIS AI, sans la modifier.
+
+- Adresses : `https://talentsconnect.wistechnologie.com` (enregistrement DNS A chez LWS vers `207.58.174.79`) et `https://207-58-174-79.sslip.io` (sans DNS, toujours disponible).
+- `/opt/talentsconnect` : `app/` (clone de `laChicotte/equipeD`), `compose.yml` (copie de `deploy/vps/compose.yml`), `.env` (secrets générés sur le serveur, `chmod 600`), `deploy.sh`.
+- Services Docker : `app` (Next.js + API, écoute seulement sur `127.0.0.1:3300`), `postgres` (volume `talentsconnect_pgdata`), `coturn` (relais des appels).
+- Caddy (sur l'hôte) : bloc de `deploy/vps/Caddyfile.snippet` ajouté à `/etc/caddy/Caddyfile`, certificats HTTPS automatiques. Sauvegarde : `/etc/caddy/Caddyfile.bak-*-avant-talentsconnect`.
+- Pare-feu ufw : 3478 (TCP/UDP) et 49160-49200/UDP ouverts pour le relais TURN.
+
+Mettre à jour après un `git push` sur `main` :
+
+```bash
+ssh vps-runner /opt/talentsconnect/deploy.sh
+```
+
+Le script récupère `main`, reconstruit l'image (5 à 10 minutes) et redémarre l'application. Les données sont conservées et les migrations s'appliquent au démarrage. Le site est indisponible quelques secondes pendant le redémarrage.
+
+Commandes utiles (dans `/opt/talentsconnect`) : `docker compose ps`, `docker compose logs --tail 100 app`, `docker compose restart app`. Sauvegarde de la base : `docker compose exec postgres pg_dump -U talents talentsconnect > sauvegarde.sql`.
