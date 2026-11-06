@@ -9,6 +9,8 @@ import {
   createSlot,
   demoEmail,
   loginAs,
+  prismaOf,
+  TEST_PASSWORD,
   type TestUser,
 } from './helpers.js';
 
@@ -224,32 +226,118 @@ describe('Ressources et notifications', () => {
     });
   });
 
-  describe('bibliothèque : document joint', () => {
-    it('est publié par un mentor et téléchargeable sans connexion', async () => {
+  describe('bibliothèque : document joint et validation par l’équipe', () => {
+    const PDF = Buffer.from('%PDF-1.4\n%test');
+    const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46]);
+
+    it('met le document d’un mentor en attente, puis le publie après validation', async () => {
       const mentor = await createMentor(app);
+      const admin = await createMentee(app, { withProfile: false });
+      await prismaOf(app).user.update({ where: { id: admin.id }, data: { role: 'ADMIN' } });
+      const adminAgent = await loginAs(app, admin.email, TEST_PASSWORD);
+      const server = app.getHttpServer();
+
+      // Sans licence ni déclaration de droits : refusé.
+      const noRights = await mentor.agent
+        .post(`${API}/resources/upload`)
+        .field('title', 'Mon livre sur le leadership')
+        .attach('file', PDF, 'leadership.pdf')
+        .expect(422);
+      expect(noRights.body.code).toBe('RIGHTS_REQUIRED');
+
       const res = await mentor.agent
         .post(`${API}/resources/upload`)
-        .field('title', 'Modèle de business plan')
-        .field('description', 'À compléter avant votre premier rendez-vous bancaire.')
-        .attach(
-          'file',
-          Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x14, 0x00, 0x06, 0x00]),
-          'business-plan.xlsx',
-        )
+        .field('title', 'Mon livre sur le leadership')
+        .field('kind', 'BOOK')
+        .field('license', 'AUTHOR')
+        .field('rightsConfirmed', 'true')
+        .field('language', 'Français')
+        .attach('file', PDF, 'leadership.pdf')
+        .attach('cover', JPEG, 'couverture.jpg')
         .expect(201);
-      expect(res.body.file.mimeType).toBe(
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      );
-      const download = await request(app.getHttpServer())
-        .get(`${API}/resources/${res.body.id}/file`)
-        .expect(200);
+      const id = res.body.id as string;
+      expect(res.body).toMatchObject({ status: 'PENDING', kind: 'BOOK', license: 'AUTHOR' });
+      expect(res.body.cover).not.toBeNull();
+
+      // Invisible du public tant qu'il n'est pas validé ; visible de l'auteur et de l'équipe.
+      const lib = await request(server).get(`${API}/resources?pageSize=50`).expect(200);
+      expect(lib.body.items.map((r: { id: string }) => r.id)).not.toContain(id);
+      await request(server).get(`${API}/resources/${id}/file`).expect(404);
+      await request(server).get(`${API}/resources/${id}/cover`).expect(404);
+      await mentor.agent.get(`${API}/resources/${id}/cover`).expect(200);
+      const mine = await mentor.agent.get(`${API}/resources/mine`).expect(200);
+      expect(mine.body[0]).toMatchObject({ id, status: 'PENDING' });
+
+      // File de validation réservée à l'équipe.
+      await mentor.agent.get(`${API}/admin/resources`).expect(403);
+      const queue = await adminAgent.get(`${API}/admin/resources?pageSize=50`).expect(200);
+      expect(queue.body.items.map((r: { id: string }) => r.id)).toContain(id);
+      const overview = await adminAgent.get(`${API}/admin/overview`).expect(200);
+      expect(overview.body.pendingResources).toBeGreaterThanOrEqual(1);
+
+      await adminAgent.post(`${API}/admin/resources/${id}/approve`).expect(200);
+      await adminAgent.post(`${API}/admin/resources/${id}/approve`).expect(409);
+
+      const after = await request(server).get(`${API}/resources?pageSize=50`).expect(200);
+      expect(after.body.items.map((r: { id: string }) => r.id)).toContain(id);
+      const cover = await request(server).get(`${API}/resources/${id}/cover`).expect(200);
+      expect(cover.headers['content-type']).toContain('image/jpeg');
+      const download = await request(server).get(`${API}/resources/${id}/file`).expect(200);
       expect(download.headers['cache-control']).toBe('public, max-age=300');
+      await request(server).get(`${API}/resources/${id}/file`).expect(200);
+      const counted = await prismaOf(app).resource.findUniqueOrThrow({ where: { id } });
+      expect(counted.downloadCount).toBe(2);
+
+      const notes = await mentor.agent.get(`${API}/notifications`).expect(200);
+      expect(JSON.stringify(notes.body)).toContain('est publiée');
+    });
+
+    it('refuse avec un motif ; l’équipe publie directement ; un lien reste immédiat', async () => {
+      const mentor = await createMentor(app);
+      const admin = await createMentee(app, { withProfile: false });
+      await prismaOf(app).user.update({ where: { id: admin.id }, data: { role: 'ADMIN' } });
+      const adminAgent = await loginAs(app, admin.email, TEST_PASSWORD);
+
+      const pending = await mentor.agent
+        .post(`${API}/resources/upload`)
+        .field('title', 'Livre scanné')
+        .field('license', 'PERMISSION')
+        .field('rightsConfirmed', 'true')
+        .attach('file', PDF, 'livre.pdf')
+        .expect(201);
+      await adminAgent
+        .post(`${API}/admin/resources/${pending.body.id}/reject`)
+        .send({ note: 'court' })
+        .expect(422);
+      const rejected = await adminAgent
+        .post(`${API}/admin/resources/${pending.body.id}/reject`)
+        .send({ note: 'Merci de joindre l’autorisation écrite de l’éditeur.' })
+        .expect(200);
+      expect(rejected.body.status).toBe('REJECTED');
+      const mine = await mentor.agent.get(`${API}/resources/mine`).expect(200);
+      expect(mine.body[0].reviewNote).toContain('autorisation');
+
+      const byAdmin = await adminAgent
+        .post(`${API}/resources/upload`)
+        .field('title', 'Guide officiel de l’orientation')
+        .field('kind', 'GUIDE')
+        .field('license', 'PUBLIC_DOMAIN')
+        .field('rightsConfirmed', 'true')
+        .attach('file', PDF, 'guide.pdf')
+        .expect(201);
+      expect(byAdmin.body.status).toBe('PUBLISHED');
+
+      const link = await mentor.agent
+        .post(`${API}/resources`)
+        .send({ title: 'Mon podcast', kind: 'PODCAST', url: 'https://example.com/podcast' })
+        .expect(201);
+      expect(link.body.status).toBe('PUBLISHED');
 
       const mentee = await createMentee(app);
       await mentee.agent
         .post(`${API}/resources/upload`)
         .field('title', 'Interdit aux mentorés')
-        .attach('file', Buffer.from('%PDF-1.4'), 'doc.pdf')
+        .attach('file', PDF, 'doc.pdf')
         .expect(403);
     });
   });

@@ -217,6 +217,7 @@ const ROLE_LABELS: Record<string, string> = {
   MENTEE: 'mentoré·e',
   MENTOR: 'mentor',
   ADMIN: 'administrateur de la plateforme',
+  VISITOR: 'visiteur non connecté',
 };
 
 const ASSISTANT_SCHEMA = {
@@ -237,6 +238,7 @@ export function assistantPrompt(c: AssistantContext): JsonCompletion {
       '---',
       'Tu es l’assistant de TalentsConnect. Tu réponds aux questions sur le fonctionnement de la plateforme, en français simple, en vouvoyant.',
       'Réponds uniquement à partir du guide ci-dessus, sans jamais mentionner ce guide (« d’après le guide »…). Si le guide ne permet pas de répondre, dis-le franchement et propose de contacter l’équipe de la plateforme ; n’invente ni fonctionnalité, ni règle, ni bouton, ni délai.',
+      'Un visiteur non connecté découvre la plateforme : explique simplement et, quand c’est utile, comment créer un compte gratuit (mentoré ou mentor).',
       'Adapte la réponse au rôle de la personne (« contexte.role ») : ne décris pas une action qu’elle ne peut pas faire sans le préciser (par exemple, seul un mentor publie des créneaux).',
       'Tu ne vois aucune donnée personnelle (séances, messages, demandes de la personne) : pour ce type de question, explique où la trouver.',
       'Pour une question sans rapport avec la plateforme, réponds en une phrase que tu aides seulement à utiliser TalentsConnect.',

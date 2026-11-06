@@ -8,6 +8,7 @@ import type { Prisma } from '../../generated/prisma/client.js';
 import { computeMatch } from '../matching/matching.js';
 import type { AvailabilityRangeQuery, ListMentorsQuery } from './mentors.dto.js';
 import { isConfirmedMentor, rankMentors } from './ranking.js';
+import { closestWord, matchText, tokenize, wordMatch } from './search.js';
 
 const AVAILABILITY_WINDOW_DAYS = 14;
 const ACTIVE_SESSION_STATUSES = ['REQUESTED', 'CONFIRMED'] as const;
@@ -48,6 +49,14 @@ const mentorCardSelect = {
 
 type MentorRow = Prisma.UserGetPayload<{ select: typeof mentorCardSelect }>;
 
+interface VocabDomain {
+  slug: string;
+  name: string;
+  icon: string;
+  topics: string[];
+  mentorCount: number;
+}
+
 @Injectable()
 export class MentorsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -60,13 +69,7 @@ export class MentorsService {
     const now = new Date();
     const profileFilters: Prisma.MentorProfileWhereInput[] = [{ isPublished: true }];
 
-    if (query.q) {
-      const terms = normalizeSearch(query.q)
-        .split(' ')
-        .filter((t) => t.length > 1)
-        .slice(0, 6);
-      for (const term of terms) profileFilters.push({ searchText: { contains: term } });
-    }
+    const terms = query.q ? tokenize(query.q) : [];
     if (query.domain)
       profileFilters.push({ domains: { some: { domain: { slug: query.domain } } } });
     if (query.modality) {
@@ -98,16 +101,36 @@ export class MentorsService {
       select: {
         id: true,
         createdAt: true,
-        mentorProfile: { select: { verificationStatus: true, yearsExperience: true } },
+        mentorProfile: {
+          select: { verificationStatus: true, yearsExperience: true, searchText: true },
+        },
       },
       take: 2_000,
     });
+
+    // Recherche : tous les mots retrouvés d'abord ; sinon, les profils proches (au moins un mot).
+    let pool = candidates;
+    let mode: 'none' | 'exact' | 'approximate' | 'empty' = 'none';
+    const relevance = new Map<string, number>();
+    if (terms.length > 0) {
+      const phrase = normalizeSearch(query.q ?? '');
+      const scored = candidates.map((c) => ({
+        c,
+        m: matchText(c.mentorProfile?.searchText ?? '', terms, phrase),
+      }));
+      const exact = scored.filter((s) => s.m.matched === terms.length);
+      const partial = scored.filter((s) => s.m.matched > 0);
+      const chosen = exact.length > 0 ? exact : partial;
+      mode = exact.length > 0 ? 'exact' : partial.length > 0 ? 'approximate' : 'empty';
+      for (const s of chosen) relevance.set(s.c.id, s.m.score + s.m.matched);
+      pool = chosen.map((s) => s.c);
+    }
     const extras = await this.extras(
-      candidates.map((c) => c.id),
+      pool.map((c) => c.id),
       now,
     );
-    const ranked = rankMentors(
-      candidates.map((c) => {
+    let ranked = rankMentors(
+      pool.map((c) => {
         const e = extras.get(c.id)!;
         return {
           id: c.id,
@@ -126,6 +149,14 @@ export class MentorsService {
       now,
       AVAILABILITY_WINDOW_DAYS,
     );
+    // Tri par pertinence : les profils qui correspondent le mieux aux mots saisis passent devant
+    // (à pertinence égale, l'ordre de l'annuaire est conservé : tri stable).
+    if (relevance.size > 0 && query.sort === 'relevance') {
+      ranked = [...ranked].sort(
+        (a, b) =>
+          Math.round((relevance.get(b.id) ?? 0) * 4) - Math.round((relevance.get(a.id) ?? 0) * 4),
+      );
+    }
     const pageIds = ranked
       .slice((query.page - 1) * query.pageSize, query.page * query.pageSize)
       .map((m) => m.id);
@@ -134,11 +165,143 @@ export class MentorsService {
       select: mentorCardSelect,
     });
     const byId = new Map(rows.map((r) => [r.id, r]));
-    return paginate(
-      pageIds.flatMap((id) => (byId.has(id) ? [this.toCard(byId.get(id)!, extras.get(id))] : [])),
-      candidates.length,
-      query,
+    return {
+      ...paginate(
+        pageIds.flatMap((id) => (byId.has(id) ? [this.toCard(byId.get(id)!, extras.get(id))] : [])),
+        pool.length,
+        query,
+      ),
+      search:
+        terms.length === 0
+          ? null
+          : {
+              mode,
+              terms: terms.map((t) => t.word),
+              didYouMean: mode === 'exact' ? null : await this.didYouMean(terms.map((t) => t.word)),
+            },
+    };
+  }
+
+  /** Vocabulaire de l'annuaire : compétences, domaines et thèmes (autocomplétion, correction). */
+  private vocabCache: { at: number; skills: Map<string, number>; domains: VocabDomain[] } | null =
+    null;
+
+  private async vocabulary() {
+    if (this.vocabCache && Date.now() - this.vocabCache.at < 60_000) return this.vocabCache;
+    const [profiles, domains] = await Promise.all([
+      this.prisma.mentorProfile.findMany({
+        where: { isPublished: true, user: { status: 'ACTIVE', role: 'MENTOR' } },
+        select: { expertise: true },
+      }),
+      this.prisma.expertiseDomain.findMany({
+        where: { isActive: true },
+        select: {
+          slug: true,
+          name: true,
+          icon: true,
+          topics: true,
+          _count: {
+            select: {
+              mentors: {
+                where: {
+                  mentorProfile: { isPublished: true, user: { status: 'ACTIVE', role: 'MENTOR' } },
+                },
+              },
+            },
+          },
+        },
+        orderBy: { sortOrder: 'asc' },
+      }),
+    ]);
+    const skills = new Map<string, number>();
+    for (const p of profiles) for (const s of p.expertise) skills.set(s, (skills.get(s) ?? 0) + 1);
+    this.vocabCache = {
+      at: Date.now(),
+      skills,
+      domains: domains.map((d) => ({
+        slug: d.slug,
+        name: d.name,
+        icon: d.icon,
+        topics: d.topics,
+        mentorCount: d._count.mentors,
+      })),
+    };
+    return this.vocabCache;
+  }
+
+  /** Correction d'une faute de frappe : le mot connu le plus proche, s'il y en a un. */
+  private async didYouMean(words: string[]): Promise<string | null> {
+    const { skills, domains } = await this.vocabulary();
+    const vocab = [...skills.keys(), ...domains.flatMap((d) => [d.name, ...d.topics])].flatMap(
+      (v) => [v, ...v.split(/\s+/)],
     );
+    const fixed = words.map((w) => closestWord(w, vocab));
+    if (fixed.every((f, i) => !f || normalizeSearch(f) === words[i])) return null;
+    return fixed.map((f, i) => f ?? words[i]).join(' ');
+  }
+
+  /** Suggestions pendant la saisie : domaines, compétences et mentors (noms publics). */
+  async autocomplete(q: string) {
+    const terms = tokenize(q);
+    const phrase = normalizeSearch(q);
+    if (phrase.length < 2) return { domains: [], skills: [], mentors: [] };
+    const { skills, domains } = await this.vocabulary();
+    const score = (label: string) => {
+      const n = normalizeSearch(label);
+      if (n.startsWith(phrase)) return 3;
+      if (n.split(/\s+/).some((w) => w.startsWith(phrase))) return 2.5;
+      if (terms.length === 0) return 0;
+      const words = n.split(/[^a-z0-9+#]+/).filter(Boolean);
+      const matched = terms.filter((t) =>
+        t.forms.some((f) => words.some((w) => wordMatch(f, w) >= 0.7)),
+      ).length;
+      return matched === terms.length ? 1.5 + matched * 0.1 : matched > 0 ? 0.5 : 0;
+    };
+    const domainHits = domains
+      .map((d) => ({
+        d,
+        s: Math.max(score(d.name), ...d.topics.map((t) => score(t) * 0.8)),
+      }))
+      .filter((x) => x.s > 0 && x.d.mentorCount > 0)
+      .sort((a, b) => b.s - a.s)
+      .slice(0, 3)
+      .map(({ d }) => ({ slug: d.slug, name: d.name, icon: d.icon, mentorCount: d.mentorCount }));
+    const skillHits = [...skills.entries()]
+      .map(([label, count]) => ({ label, count, s: score(label) }))
+      .filter((x) => x.s >= 1)
+      .sort((a, b) => b.s - a.s || b.count - a.count)
+      .slice(0, 5)
+      .map(({ label, count }) => ({ label, count }));
+    const people = terms.length
+      ? await this.prisma.user.findMany({
+          where: {
+            ...this.baseWhere(),
+            OR: terms.flatMap((t) => [
+              { firstName: { startsWith: t.word, mode: 'insensitive' as const } },
+              { lastName: { startsWith: t.word, mode: 'insensitive' as const } },
+            ]),
+          },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            avatarUpdatedAt: true,
+            mentorProfile: { select: { headline: true } },
+          },
+          take: 3,
+        })
+      : [];
+    return {
+      domains: domainHits,
+      skills: skillHits,
+      mentors: people.map((p) => ({
+        id: p.id,
+        firstName: p.firstName,
+        lastName: p.lastName,
+        avatarUpdatedAt: p.avatarUpdatedAt,
+        headline: p.mentorProfile?.headline ?? '',
+      })),
+    };
   }
 
   /** Suggestions explicables pour le mentoré connecté (score déterministe, voir matching.ts). */

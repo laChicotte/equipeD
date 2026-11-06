@@ -38,6 +38,16 @@ export const ASSISTANT_PAGES: { href: string; label: string; roles: Role[] | 'al
   { href: '/admin/contenus', label: 'Contenus', roles: ['ADMIN'] },
 ];
 
+/** Pages publiques proposées à un visiteur non connecté. */
+export const VISITOR_PAGES: { href: string; label: string }[] = [
+  { href: '/inscription', label: 'Créer un compte' },
+  { href: '/connexion', label: 'Se connecter' },
+  { href: '/mentors', label: 'Trouver un mentor' },
+  { href: '/ressources', label: 'Ressources' },
+  { href: '/opportunites', label: 'Opportunités' },
+  { href: '/mot-de-passe-oublie', label: 'Mot de passe oublié' },
+];
+
 export const ASSISTANT_KNOWLEDGE = `
 # TalentsConnect : guide complet de la plateforme
 
@@ -60,7 +70,9 @@ Domaines : Entrepreneuriat et gestion d'entreprise ; Numérique et technologies 
 - Mot de passe oublié : la plateforme n'envoie pas encore d'emails. Il faut contacter l'équipe (stand du programme ou administrateur de sa structure). Après vérification d'identité, elle remet un lien personnel, valable 2 heures et utilisable une seule fois, pour choisir un nouveau mot de passe ; les anciennes sessions sont alors fermées.
 
 ## Trouver un mentor (page « Trouver un mentor »)
-- Recherche par compétence, métier ou nom (sans tenir compte des accents), filtres par domaine, modalité, langue, et « Disponible sous 14 jours ».
+- Recherche par compétence, métier, domaine ou nom, sans tenir compte des accents : elle reconnaît les variantes (« développeur » trouve « développement »), les fautes de frappe et les synonymes courants (« startup », « IA », « emploi »). Pendant la saisie, elle propose des domaines, des compétences et des mentors. Si aucun profil ne contient tous les mots, elle affiche les profils proches et peut proposer une correction (« Vouliez-vous dire… »).
+- Filtres : domaine, modalité (à distance, en présentiel, hybride), langue et « Disponible sous 14 jours ». Les filtres actifs s'affichent sous la barre et se retirent d'un clic.
+- Un visiteur peut consulter l'annuaire sans compte ; il faut un compte gratuit pour envoyer une demande.
 - « Trier par » : Pertinence (par défaut : profils vérifiés d'abord, puis l'expérience démontrée sur la plateforme, puis la disponibilité, puis les années d'expérience), Expérience, Disponibilité (créneau le plus proche d'abord), Note (prise en compte à partir de 3 avis).
 - Badges : « Profil vérifié » (l'équipe a contrôlé les justificatifs) ; « Mentor confirmé » (au moins 3 accompagnements menés à terme et une note moyenne d'au moins 4 sur 5, sur 3 avis ou plus).
 - « Recommandés pour vous » (mentorés ayant complété leur profil) : un score sur 100 calculé par des règles transparentes, sans intelligence artificielle : domaines communs, compétences recherchées couvertes, modalité compatible, créneaux dans les 14 jours, profil vérifié. Le lien « Pourquoi ce mentor ? » explique ce score.
@@ -97,7 +109,9 @@ Onglets :
 - Groupes : un mentor peut créer un groupe (bouton « Nouveau groupe ») avec ses mentorés actuels ou anciens et d'autres mentors, 50 membres au plus. Tous les membres écrivent dans le fil commun. Le mentor responsable renomme, ajoute ou retire des membres, supprime le groupe et peut planifier des ateliers de groupe (date, durée de 15 minutes à 4 heures, à distance ou en présentiel) ; les membres répondent s'ils participent. Un membre peut quitter le groupe.
 
 ## Ressources et opportunités
-- Ressources : bibliothèque publique de conseils, articles, vidéos, modèles et outils, filtrable par domaine et type. Les mentors et l'équipe peuvent publier ; une ressource contient un document joint (10 Mo au plus), un lien https ou un conseil rédigé.
+- Bibliothèque et ressources (page « Ressources ») : livres, guides, podcasts, conseils, articles, vidéos, modèles et outils, gratuits, filtrables par domaine et type, avec couverture, auteur de l'œuvre, langue et nombre de téléchargements. Tout le monde peut consulter et télécharger, même sans compte.
+- Publier : les mentors et l'équipe. Une ressource contient un document (10 Mo au plus pour un mentor, 25 Mo pour l'équipe), un lien https (par exemple un podcast) ou un conseil rédigé, et peut avoir une couverture. Pour un document, il faut indiquer ses droits (je suis l'auteur, autorisation écrite de l'auteur, licence libre Creative Commons ou domaine public) et confirmer avoir le droit de le diffuser : un livre acheté ou copié sans autorisation ne peut pas être publié.
+- Validation : un document proposé par un mentor est vérifié par l'équipe avant d'être visible ; un lien ou un conseil est publié aussitôt ; l'équipe publie directement. Le mentor est prévenu de la décision, avec le motif en cas de refus, et suit ses ressources dans « Mes publications ». L'équipe valide dans Administration, page « Contenus », section « Documents à valider ».
 - Opportunités : stages, emplois, appels à projets, bourses, formations et événements publiés par les mentors et l'équipe.
 
 ## Notifications

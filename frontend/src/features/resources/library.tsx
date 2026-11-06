@@ -1,23 +1,83 @@
 'use client';
 
-import { BookOpen, LoaderCircle, Plus, Search, SearchX } from 'lucide-react';
+import { BookOpen, ChevronDown, LoaderCircle, Plus, Search, SearchX } from 'lucide-react';
 import { useDeferredValue, useState } from 'react';
 import { DomainIcon } from '@/components/domain-icon';
 import { EmptyState, ErrorState } from '@/components/feedback/states';
 import { BandChip, PageBand } from '@/components/layout/page-band';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/misc';
 import { useMe } from '@/features/auth/api';
 import { useDomains } from '@/features/catalog/api';
 import { resourceKindLabels } from '@/lib/labels';
 import { photos } from '@/lib/photos';
-import type { ResourceKind } from '@/lib/types';
+import type { Me, ResourceKind } from '@/lib/types';
 import { cn, isStaff } from '@/lib/utils';
-import { useLibrary } from './api';
+import { useLibrary, useMyResources } from './api';
 import { ResourceCard } from './resource-card';
 import { ResourceDialog } from './resource-dialog';
 
-const KINDS: (ResourceKind | '')[] = ['', 'ADVICE', 'ARTICLE', 'VIDEO', 'TEMPLATE', 'TOOL'];
+const KINDS: (ResourceKind | '')[] = [
+  '',
+  'BOOK',
+  'GUIDE',
+  'PODCAST',
+  'ADVICE',
+  'ARTICLE',
+  'VIDEO',
+  'TEMPLATE',
+  'TOOL',
+];
+
+/** Mes publications : statut de validation de chaque ressource proposée. */
+function MyPublications({ me }: { me: Me }) {
+  const [open, setOpen] = useState(false);
+  const mine = useMyResources(true);
+  const items = mine.data ?? [];
+  if (items.length === 0) return null;
+  const pending = items.filter((r) => r.status === 'PENDING').length;
+  const rejected = items.filter((r) => r.status === 'REJECTED').length;
+  return (
+    <section className="mb-6 overflow-hidden rounded-xl bg-surface ring-1 ring-border">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center justify-between gap-3 px-5 py-3.5 text-left"
+      >
+        <span className="font-display text-[16px] font-semibold text-ink-900">
+          Mes publications{' '}
+          <span className="font-normal text-muted-foreground">({items.length})</span>
+        </span>
+        <span className="flex items-center gap-2">
+          {pending > 0 && <Badge tone="amber">{pending} en attente</Badge>}
+          {rejected > 0 && (
+            <Badge tone="danger">
+              {rejected} refusée{rejected > 1 ? 's' : ''}
+            </Badge>
+          )}
+          <ChevronDown
+            className={cn(
+              'size-4 text-muted-foreground transition-transform',
+              open && 'rotate-180',
+            )}
+            aria-hidden
+          />
+        </span>
+      </button>
+      {open && (
+        <ul className="grid gap-5 border-t border-border/70 p-5 md:grid-cols-2 xl:grid-cols-3">
+          {items.map((r) => (
+            <li key={r.id} className="animate-slide-up">
+              <ResourceCard resource={r} me={me} showStatus />
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
 
 /** Bibliothèque publique de ressources et conseils (TDR §7.2). */
 export function Library() {
@@ -35,8 +95,8 @@ export function Library() {
   return (
     <>
       <PageBand
-        title="Ressources et conseils"
-        description="Fiches pratiques, modèles et liens utiles partagés par les mentors, pour avancer entre deux séances."
+        title="Bibliothèque et ressources"
+        description="Livres, guides, podcasts, fiches pratiques et modèles partagés par l’équipe et les mentors. Tout est gratuit et vérifié."
         photo={photos.eleves}
         actions={
           canPublish ? (
@@ -66,7 +126,7 @@ export function Library() {
               setQ(e.target.value);
               setPage(1);
             }}
-            placeholder="Portfolio, entretien, pitch, Campus France…"
+            placeholder="Livre, guide, auteur, entretien, Campus France…"
             className="h-13 min-w-0 flex-1 bg-transparent px-3 text-[16px] outline-none placeholder:text-muted-foreground"
           />
         </div>
@@ -104,6 +164,8 @@ export function Library() {
           ))}
         </ul>
       </PageBand>
+
+      {me && canPublish && <MyPublications me={me} />}
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
         <div
@@ -161,7 +223,7 @@ export function Library() {
           }
           description={
             canPublish
-              ? 'Partagez une fiche pratique, un modèle ou un lien utile avec tous les mentorés.'
+              ? 'Partagez un livre, un guide, un podcast ou une fiche pratique avec tous les mentorés.'
               : 'Les mentors publient ici leurs conseils et leurs ressources.'
           }
           action={

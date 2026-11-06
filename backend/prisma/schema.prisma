@@ -103,6 +103,16 @@ enum ResourceKind {
   TOOL
   ADVICE
   OTHER
+  BOOK
+  GUIDE
+  PODCAST
+}
+
+/// Publication dans la bibliothèque : le document d'un mentor attend la validation de l'équipe.
+enum ResourceStatus {
+  PUBLISHED
+  PENDING
+  REJECTED
 }
 
 enum NotificationType {
@@ -121,6 +131,9 @@ enum NotificationType {
   WORKSHOP_CANCELLED
   VERIFICATION_APPROVED
   VERIFICATION_REJECTED
+  RESOURCE_SUBMITTED
+  RESOURCE_APPROVED
+  RESOURCE_REJECTED
 }
 
 /// Réponse d'un membre à l'invitation à un atelier.
@@ -538,30 +551,57 @@ model SessionFeedback {
 /// mentorshipId null  → bibliothèque publique (publiée par un mentor ou un admin) ;
 /// mentorshipId défini → visible des seuls participants de ce mentorat.
 model Resource {
-  id           String       @id @default(cuid())
-  authorId     String       @map("author_id")
-  mentorshipId String?      @map("mentorship_id")
-  domainId     String?      @map("domain_id")
-  kind         ResourceKind @default(OTHER)
-  title        String       @db.VarChar(160)
-  description  String?      @db.VarChar(2000)
-  url          String?      @db.VarChar(500)
+  id              String         @id @default(cuid())
+  authorId        String         @map("author_id")
+  mentorshipId    String?        @map("mentorship_id")
+  domainId        String?        @map("domain_id")
+  kind            ResourceKind   @default(OTHER)
+  title           String         @db.VarChar(160)
+  description     String?        @db.VarChar(2000)
+  url             String?        @db.VarChar(500)
   /// Vrai si un document est joint (ResourceFile) : permet la contrainte « lien, texte ou document ».
-  hasFile      Boolean      @default(false) @map("has_file")
-  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt    DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+  hasFile         Boolean        @default(false) @map("has_file")
+  status          ResourceStatus @default(PUBLISHED)
+  /// Auteur de l'œuvre quand ce n'est pas la personne qui publie (livre, guide officiel…).
+  workAuthor      String?        @map("work_author") @db.VarChar(120)
+  language        String?        @db.VarChar(30)
+  /// AUTHOR (œuvre de la personne), PERMISSION (autorisation de l'auteur), CC (licence libre), PUBLIC_DOMAIN.
+  license         String?        @db.VarChar(20)
+  /// La personne a déclaré avoir le droit de diffuser le document.
+  rightsConfirmed Boolean        @default(false) @map("rights_confirmed")
+  reviewNote      String?        @map("review_note") @db.VarChar(500)
+  reviewedAt      DateTime?      @map("reviewed_at") @db.Timestamptz(3)
+  downloadCount   Int            @default(0) @map("download_count")
+  createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   author     User             @relation(fields: [authorId], references: [id], onDelete: Cascade)
   mentorship Mentorship?      @relation(fields: [mentorshipId], references: [id], onDelete: Cascade)
   domain     ExpertiseDomain? @relation(fields: [domainId], references: [id], onDelete: SetNull)
   file       ResourceFile?
+  cover      ResourceCover?
 
   @@index([mentorshipId, createdAt])
   @@index([domainId, createdAt])
+  @@index([status, createdAt])
   @@map("resources")
 }
 
-/// Document joint à une ressource (PDF, Word, Excel, PowerPoint, image, texte), 10 Mo au plus.
+/// Couverture d'une ressource de la bibliothèque (JPEG, PNG ou WebP, 1 Mo au plus, réduite à l'envoi).
+model ResourceCover {
+  resourceId String   @id @map("resource_id")
+  mimeType   String   @map("mime_type") @db.VarChar(40)
+  size       Int
+  data       Bytes
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  resource Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@map("resource_covers")
+}
+
+/// Document joint à une ressource (PDF, Word, Excel, PowerPoint, image, texte) : 10 Mo au plus
+/// (25 Mo pour un document publié par l'équipe dans la bibliothèque).
 /// Stocké à part pour que les listes de ressources restent légères. Type et taille bornés par des CHECK SQL.
 model ResourceFile {
   resourceId String   @id @map("resource_id")

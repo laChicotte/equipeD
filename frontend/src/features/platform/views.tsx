@@ -39,6 +39,7 @@ import { useMe } from '@/features/auth/api';
 import { formatDuration } from '@/features/certificates/api';
 import { useOpportunities, useOpportunityMutations } from '@/features/opportunities/api';
 import { useDeleteResource, useLibrary } from '@/features/resources/api';
+import { ResourceReviewQueue } from '@/features/resources/review-queue';
 import { errorMessage } from '@/lib/api';
 import { formatDate, formatRelative, fullName, normalizeText } from '@/lib/format';
 import { roleLabels } from '@/lib/labels';
@@ -793,9 +794,10 @@ export function ContentView() {
     <Guard>
       <PageHeader
         title="Modération des contenus"
-        description="Ressources publiques et opportunités publiées par les mentors. Chaque retrait par l’équipe est inscrit au journal."
+        description="Validation des documents proposés pour la bibliothèque, ressources publiques et opportunités. Chaque décision de l’équipe est inscrite au journal."
       />
       <div className="grid gap-8">
+        <ResourceReviewQueue />
         <section aria-labelledby="titre-ressources" className="grid gap-3">
           <h2 id="titre-ressources" className="font-display text-[16px] font-semibold text-ink-900">
             Ressources publiques

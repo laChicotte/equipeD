@@ -3,7 +3,8 @@ import { ApiTags } from '@nestjs/swagger';
 import { CurrentUser, Public, Roles } from '../../common/auth/decorators.js';
 import type { AuthUser } from '../../common/auth/auth-user.js';
 import { MentorsService } from './mentors.service.js';
-import { AvailabilityRangeQuery, ListMentorsQuery } from './mentors.dto.js';
+import { AutocompleteQuery, AvailabilityRangeQuery, ListMentorsQuery } from './mentors.dto.js';
+import { Throttle } from '@nestjs/throttler';
 
 @ApiTags('mentors')
 @Controller('mentors')
@@ -15,6 +16,14 @@ export class MentorsController {
   @Get()
   list(@Query() query: ListMentorsQuery) {
     return this.mentors.list(query);
+  }
+
+  /** Suggestions pendant la saisie : domaines, compétences et mentors correspondants. */
+  @Public()
+  @Throttle({ default: { limit: 120, ttl: 60_000 } })
+  @Get('autocomplete')
+  autocomplete(@Query() query: AutocompleteQuery) {
+    return this.mentors.autocomplete(query.q ?? '');
   }
 
   /** Suggestions personnalisées et explicables pour le mentoré connecté. */

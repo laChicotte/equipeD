@@ -22,7 +22,9 @@ export type AuditAction =
   | 'VERIFICATION_APPROVED'
   | 'VERIFICATION_REJECTED'
   | 'MENTOR_APPLICATION_APPROVED'
-  | 'MENTOR_APPLICATION_REJECTED';
+  | 'MENTOR_APPLICATION_REJECTED'
+  | 'RESOURCE_APPROVED'
+  | 'RESOURCE_REJECTED';
 
 type AuditClient = Pick<Prisma.TransactionClient, 'auditLog'>;
 

@@ -49,6 +49,14 @@ export class ListMentorsQuery extends PaginationQuery {
   sort: MentorSort = 'relevance';
 }
 
+export class AutocompleteQuery {
+  @Transform(trim)
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  q?: string;
+}
+
 export class AvailabilityRangeQuery {
   @IsOptional()
   @IsISO8601()

@@ -47,6 +47,9 @@ export const NOTIFICATION_ICONS: Record<NotificationType, LucideIcon> = {
   WORKSHOP_CANCELLED: CalendarX2,
   VERIFICATION_APPROVED: BadgeCheck,
   VERIFICATION_REJECTED: ShieldX,
+  RESOURCE_SUBMITTED: FileText,
+  RESOURCE_APPROVED: BadgeCheck,
+  RESOURCE_REJECTED: ShieldX,
 };
 
 /** Cloche de notifications in-app : badge des non-lus, liste, navigation vers l'écran concerné. */

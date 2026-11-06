@@ -7,6 +7,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { errorMessage } from '@/lib/api';
 import type { Role } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { useMe } from '@/features/auth/api';
 import { useAiAvailable, useAssistant, type AssistantAnswer } from './api';
 
 interface Turn {
@@ -16,7 +17,15 @@ interface Turn {
   error?: boolean;
 }
 
-const SUGGESTIONS: Record<Role, string[]> = {
+type AssistantRole = Role | 'VISITOR';
+
+const SUGGESTIONS: Record<AssistantRole, string[]> = {
+  VISITOR: [
+    'C’est quoi TalentsConnect ?',
+    'Comment trouver un mentor ?',
+    'Est-ce gratuit ?',
+    'Comment devenir mentor ?',
+  ],
   MENTEE: [
     'Comment trouver un mentor ?',
     'Comment réserver une séance ?',
@@ -37,7 +46,7 @@ const SUGGESTIONS: Record<Role, string[]> = {
 };
 
 /** Assistant de la plateforme : répond aux questions sur son fonctionnement, à partir du guide intégré. */
-export function AssistantWidget({ role }: { role: Role }) {
+export function AssistantWidget({ role }: { role: AssistantRole }) {
   const available = useAiAvailable();
   const pathname = usePathname();
   const assistant = useAssistant();
@@ -96,7 +105,8 @@ export function AssistantWidget({ role }: { role: Role }) {
           className={cn(
             'fixed right-4 z-40 inline-flex h-12 items-center gap-2 rounded-full bg-ink-900 pr-4 pl-3.5 text-sm font-semibold text-white shadow-raised transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring lg:bottom-6 print:hidden',
             // Au-dessus de la barre d'onglets mobile ; l'administration n'en a pas.
-            role === 'ADMIN' ? 'bottom-6' : 'bottom-24',
+            // L'administration et les pages publiques n'ont pas de barre d'onglets.
+            role === 'ADMIN' || role === 'VISITOR' ? 'bottom-6' : 'bottom-24',
             // Dans la messagerie, le bouton masquerait la zone de saisie sur mobile.
             pathname.startsWith('/messages') && 'hidden lg:inline-flex',
           )}
@@ -253,4 +263,10 @@ export function AssistantWidget({ role }: { role: Role }) {
       )}
     </>
   );
+}
+
+/** Pages publiques (accueil, annuaire, connexion…) : l'assistant aide aussi les visiteurs. */
+export function PublicAssistant() {
+  const { data: me } = useMe();
+  return <AssistantWidget role={me?.role ?? 'VISITOR'} />;
 }

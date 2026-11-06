@@ -249,7 +249,7 @@ export function CertificateView({ code }: { code: string }) {
               <p className="mt-1">
                 Chiffres enregistrés par la plateforme à la clôture du mentorat.
               </p>
-              <p>Hackathon « Talents connectés », Conakry 2026 · prototype de démonstration.</p>
+              <p>Hackathon « Talents connectés », Conakry 2026.</p>
             </div>
             <div className="text-right">
               <p className="text-[11px] font-medium text-muted-foreground">Code de vérification</p>

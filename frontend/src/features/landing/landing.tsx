@@ -660,7 +660,7 @@ function Mentors() {
           </Link>
         </div>
         <p data-reveal className="mt-4 max-w-[60ch] text-[15px] text-muted-foreground">
-          Profils fictifs de démonstration, issus de la base de données de la plateforme.
+          Des professionnels de Guinée prêts à transmettre leur expérience.
         </p>
         <ul className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {isPending

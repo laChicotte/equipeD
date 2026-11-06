@@ -23,8 +23,8 @@ import { AssistantWidget } from '@/features/ai/assistant-widget';
 import { OfflineBanner } from '@/features/offline/offline-banner';
 import type { Me } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { DemoBanner } from './demo-banner';
 import { Logo } from './logo';
+import { NotificationBell } from './notification-bell';
 import { UserMenu } from './user-menu';
 
 interface AdminLink {
@@ -142,7 +142,6 @@ export function AdminShell({ me, children }: { me: Me; children: ReactNode }) {
 
   return (
     <div className="flex min-h-dvh flex-col bg-background">
-      <DemoBanner />
       <OfflineBanner />
       <div className="flex flex-1">
         {/* Barre latérale (ordinateur) */}
@@ -198,7 +197,8 @@ export function AdminShell({ me, children }: { me: Me; children: ReactNode }) {
             <p className="hidden text-sm text-muted-foreground lg:block">
               Espace d’administration de la plateforme
             </p>
-            <div className="ml-auto">
+            <div className="ml-auto flex items-center gap-1">
+              <NotificationBell />
               <UserMenu me={me} />
             </div>
           </header>

@@ -16,6 +16,7 @@ export interface AdminOverview {
   mentors: number;
   mentees: number;
   pendingVerification: number;
+  pendingResources: number;
   activeMentorships: number;
   requestsByStatus: Partial<Record<MentorshipRequestStatus, number>>;
   sessionsByStatus: Partial<Record<SessionStatus, number>>;

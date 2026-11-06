@@ -96,6 +96,8 @@ export const auditActionLabels: Record<string, string> = {
   CERTIFICATE_REVOKED: 'Certificat révoqué',
   RESOURCE_REMOVED: 'Ressource retirée',
   OPPORTUNITY_ARCHIVED: 'Opportunité archivée',
+  RESOURCE_APPROVED: 'Ressource publiée',
+  RESOURCE_REJECTED: 'Ressource refusée',
 };
 
 export function useMetrics() {

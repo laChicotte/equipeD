@@ -16,7 +16,10 @@ export type MentorshipStatus = 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
 export type SessionStatus = 'REQUESTED' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED';
 export type GoalStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED';
 export type UserStatus = 'ACTIVE' | 'SUSPENDED' | 'DELETED';
-export type ResourceKind = 'ARTICLE' | 'VIDEO' | 'TEMPLATE' | 'TOOL' | 'ADVICE' | 'OTHER';
+export type ResourceKind =
+  'ARTICLE' | 'VIDEO' | 'TEMPLATE' | 'TOOL' | 'ADVICE' | 'OTHER' | 'BOOK' | 'GUIDE' | 'PODCAST';
+export type ResourceStatus = 'PUBLISHED' | 'PENDING' | 'REJECTED';
+export type ResourceLicense = 'AUTHOR' | 'PERMISSION' | 'CC' | 'PUBLIC_DOMAIN';
 export type OpportunityType =
   'INTERNSHIP' | 'JOB' | 'CALL_FOR_PROJECTS' | 'SCHOLARSHIP' | 'TRAINING' | 'EVENT' | 'OTHER';
 export type NotificationType =
@@ -34,7 +37,10 @@ export type NotificationType =
   | 'WORKSHOP_SCHEDULED'
   | 'WORKSHOP_CANCELLED'
   | 'VERIFICATION_APPROVED'
-  | 'VERIFICATION_REJECTED';
+  | 'VERIFICATION_REJECTED'
+  | 'RESOURCE_SUBMITTED'
+  | 'RESOURCE_APPROVED'
+  | 'RESOURCE_REJECTED';
 
 export interface Me {
   id: string;
@@ -378,6 +384,16 @@ export interface Resource {
   url: string | null;
   /** Document joint (téléchargeable via /api/v1/resources/:id/file). */
   file: { fileName: string; mimeType: string; size: number } | null;
+  /** Couverture (image servie par /api/v1/resources/:id/cover). */
+  cover: { createdAt: string } | null;
+  /** Bibliothèque : un document proposé par un mentor attend la validation de l'équipe. */
+  status: ResourceStatus;
+  workAuthor: string | null;
+  language: string | null;
+  license: ResourceLicense | null;
+  reviewNote: string | null;
+  reviewedAt: string | null;
+  downloadCount: number;
   createdAt: string;
   author: AuthorRef;
   domain: DomainRef | null;

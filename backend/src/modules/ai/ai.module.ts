@@ -8,6 +8,7 @@ import {
   Module,
   Param,
   Post,
+  Req,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
@@ -23,7 +24,8 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { AppConfigService } from '../../config/app-config.service.js';
-import { CurrentUser, Roles } from '../../common/auth/decorators.js';
+import { CurrentUser, Public, Roles } from '../../common/auth/decorators.js';
+import type { Request } from 'express';
 import type { AuthUser } from '../../common/auth/auth-user.js';
 import { conflict, DomainError, notFound } from '../../common/errors.js';
 import { PrismaService } from '../../database/prisma.service.js';
@@ -37,7 +39,7 @@ import {
   parseOrientation,
   parsePathProposal,
 } from './ai.logic.js';
-import { ASSISTANT_PAGES } from './assistant.knowledge.js';
+import { ASSISTANT_PAGES, VISITOR_PAGES } from './assistant.knowledge.js';
 import {
   assistantPrompt,
   explanationPrompt,
@@ -49,6 +51,8 @@ import { OpenAiClient } from './openai.client.js';
 
 const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
 const DAY_MS = 86_400_000;
+/** Questions à l'assistant par visiteur non connecté (adresse IP) et par jour. */
+const VISITOR_DAILY_LIMIT = 15;
 
 export class OrientationDto {
   @Transform(trim)
@@ -154,25 +158,26 @@ export class AiService {
     return [...new Set(rows.flatMap((r) => r.expertise))].sort((a, b) => a.localeCompare(b, 'fr'));
   }
 
-  status(user: AuthUser) {
+  status(user: AuthUser | undefined, ip: string) {
     return {
       enabled: this.client.enabled,
-      remainingToday: this.remaining(user.id),
-      assistantRemainingToday: this.assistantRemaining(user.id),
+      remainingToday: user ? this.remaining(user.id) : 0,
+      assistantRemainingToday: this.assistantRemaining(user ? user.id : `ip:${ip}`, !user),
     };
   }
 
   /** L'assistant a son propre budget quotidien : une conversation compte plusieurs questions. */
   private assistantUsage = { day: 0, perUser: new Map<string, number>() };
 
-  private assistantRemaining(userId: string) {
+  private assistantRemaining(userId: string, visitor = false) {
     const day = Math.floor(Date.now() / DAY_MS);
     if (this.assistantUsage.day !== day) this.assistantUsage = { day, perUser: new Map() };
     const c = this.counters();
     return Math.max(
       0,
       Math.min(
-        this.config.get('AI_ASSISTANT_DAILY_LIMIT') -
+        // Visiteur non connecté (compté par adresse IP) : un budget plus réduit.
+        (visitor ? VISITOR_DAILY_LIMIT : this.config.get('AI_ASSISTANT_DAILY_LIMIT')) -
           (this.assistantUsage.perUser.get(userId) ?? 0),
         this.config.get('AI_GLOBAL_DAILY_LIMIT') - c.total,
       ),
@@ -180,29 +185,37 @@ export class AiService {
   }
 
   /** Questions sur le fonctionnement de la plateforme, à partir du guide intégré. */
-  async assistant(user: AuthUser, dto: AssistantDto) {
+  async assistant(user: AuthUser | undefined, dto: AssistantDto, ip: string) {
     if (!this.client.enabled) throw unavailable();
-    if (this.assistantRemaining(user.id) === 0) {
+    const key = user ? user.id : `ip:${ip}`;
+    if (this.assistantRemaining(key, !user) === 0) {
       throw new DomainError(
         HttpStatus.TOO_MANY_REQUESTS,
         'AI_QUOTA_REACHED',
         'Vous avez posé beaucoup de questions aujourd’hui. L’assistant sera de nouveau disponible demain.',
       );
     }
-    const account = await this.prisma.user.findUnique({
-      where: { id: user.id },
-      select: { mentorProfile: { select: { id: true } }, menteeProfile: { select: { id: true } } },
-    });
-    const pages = ASSISTANT_PAGES.filter(
-      (p) => p.roles === 'all' || p.roles.includes(user.role),
-    ).map(({ href, label }) => ({ href, label }));
+    const account = user
+      ? await this.prisma.user.findUnique({
+          where: { id: user.id },
+          select: {
+            mentorProfile: { select: { id: true } },
+            menteeProfile: { select: { id: true } },
+          },
+        })
+      : null;
+    const pages = user
+      ? ASSISTANT_PAGES.filter((p) => p.roles === 'all' || p.roles.includes(user.role)).map(
+          ({ href, label }) => ({ href, label }),
+        )
+      : VISITOR_PAGES;
     const page = dto.page && /^\/[a-z0-9\-/?=]*$/i.test(dto.page) ? dto.page.split('?')[0] : null;
 
     this.counters().total += 1;
-    this.assistantUsage.perUser.set(user.id, (this.assistantUsage.perUser.get(user.id) ?? 0) + 1);
+    this.assistantUsage.perUser.set(key, (this.assistantUsage.perUser.get(key) ?? 0) + 1);
     const raw = await this.client.completeJson(
       assistantPrompt({
-        role: user.role,
+        role: user?.role ?? 'VISITOR',
         hasProfile: Boolean(account?.mentorProfile ?? account?.menteeProfile),
         page,
         pages,
@@ -349,17 +362,24 @@ export class AiController {
   constructor(private readonly ai: AiService) {}
 
   /** Disponibilité de l'assistant : l'interface masque ce qui ne fonctionnerait pas. */
+  @Public()
   @Get('status')
-  status(@CurrentUser() user: AuthUser) {
-    return this.ai.status(user);
+  status(@CurrentUser() user: AuthUser | undefined, @Req() req: Request) {
+    return this.ai.status(user, req.ip ?? '');
   }
 
   /** Assistant : questions sur le fonctionnement de la plateforme (20 par minute au plus). */
+  /** Ouvert aux visiteurs : ils découvrent la plateforme avant de créer un compte. */
+  @Public()
   @Throttle({ default: { limit: 20, ttl: 60_000 } })
   @HttpCode(200)
   @Post('assistant')
-  assistant(@CurrentUser() user: AuthUser, @Body() dto: AssistantDto) {
-    return this.ai.assistant(user, dto);
+  assistant(
+    @CurrentUser() user: AuthUser | undefined,
+    @Body() dto: AssistantDto,
+    @Req() req: Request,
+  ) {
+    return this.ai.assistant(user, dto, req.ip ?? '');
   }
 
   @Throttle({ default: { limit: 10, ttl: 60_000 } })

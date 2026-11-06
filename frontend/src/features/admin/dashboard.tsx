@@ -197,6 +197,7 @@ export function AdminDashboard() {
   if (me.role !== 'ADMIN') return <AccessDenied />;
 
   const pending = overview.data?.pendingVerification ?? 0;
+  const pendingResources = overview.data?.pendingResources ?? 0;
   const m = metrics.data;
 
   return (
@@ -219,27 +220,51 @@ export function AdminDashboard() {
         }
       />
 
-      {pending > 0 ? (
-        <div className="mb-6 flex animate-slide-up flex-col gap-3 rounded-xl border border-amber-100 bg-amber-50 p-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-          <p className="flex items-center gap-3 text-[14px] font-medium text-[#7a4a0f]">
-            <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-100">
-              <Hourglass className="size-4" aria-hidden />
-            </span>
-            {pending === 1
-              ? '1 demande de vérification ou candidature de mentor attend une décision.'
-              : `${pending} demandes de vérification ou candidatures de mentor attendent une décision.`}
-          </p>
-          <Button asChild size="sm">
-            <Link href="/admin/verifications">
-              Examiner
-              <ArrowRight aria-hidden />
-            </Link>
-          </Button>
+      {pending + pendingResources > 0 ? (
+        <div className="mb-6 grid gap-3">
+          {[
+            pending > 0 && {
+              key: 'verif',
+              text:
+                pending === 1
+                  ? '1 demande de vérification ou candidature de mentor attend une décision.'
+                  : `${pending} demandes de vérification ou candidatures de mentor attendent une décision.`,
+              href: '/admin/verifications',
+            },
+            pendingResources > 0 && {
+              key: 'res',
+              text:
+                pendingResources === 1
+                  ? '1 document proposé pour la bibliothèque attend votre validation.'
+                  : `${pendingResources} documents proposés pour la bibliothèque attendent votre validation.`,
+              href: '/admin/contenus',
+            },
+          ]
+            .filter((x): x is { key: string; text: string; href: string } => !!x)
+            .map((x) => (
+              <div
+                key={x.key}
+                className="flex animate-slide-up flex-col gap-3 rounded-xl border border-amber-100 bg-amber-50 p-4 sm:flex-row sm:items-center sm:justify-between sm:px-5"
+              >
+                <p className="flex items-center gap-3 text-[14px] font-medium text-[#7a4a0f]">
+                  <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-100">
+                    <Hourglass className="size-4" aria-hidden />
+                  </span>
+                  {x.text}
+                </p>
+                <Button asChild size="sm">
+                  <Link href={x.href}>
+                    Examiner
+                    <ArrowRight aria-hidden />
+                  </Link>
+                </Button>
+              </div>
+            ))}
         </div>
       ) : overview.data ? (
         <p className="mb-6 flex items-center gap-2 rounded-xl bg-success-50 px-4 py-3 text-[14px] text-success-700">
           <CircleCheck className="size-4" aria-hidden />
-          Aucune demande de vérification en attente : tout est à jour.
+          Aucune demande en attente : tout est à jour.
         </p>
       ) : null}
 

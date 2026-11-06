@@ -40,22 +40,33 @@ export class AdminService {
   constructor(private readonly prisma: PrismaService) {}
 
   async overview() {
-    const [users, mentors, mentees, pendingVerification, requests, activeMentorships, sessions] =
-      await Promise.all([
-        this.prisma.user.count(),
-        this.prisma.user.count({ where: { role: 'MENTOR' } }),
-        this.prisma.user.count({ where: { role: 'MENTEE' } }),
-        // Demandes de vérification et candidatures de mentor en attente de décision.
-        this.prisma.verificationRequest.count({ where: { status: 'PENDING' } }),
-        this.prisma.mentorshipRequest.groupBy({ by: ['status'], _count: { _all: true } }),
-        this.prisma.mentorship.count({ where: { status: 'ACTIVE' } }),
-        this.prisma.mentoringSession.groupBy({ by: ['status'], _count: { _all: true } }),
-      ]);
+    const [
+      users,
+      mentors,
+      mentees,
+      pendingVerification,
+      requests,
+      activeMentorships,
+      sessions,
+      pendingResources,
+    ] = await Promise.all([
+      this.prisma.user.count(),
+      this.prisma.user.count({ where: { role: 'MENTOR' } }),
+      this.prisma.user.count({ where: { role: 'MENTEE' } }),
+      // Demandes de vérification et candidatures de mentor en attente de décision.
+      this.prisma.verificationRequest.count({ where: { status: 'PENDING' } }),
+      this.prisma.mentorshipRequest.groupBy({ by: ['status'], _count: { _all: true } }),
+      this.prisma.mentorship.count({ where: { status: 'ACTIVE' } }),
+      this.prisma.mentoringSession.groupBy({ by: ['status'], _count: { _all: true } }),
+      // Documents proposés par les mentors pour la bibliothèque, en attente de validation.
+      this.prisma.resource.count({ where: { status: 'PENDING', mentorshipId: null } }),
+    ]);
     return {
       users,
       mentors,
       mentees,
       pendingVerification,
+      pendingResources,
       activeMentorships,
       requestsByStatus: Object.fromEntries(requests.map((r) => [r.status, r._count._all])),
       sessionsByStatus: Object.fromEntries(sessions.map((s) => [s.status, s._count._all])),

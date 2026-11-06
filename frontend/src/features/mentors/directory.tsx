@@ -1,12 +1,12 @@
 'use client';
 
 import {
+  ArrowDownUp,
+  CalendarCheck2,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   Info,
-  LoaderCircle,
-  Search,
   SearchX,
   Sparkles,
   X,
@@ -15,7 +15,7 @@ import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { DomainIcon } from '@/components/domain-icon';
-import { EmptyState, ErrorState } from '@/components/feedback/states';
+import { ErrorState } from '@/components/feedback/states';
 import { Button } from '@/components/ui/button';
 import { OrientationPanel, WhyThisMentor } from '@/features/ai/ai-parts';
 import { useMe } from '@/features/auth/api';
@@ -30,6 +30,7 @@ import { CAMPUS_FRANCE_NOTICE, LANGUAGES, isCampusFrance, modalityLabels } from 
 import type { Modality } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { MentorResult, MentorResultSkeleton } from './mentor-card';
+import { MentorSearchBox } from './search-box';
 
 function useFilters(): [MentorFilters, (patch: Partial<MentorFilters>) => void] {
   const params = useSearchParams();
@@ -159,6 +160,23 @@ function PillSelect({
   );
 }
 
+/** « Vouliez-vous dire … ? » : relance la recherche avec le mot corrigé. */
+function DidYouMean({ value, onPick }: { value: string; onPick: (v: string) => void }) {
+  return (
+    <span>
+      Vouliez-vous dire{' '}
+      <button
+        type="button"
+        onClick={() => onPick(value)}
+        className="font-semibold text-teal-700 underline underline-offset-2 hover:text-teal-800"
+      >
+        {value}
+      </button>{' '}
+      ?
+    </span>
+  );
+}
+
 /* ── Recommandations (score déterministe et expliqué) ─────────────────────── */
 
 function Suggestions() {
@@ -222,136 +240,198 @@ export function Directory() {
   const mentors = useMentors(filters);
   const [q, setQ] = useState(filters.q ?? '');
 
-  // Recherche avec anti-rebond (350 ms).
+  // Résultats en direct pendant la saisie (anti-rebond court) ; Entrée cherche immédiatement.
   useEffect(() => {
-    if (q === (filters.q ?? '')) return;
-    const t = setTimeout(() => update({ q }), 350);
+    if (q.trim() === (filters.q ?? '').trim()) return;
+    const t = setTimeout(() => update({ q: q.trim() }), 280);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q]);
 
   const activeDomain = domains.data?.find((d) => d.slug === filters.domain);
-  const activeCount = [
-    filters.modality,
-    filters.language,
-    filters.available,
-    filters.domain,
-    filters.q,
-  ].filter(Boolean).length;
+  const chips: { key: string; label: string; clear: () => void }[] = [
+    ...(filters.q
+      ? [
+          {
+            key: 'q',
+            label: `« ${filters.q} »`,
+            clear: () => {
+              setQ('');
+              update({ q: '' });
+            },
+          },
+        ]
+      : []),
+    ...(activeDomain
+      ? [{ key: 'domain', label: activeDomain.name, clear: () => update({ domain: '' }) }]
+      : []),
+    ...(filters.modality
+      ? [
+          {
+            key: 'modality',
+            label: modalityLabels[filters.modality],
+            clear: () => update({ modality: '' }),
+          },
+        ]
+      : []),
+    ...(filters.language
+      ? [{ key: 'language', label: filters.language, clear: () => update({ language: '' }) }]
+      : []),
+    ...(filters.available
+      ? [
+          {
+            key: 'available',
+            label: 'Disponible sous 14 jours',
+            clear: () => update({ available: false }),
+          },
+        ]
+      : []),
+  ];
+  const activeCount = chips.length;
   const isMentee = me?.role === 'MENTEE' && me.hasProfile;
   const showSuggestions = isMentee && activeCount === 0 && filters.page === 1;
   const total = mentors.data?.total;
+  const search = mentors.data?.search;
   const resetAll = () => {
     setQ('');
     update({ q: '', domain: '', modality: '', language: '', available: false });
   };
+  const runSearch = (value: string) => {
+    setQ(value);
+    update({ q: value.trim() });
+  };
 
   return (
     <div className="mx-auto grid max-w-[1128px] gap-4">
-      {/* Barre de recherche et de filtres */}
-      <section className={cn(panel, 'px-4 py-3 sm:px-5')} aria-label="Recherche de mentors">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-          <div className="relative w-full lg:max-w-[300px]">
-            <label htmlFor="recherche-mentor" className="sr-only">
-              Rechercher un mentor
-            </label>
-            <span
-              className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground"
-              aria-hidden
-            >
-              {mentors.isFetching && q ? (
-                <LoaderCircle className="size-4 animate-spin" />
-              ) : (
-                <Search className="size-4" />
-              )}
-            </span>
-            <input
-              id="recherche-mentor"
-              type="search"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Compétence, métier, nom…"
-              className="h-9 w-full rounded-md border border-border bg-background pr-9 pl-9 text-[14px] text-ink-900 outline-none placeholder:text-muted-foreground focus:border-teal-600 focus:bg-surface focus:ring-3 focus:ring-teal-600/15"
-            />
-            {q && (
-              <button
-                type="button"
-                onClick={() => setQ('')}
-                className="absolute top-1/2 right-2 -translate-y-1/2 rounded-full p-1 text-muted-foreground hover:text-ink-900"
-                aria-label="Effacer la recherche"
-              >
-                <X className="size-4" />
-              </button>
-            )}
-          </div>
-          <span className="hidden h-6 w-px bg-border lg:block" aria-hidden />
-          <div className="scrollbar-none -mx-1 flex min-w-0 items-center gap-2 overflow-x-auto px-1 py-0.5">
-            <PillSelect
-              label="Domaine"
+      {/* Recherche et filtres */}
+      <section
+        className={cn(panel, 'overflow-visible px-4 py-4 sm:px-5')}
+        aria-label="Recherche de mentors"
+      >
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_260px]">
+          <MentorSearchBox
+            value={q}
+            onChange={setQ}
+            onSubmit={runSearch}
+            onDomain={(domain) => update({ domain, q: '' })}
+            loading={mentors.isFetching}
+          />
+          <label className="relative block">
+            <span className="sr-only">Domaine</span>
+            <select
               value={filters.domain ?? ''}
-              onChange={(v) => update({ domain: v })}
+              onChange={(e) => update({ domain: e.target.value })}
+              className={cn(
+                'h-11 w-full cursor-pointer appearance-none rounded-lg border pr-10 pl-3.5 text-[15px] font-medium outline-none transition-colors focus:ring-4 focus:ring-teal-600/12',
+                filters.domain
+                  ? 'border-ink-900 bg-ink-900 text-white'
+                  : 'border-border bg-background text-ink-900 hover:border-border-strong focus:border-teal-600',
+              )}
             >
-              <option value="">Domaine</option>
+              <option value="">Tous les domaines</option>
               {domains.data?.map((d) => (
                 <option key={d.id} value={d.slug}>
                   {d.name} ({d.mentorCount})
                 </option>
               ))}
-            </PillSelect>
-            {MODALITIES.map((m) => (
-              <Pill
-                key={m}
-                active={filters.modality === m}
-                onClick={() => update({ modality: filters.modality === m ? '' : m })}
+            </select>
+            <ChevronDown
+              className={cn(
+                'pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2',
+                filters.domain ? 'text-white' : 'text-muted-foreground',
+              )}
+              aria-hidden
+            />
+          </label>
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <div
+            role="group"
+            aria-label="Modalité"
+            className="scrollbar-none inline-flex max-w-full shrink-0 overflow-x-auto rounded-full bg-surface-muted p-0.5"
+          >
+            {(['', ...MODALITIES] as const).map((m) => (
+              <button
+                key={m || 'all'}
+                type="button"
+                aria-pressed={(filters.modality ?? '') === m}
+                onClick={() => update({ modality: m })}
+                className={cn(
+                  'h-8 rounded-full px-3.5 text-[13px] font-semibold whitespace-nowrap transition-all duration-150',
+                  (filters.modality ?? '') === m
+                    ? 'bg-surface text-ink-900 shadow-card'
+                    : 'text-muted-foreground hover:text-ink-900',
+                )}
               >
-                {modalityLabels[m]}
-              </Pill>
+                {m ? modalityLabels[m] : 'Toutes modalités'}
+              </button>
             ))}
-            <PillSelect
-              label="Langue"
-              value={filters.language ?? ''}
-              onChange={(v) => update({ language: v })}
+          </div>
+          <PillSelect
+            label="Langue"
+            value={filters.language ?? ''}
+            onChange={(v) => update({ language: v })}
+          >
+            <option value="">Toutes les langues</option>
+            {LANGUAGES.map((l) => (
+              <option key={l} value={l}>
+                {l}
+              </option>
+            ))}
+          </PillSelect>
+          <Pill
+            active={!!filters.available}
+            onClick={() => update({ available: !filters.available })}
+          >
+            <CalendarCheck2 className="size-3.5" aria-hidden />
+            Disponible sous 14 jours
+          </Pill>
+          <span className="ml-auto h-6 w-px shrink-0 bg-border" aria-hidden />
+          <label className="inline-flex shrink-0 items-center gap-2 text-[13px] text-muted-foreground">
+            <ArrowDownUp className="size-3.5" aria-hidden />
+            <span className="sr-only sm:not-sr-only">Trier par</span>
+            <select
+              value={filters.sort ?? 'relevance'}
+              onChange={(e) => update({ sort: e.target.value as MentorSort })}
+              title={SORTS.find((s) => s.value === (filters.sort ?? 'relevance'))?.hint}
+              className="h-8 cursor-pointer rounded-full bg-surface pr-3 pl-3 text-[13px] font-semibold text-ink-900 ring-1 ring-border-strong outline-none ring-inset focus-visible:ring-2 focus-visible:ring-teal-600"
             >
-              <option value="">Langue</option>
-              {LANGUAGES.map((l) => (
-                <option key={l} value={l}>
-                  {l}
+              {SORTS.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
                 </option>
               ))}
-            </PillSelect>
-            <Pill
-              active={!!filters.available}
-              onClick={() => update({ available: !filters.available })}
-            >
-              Disponible sous 14 jours
-            </Pill>
-            <span className="h-6 w-px shrink-0 bg-border" aria-hidden />
-            <label className="inline-flex shrink-0 items-center gap-2 text-[13px] text-muted-foreground">
-              Trier par
-              <select
-                value={filters.sort ?? 'relevance'}
-                onChange={(e) => update({ sort: e.target.value as MentorSort })}
-                title={SORTS.find((s) => s.value === (filters.sort ?? 'relevance'))?.hint}
-                className="h-8 cursor-pointer rounded-full bg-surface pr-3 pl-3 text-[14px] font-semibold text-ink-900 ring-1 ring-border-strong outline-none ring-inset focus-visible:ring-2 focus-visible:ring-teal-600"
+            </select>
+          </label>
+        </div>
+
+        {chips.length > 0 && (
+          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border/70 pt-3">
+            <span className="text-[12px] font-medium text-muted-foreground">Filtres :</span>
+            {chips.map((c) => (
+              <button
+                key={c.key}
+                type="button"
+                onClick={c.clear}
+                className="inline-flex h-7 animate-scale-in items-center gap-1.5 rounded-full bg-ink-50 pr-2 pl-3 text-[13px] font-medium text-ink-900 ring-1 ring-ink-100 transition-colors hover:bg-ink-100"
+                aria-label={`Retirer le filtre ${c.label}`}
               >
-                {SORTS.map((s) => (
-                  <option key={s.value} value={s.value}>
-                    {s.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {activeCount > 0 && (
+                {c.label}
+                <X className="size-3.5 text-muted-foreground" aria-hidden />
+              </button>
+            ))}
+            {chips.length > 1 && (
               <button
                 type="button"
                 onClick={resetAll}
-                className="h-8 shrink-0 rounded-full px-3 text-[14px] font-semibold whitespace-nowrap text-muted-foreground hover:bg-surface-muted hover:text-ink-900"
+                className="h-7 rounded-full px-2.5 text-[13px] font-semibold text-teal-700 hover:underline"
               >
-                Réinitialiser
+                Tout effacer
               </button>
             )}
           </div>
-        </div>
+        )}
       </section>
 
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
@@ -364,7 +444,7 @@ export function Directory() {
           )}
 
           {me && me.role !== 'ADMIN' && (
-            <OrientationPanel onDomain={(domain) => update({ domain })} onSkill={setQ} />
+            <OrientationPanel onDomain={(domain) => update({ domain })} onSkill={runSearch} />
           )}
 
           {showSuggestions && <Suggestions />}
@@ -377,12 +457,24 @@ export function Directory() {
               >
                 {activeDomain ? activeDomain.name : 'Trouver un mentor'}
               </h1>
-              <p className="text-[13px] text-muted-foreground" aria-live="polite">
+              <p className="text-[13px] text-muted-foreground tabular-nums" aria-live="polite">
                 {total === undefined
                   ? 'Recherche en cours…'
-                  : `${total} résultat${total > 1 ? 's' : ''}`}
+                  : `${total} mentor${total > 1 ? 's' : ''}`}
               </p>
             </div>
+
+            {search?.mode === 'approximate' && total !== undefined && total > 0 && (
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-border/70 bg-amber-50/60 px-5 py-2.5 text-[13px] text-[#7a4a0f] sm:px-6">
+                <Info className="size-4 shrink-0" aria-hidden />
+                <span>
+                  Aucun profil ne contient tous les mots de « {filters.q} » : voici les plus
+                  proches.
+                </span>
+                {search.didYouMean && <DidYouMean value={search.didYouMean} onPick={runSearch} />}
+              </div>
+            )}
+
             {mentors.isError ? (
               <div className="p-5">
                 <ErrorState error={mentors.error} onRetry={() => void mentors.refetch()} />
@@ -396,17 +488,42 @@ export function Directory() {
                 ))}
               </ul>
             ) : mentors.data.items.length === 0 ? (
-              <div className="p-5">
-                <EmptyState
-                  icon={SearchX}
-                  title="Aucun mentor ne correspond à ces critères"
-                  description="Essayez un autre mot-clé, un autre domaine ou retirez un filtre."
-                  action={
-                    <Button variant="secondary" onClick={resetAll}>
-                      Réinitialiser la recherche
-                    </Button>
-                  }
-                />
+              <div className="flex flex-col items-center px-6 py-12 text-center">
+                <span className="inline-flex size-12 items-center justify-center rounded-full bg-surface-muted text-muted-foreground">
+                  <SearchX className="size-5" aria-hidden />
+                </span>
+                <p className="mt-4 font-display text-[17px] font-semibold text-ink-900">
+                  {filters.q
+                    ? `Aucun mentor pour « ${filters.q} »`
+                    : 'Aucun mentor avec ces filtres'}
+                </p>
+                <p className="mt-1 max-w-sm text-[14px] text-muted-foreground">
+                  {search?.didYouMean ? (
+                    <DidYouMean value={search.didYouMean} onPick={runSearch} />
+                  ) : chips.length > 1 ? (
+                    'Retirez un filtre pour élargir la recherche :'
+                  ) : (
+                    'Essayez un autre mot, plus général.'
+                  )}
+                </p>
+                {chips.length > 1 && (
+                  <div className="mt-3 flex flex-wrap justify-center gap-2">
+                    {chips.map((c) => (
+                      <button
+                        key={c.key}
+                        type="button"
+                        onClick={c.clear}
+                        className="inline-flex h-8 items-center gap-1.5 rounded-full bg-surface px-3 text-[13px] font-medium text-ink-900 ring-1 ring-border-strong hover:bg-surface-muted"
+                      >
+                        <X className="size-3.5" aria-hidden />
+                        {c.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <Button variant="secondary" size="sm" className="mt-5" onClick={resetAll}>
+                  Voir tous les mentors
+                </Button>
               </div>
             ) : (
               <>

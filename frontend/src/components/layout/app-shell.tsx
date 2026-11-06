@@ -18,14 +18,13 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Skeleton } from '@/components/ui/misc';
-import { AssistantWidget } from '@/features/ai/assistant-widget';
+import { AssistantWidget, PublicAssistant } from '@/features/ai/assistant-widget';
 import { homeFor, useMe } from '@/features/auth/api';
 import { useDashboard } from '@/features/mentorships/api';
 import { OfflineBanner } from '@/features/offline/offline-banner';
 import type { Me } from '@/lib/types';
 import { cn, isStaff } from '@/lib/utils';
 import { AdminShell } from './admin-shell';
-import { DemoBanner } from './demo-banner';
 import { Logo } from './logo';
 import { PublicFooter, PublicHeader } from './public-header';
 import { NotificationBell } from './notification-bell';
@@ -291,7 +290,6 @@ function MemberLayout({ me, children }: { me: Me; children: ReactNode }) {
   const counts = useBadgeCounts(!isStaff(me.role) && me.hasProfile);
   return (
     <div className="flex min-h-dvh flex-col bg-background">
-      <DemoBanner />
       <OfflineBanner />
       <TopNav me={me} items={items} counts={counts} />
       <main
@@ -349,7 +347,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   if (pathname === '/onboarding') {
     return (
       <div className="flex min-h-dvh flex-col bg-background">
-        <DemoBanner />
         <header className="flex h-16 items-center justify-between border-b border-border bg-surface px-4 sm:px-8">
           <Logo href="/" />
           <UserMenu me={me} />
@@ -373,7 +370,6 @@ export function AdaptiveShell({ children }: { children: ReactNode }) {
   }
   return (
     <div className="flex min-h-dvh flex-col">
-      <DemoBanner />
       <PublicHeader />
       <main
         id="contenu"
@@ -382,6 +378,7 @@ export function AdaptiveShell({ children }: { children: ReactNode }) {
         {children}
       </main>
       <PublicFooter />
+      <PublicAssistant />
     </div>
   );
 }

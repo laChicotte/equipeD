@@ -4,6 +4,8 @@ import type {
   MentorshipRequestStatus,
   OpportunityType,
   ResourceKind,
+  ResourceLicense,
+  ResourceStatus,
   MentorshipStatus,
   Modality,
   Role,
@@ -76,12 +78,36 @@ export function isCampusFrance(slug: string | undefined | null): boolean {
 }
 
 export const resourceKindLabels: Record<ResourceKind, string> = {
+  BOOK: 'Livre',
+  GUIDE: 'Guide',
+  PODCAST: 'Podcast',
   ARTICLE: 'Article',
   VIDEO: 'Vidéo',
   TEMPLATE: 'Modèle',
   TOOL: 'Outil',
   ADVICE: 'Conseil',
   OTHER: 'Autre',
+};
+
+export const resourceLicenseLabels: Record<ResourceLicense, string> = {
+  AUTHOR: 'Je suis l’auteur',
+  PERMISSION: 'Autorisation écrite de l’auteur',
+  CC: 'Licence libre (Creative Commons)',
+  PUBLIC_DOMAIN: 'Domaine public',
+};
+
+/** Mention publique des droits, sur la fiche de la ressource. */
+export const resourceLicensePublicLabels: Record<ResourceLicense, string> = {
+  AUTHOR: 'Publié par son auteur',
+  PERMISSION: 'Diffusé avec l’autorisation de l’auteur',
+  CC: 'Licence libre (Creative Commons)',
+  PUBLIC_DOMAIN: 'Domaine public',
+};
+
+export const resourceStatusLabels: Record<ResourceStatus, string> = {
+  PUBLISHED: 'Publiée',
+  PENDING: 'En attente de validation',
+  REJECTED: 'Refusée',
 };
 
 export const opportunityTypeLabels: Record<OpportunityType, string> = {

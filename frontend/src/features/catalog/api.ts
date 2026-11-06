@@ -34,11 +34,45 @@ export interface MentorFilters {
 
 export type MentorSort = 'relevance' | 'experience' | 'availability' | 'rating';
 
+/** Recherche : « exact » (tous les mots), « approximate » (profils proches), « empty » (rien). */
+export interface MentorSearchInfo {
+  mode: 'exact' | 'approximate' | 'empty' | 'none';
+  terms: string[];
+  didYouMean: string | null;
+}
+
+export type MentorList = Paginated<MentorCard> & { search: MentorSearchInfo | null };
+
+export interface Autocomplete {
+  domains: { slug: string; name: string; icon: string; mentorCount: number }[];
+  skills: { label: string; count: number }[];
+  mentors: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    avatarUpdatedAt: string | null;
+    headline: string;
+  }[];
+}
+
+/** Suggestions pendant la saisie (domaines, compétences, mentors). */
+export function useAutocomplete(q: string) {
+  const term = q.trim();
+  return useQuery({
+    queryKey: ['mentors', 'autocomplete', term.toLowerCase()],
+    queryFn: ({ signal }) =>
+      api<Autocomplete>('/mentors/autocomplete', { query: { q: term }, signal }),
+    enabled: term.length >= 2,
+    staleTime: 60_000,
+    placeholderData: keepPreviousData,
+  });
+}
+
 export function useMentors(filters: MentorFilters) {
   return useQuery({
     queryKey: ['mentors', filters],
     queryFn: ({ signal }) =>
-      api<Paginated<MentorCard>>('/mentors', {
+      api<MentorList>('/mentors', {
         query: {
           q: filters.q,
           domain: filters.domain,

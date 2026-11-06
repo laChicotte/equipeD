@@ -186,6 +186,10 @@ Ordre (`sort`, fonction pure `modules/mentors/ranking.ts`, calculé sur l'ensemb
 - `rating` : note moyenne (comptée à partir de 3 avis), puis nombre d'avis.
 Valeur inconnue : 422. L'interface l'expose par le menu « Trier par » (paramètre d'URL `tri`).
 
+Recherche `q` (`modules/mentors/search.ts`) : sans accents ni casse, mots vides ignorés, variantes et préfixes (« developpeur » → « développement »), fautes de frappe (distance d'édition) et synonymes (« startup », « IA », « emploi »…). Les profils qui contiennent tous les mots passent d'abord ; sinon, les profils proches (au moins un mot). La réponse ajoute `search: { mode: 'exact' | 'approximate' | 'empty', terms, didYouMean } | null`.
+
+`GET /mentors/autocomplete?q=` 🔓 (120/min) → `{ domains[{ slug, name, icon, mentorCount }], skills[{ label, count }], mentors[{ id, firstName, lastName, avatarUpdatedAt, headline }] }` : suggestions pendant la saisie.
+
 ```ts
 interface MentorCard {
   id: string;                 // = id utilisateur du mentor (à utiliser comme mentorId)
@@ -623,8 +627,8 @@ Frontend : onglet **Objectifs** → « Parcours guidé » (et encart « Parcours
 
 | Route | Accès | Détail |
 |---|---|---|
-| `GET /ai/status` | 🔒 | `{ enabled, remainingToday, assistantRemainingToday }` : l'interface masque l'assistant si `enabled` est faux |
-| `POST /ai/assistant` | 🔒, 20/min | `{ question (2–600), history?[{ role: 'user'\|'assistant', content }] (≤12), page? }` → `{ answer, links[{ href, label }] }` : assistant qui répond aux questions sur le fonctionnement de la plateforme (widget « Une question ? » de l'espace connecté). Liens limités aux pages permises au rôle ; le serveur ne conserve pas la conversation |
+| `GET /ai/status` | 🔓 | `{ enabled, remainingToday, assistantRemainingToday }` : l'interface masque l'assistant si `enabled` est faux |
+| `POST /ai/assistant` | 🔓 (visiteurs : 15 questions par jour et par IP, liens vers les seules pages publiques), 20/min | `{ question (2–600), history?[{ role: 'user'\|'assistant', content }] (≤12), page? }` → `{ answer, links[{ href, label }] }` : assistant qui répond aux questions sur le fonctionnement de la plateforme (widget « Une question ? » de l'espace connecté). Liens limités aux pages permises au rôle ; le serveur ne conserve pas la conversation |
 | `POST /ai/orientation` | 🔒, 10/min | `{ need (20–1000) }` → `{ summary, domains[{ id, slug, name, reason }], skills[] }` (domaines limités au catalogue) |
 | `POST /ai/mentors/:id/explanation` | 🔒 MENTEE, 20/min | `{ score, reasons[], text, source: 'ai'\|'rules' }` ; sans IA, `text` est nul et les raisons restent (mise en cache 24 h) |
 | `POST /ai/mentorships/:id/path-proposal` | 🔒 participant (mentorat actif), 10/min | `{ focus? (≤300) }` → `{ goals[{ title, description, milestones[] }] }` : rien n'est enregistré, l'interface crée ensuite les objectifs validés via `POST /mentorships/:id/goals` |
@@ -638,4 +642,12 @@ Erreurs : 503 `AI_UNAVAILABLE`, 429 `AI_QUOTA_REACHED` (30 appels par personne e
 **Assistant** : il ne répond qu'à partir du guide `modules/ai/assistant.knowledge.ts` (texte et liste des pages par rôle). **À mettre à jour à chaque évolution fonctionnelle**, sinon l'assistant décrira l'ancien comportement. `pnpm --filter backend ai:eval-assistant -- gpt-5.4-mini` rejoue 27 questions (trois rôles, hors sujet, tentative de manipulation, suivi de conversation) et contrôle mots attendus, mots interdits et liens : 27/27, environ 2,5 s et 3 800 jetons d'entrée par question.
 
 Résultat : modèle par défaut `gpt-5.4-mini` (effort de raisonnement `low`). Les consignes s'appuient sur les compétences réellement proposées par les mentors, les parcours guidés du domaine et le niveau de correspondance (forte, partielle, faible).
+
+### Bibliothèque : validation, couvertures, livres (6 novembre)
+
+- Types ajoutés : `BOOK`, `GUIDE`, `PODCAST`. Champs : `status` (`PUBLISHED` | `PENDING` | `REJECTED`), `workAuthor`, `language`, `license` (`AUTHOR` | `PERMISSION` | `CC` | `PUBLIC_DOMAIN`), `reviewNote`, `reviewedAt`, `downloadCount`, `cover`.
+- `POST /resources/upload` (multipart) : champs + `file` (document) + `cover` (image JPEG/PNG/WebP ≤ 1 Mo, réduite par le navigateur). Un document exige `license` et `rightsConfirmed=true` (422 `RIGHTS_REQUIRED`). Document d'un mentor : `PENDING` (10 Mo max) ; équipe : publié directement (25 Mo max) ; lien ou conseil : publié directement.
+- `GET /resources` 🔓 : seulement les ressources publiées. `GET /resources/mine` 🔒 M/A : mes publications, tous statuts. `GET /resources/:id/cover` 🔓.
+- Équipe : `GET /admin/resources?status=PENDING|PUBLISHED|REJECTED`, `POST /admin/resources/:id/approve`, `POST /admin/resources/:id/reject { note (10–500) }` (409 `RESOURCE_ALREADY_REVIEWED`). Notifications `RESOURCE_SUBMITTED` (équipe), `RESOURCE_APPROVED` / `RESOURCE_REJECTED` (auteur) ; journal d'audit. `GET /admin/overview` renvoie `pendingResources`.
+- Téléchargements comptés (hors auteur et équipe). Migration `20261106150000_resource_library`.
 

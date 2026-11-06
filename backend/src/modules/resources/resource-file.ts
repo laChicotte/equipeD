@@ -1,4 +1,4 @@
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileFieldsInterceptor, FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
 import { unprocessable } from '../../common/errors.js';
 
@@ -12,6 +12,10 @@ import { unprocessable } from '../../common/errors.js';
 
 /** Taille maximale d'un document (10 Mo), aussi garantie par une contrainte SQL. */
 export const RESOURCE_FILE_MAX_BYTES = 10 * 1024 * 1024;
+/** Document publié par l'équipe dans la bibliothèque (livres, guides) : 25 Mo. */
+export const LIBRARY_FILE_MAX_BYTES = 25 * 1024 * 1024;
+/** Couverture (réduite par le navigateur avant l'envoi) : 1 Mo au plus. */
+export const COVER_MAX_BYTES = 1024 * 1024;
 
 type Family = 'pdf' | 'zip' | 'ole' | 'png' | 'jpeg' | 'webp' | 'text';
 
@@ -136,6 +140,34 @@ export const documentUpload = () =>
   FileInterceptor('file', {
     limits: { fileSize: RESOURCE_FILE_MAX_BYTES, files: 1, fields: 10, fieldSize: 8 * 1024 },
   });
+
+/** Bibliothèque : un document « file » et une couverture « cover » facultatifs. */
+export const libraryUpload = () =>
+  FileFieldsInterceptor(
+    [
+      { name: 'file', maxCount: 1 },
+      { name: 'cover', maxCount: 1 },
+    ],
+    { limits: { fileSize: LIBRARY_FILE_MAX_BYTES, files: 2, fields: 20, fieldSize: 8 * 1024 } },
+  );
+
+/** Couverture : image PNG, JPEG ou WebP réelle (signature vérifiée), 1 Mo au plus. */
+export function readUploadedCover(upload: UploadedDocument) {
+  const fail = (message: string) =>
+    unprocessable('COVER_INVALID', message, [{ field: 'cover', messages: [message] }]);
+  if (upload.size === 0 || upload.size > COVER_MAX_BYTES)
+    throw fail('La couverture doit être une image de 1 Mo au plus.');
+  const buf = upload.buffer;
+  const mimeType = matchesFamily(buf, 'jpeg')
+    ? 'image/jpeg'
+    : matchesFamily(buf, 'png')
+      ? 'image/png'
+      : matchesFamily(buf, 'webp')
+        ? 'image/webp'
+        : null;
+  if (!mimeType) throw fail('La couverture doit être une image JPEG, PNG ou WebP.');
+  return { mimeType, size: upload.size, data: new Uint8Array(buf) };
+}
 
 /**
  * Contrôle d'un document reçu : non vide, extension autorisée, contenu réel cohérent.

@@ -13,10 +13,10 @@ import type { AppConfigService } from '../src/config/app-config.service.js';
 import { normalizeSearch } from '../src/common/text.js';
 import { parseAssistant } from '../src/modules/ai/ai.logic.js';
 import { assistantPrompt } from '../src/modules/ai/ai.prompts.js';
-import { ASSISTANT_PAGES } from '../src/modules/ai/assistant.knowledge.js';
+import { ASSISTANT_PAGES, VISITOR_PAGES } from '../src/modules/ai/assistant.knowledge.js';
 import { OpenAiClient } from '../src/modules/ai/openai.client.js';
 
-type Role = 'MENTEE' | 'MENTOR' | 'ADMIN';
+type Role = 'MENTEE' | 'MENTOR' | 'ADMIN' | 'VISITOR';
 interface Case {
   role: Role;
   question: string;
@@ -188,6 +188,21 @@ const CASES: Case[] = [
   },
 ];
 
+CASES.push(
+  {
+    role: 'VISITOR',
+    question: 'C’est quoi TalentsConnect et est-ce gratuit ?',
+    must: [['mentor'], ['gratuit']],
+    link: '/inscription',
+  },
+  {
+    role: 'VISITOR',
+    question: 'Je cherche un mentor en développement web, comment faire ?',
+    must: [['trouver un mentor', 'recherche'], ['compte']],
+    link: '/mentors',
+  },
+);
+
 const models = process.argv.slice(2).filter((a) => !a.startsWith('--'));
 const out = process.env.AI_EVAL_OUT ?? 'ai-eval';
 
@@ -215,9 +230,12 @@ async function main() {
       results.push(...(await Promise.all(CASES.slice(i, i + 4).map(runCase))));
     }
     async function runCase(c: Case) {
-      const pages = ASSISTANT_PAGES.filter(
-        (p) => p.roles === 'all' || p.roles.includes(c.role),
-      ).map(({ href, label }) => ({ href, label }));
+      const pages =
+        c.role === 'VISITOR'
+          ? VISITOR_PAGES
+          : ASSISTANT_PAGES.filter(
+              (p) => p.roles === 'all' || p.roles.includes(c.role as Exclude<Role, 'VISITOR'>),
+            ).map(({ href, label }) => ({ href, label }));
       const r = await client.complete(
         assistantPrompt({
           role: c.role,

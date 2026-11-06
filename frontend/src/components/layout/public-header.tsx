@@ -230,9 +230,6 @@ export function PublicFooter() {
             TalentsConnect
           </text>
         </svg>
-        <p className="mt-4 text-[13px] text-ink-100/80">
-          Prototype de démonstration réalisé pendant le hackathon. Données et profils fictifs.
-        </p>
       </div>
     </footer>
   );

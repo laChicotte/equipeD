@@ -1,3 +1,4 @@
+import request from 'supertest';
 import type { INestApplication } from '@nestjs/common';
 import { vi } from 'vitest';
 import { OpenAiClient, type JsonCompletion } from '../src/modules/ai/openai.client.js';
@@ -194,6 +195,27 @@ describe('Assistance par IA (fournisseur simulé)', () => {
       .send({ question: 'Comment ça marche ?' })
       .expect(503);
     expect(down.body.code).toBe('AI_UNAVAILABLE');
+  });
+
+  it('assistant : ouvert aux visiteurs, avec les seules pages publiques', async () => {
+    reply = () => ({
+      answer: '1. Créez un compte gratuit. 2. Cherchez un mentor.',
+      links: ['/inscription', '/mentors', '/tableau-de-bord', '/admin'],
+    });
+    const server = app.getHttpServer();
+    const status = await request(server).get(`${API}/ai/status`).expect(200);
+    expect(status.body).toMatchObject({ enabled: true, remainingToday: 0 });
+    const res = await request(server)
+      .post(`${API}/ai/assistant`)
+      .set('Origin', 'http://localhost:3000')
+      .send({ question: 'Comment ça marche ?', page: '/' })
+      .expect(200);
+    expect(res.body.links.map((l: { href: string }) => l.href)).toEqual([
+      '/inscription',
+      '/mentors',
+    ]);
+    const payload = JSON.parse(calls[0].user) as { contexte: { role: string } };
+    expect(payload.contexte.role).toBe('visiteur non connecté');
   });
 
   it('est masquable : sans clé, le statut l’indique et les routes refusent', async () => {
