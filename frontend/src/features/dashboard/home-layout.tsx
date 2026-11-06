@@ -9,6 +9,7 @@ import { useMe } from '@/features/auth/api';
 import { useMentors, useProfile, useSuggestions } from '@/features/catalog/api';
 import { useDashboard } from '@/features/mentorships/api';
 import { EditableAvatar } from '@/features/account/avatar-editor';
+import { ProfileBanner } from '@/features/account/profile-banner';
 import { useOpportunities } from '@/features/opportunities/api';
 import { formatDate, fullName } from '@/lib/format';
 import { opportunityTypeLabels, roleLabels, situationLabels } from '@/lib/labels';
@@ -54,13 +55,7 @@ function ProfileCard() {
   return (
     <div className="grid gap-2">
       <section className={panel} aria-label="Mon profil">
-        <div className="relative isolate h-[58px] overflow-hidden bg-ink-900">
-          <div className="pattern-kente absolute inset-0 -z-10 opacity-[0.16]" aria-hidden />
-          <div
-            className="absolute -top-8 right-0 -z-10 size-28 rounded-full bg-amber-400/35 blur-2xl"
-            aria-hidden
-          />
-        </div>
+        <ProfileBanner person={me} editable className="h-[72px]" />
         <div className="px-4 pb-4">
           <EditableAvatar className="relative z-[1] -mt-9" />
           <Link

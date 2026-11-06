@@ -10,14 +10,20 @@ import {
   Inbox,
   MessageSquareText,
   Search,
+  GraduationCap,
+  Menu,
   Send,
+  Settings,
   Users,
+  X,
   type LucideIcon,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
+import { Avatar } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/misc';
+import { roleLabels } from '@/lib/labels';
 import { AssistantWidget, PublicAssistant } from '@/features/ai/assistant-widget';
 import { homeFor, useMe } from '@/features/auth/api';
 import { useDashboard } from '@/features/mentorships/api';
@@ -131,91 +137,153 @@ function useBadgeCounts(enabled: boolean) {
   };
 }
 
-function TopNav({
+/** Sections de la barre latérale : l'espace de travail, puis la découverte. */
+function sectionsFor(me: Me, items: NavItem[]) {
+  const discover = ['/mentors', '/ressources', '/opportunites'];
+  const work = items.filter((i) => !discover.includes(i.href));
+  const explore = items.filter((i) => discover.includes(i.href));
+  return [
+    { title: 'Mon espace', items: work },
+    { title: me.role === 'MENTOR' ? 'Partager' : 'Découvrir', items: explore },
+  ];
+}
+
+function SidebarNav({
   me,
   items,
   counts,
+  onNavigate,
 }: {
   me: Me;
   items: NavItem[];
   counts: Record<string, number>;
+  onNavigate?: () => void;
 }) {
   const pathname = usePathname();
+  const link = (item: NavItem) => {
+    const active = isActive(pathname, item);
+    const Icon = item.icon;
+    const count = item.badge ? (counts[item.badge] ?? 0) : 0;
+    return (
+      <li key={item.href}>
+        <Link
+          href={item.href}
+          onClick={onNavigate}
+          aria-current={active ? 'page' : undefined}
+          className={cn(
+            'group relative flex h-10 items-center gap-3 rounded-lg px-3 text-[14px] font-medium transition-colors',
+            active ? 'bg-white/10 text-white' : 'text-ink-100/85 hover:bg-white/5 hover:text-white',
+          )}
+        >
+          {active && (
+            <span
+              className="absolute top-2 bottom-2 left-0 w-[3px] rounded-r-full bg-amber-400"
+              aria-hidden
+            />
+          )}
+          <Icon
+            className={cn(
+              'size-[18px] shrink-0 transition-colors',
+              active ? 'text-amber-400' : 'text-ink-100/60 group-hover:text-ink-100',
+            )}
+            aria-hidden
+          />
+          <span className="flex-1 truncate">{item.label}</span>
+          {count > 0 && (
+            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-teal-600 px-1.5 text-[11px] font-semibold text-white tabular-nums">
+              {count > 99 ? '99+' : count}
+            </span>
+          )}
+        </Link>
+      </li>
+    );
+  };
+  return (
+    <nav aria-label="Navigation de l’espace" className="flex-1 overflow-y-auto px-3 py-5">
+      {sectionsFor(me, items).map((section) =>
+        section.items.length ? (
+          <div key={section.title} className="mb-6 last:mb-0">
+            <p className="px-3 pb-2 text-[11px] font-semibold tracking-[0.08em] text-ink-100/50 uppercase">
+              {section.title}
+            </p>
+            <ul className="space-y-0.5">{section.items.map(link)}</ul>
+          </div>
+        ) : null,
+      )}
+      <div className="mt-6 border-t border-white/10 pt-5">
+        <ul className="space-y-0.5">
+          {link({ href: '/compte', label: 'Mon compte', short: 'Compte', icon: Settings })}
+          {me.role === 'MENTEE' &&
+            link({
+              href: '/devenir-mentor',
+              label: 'Devenir mentor',
+              short: 'Mentor',
+              icon: GraduationCap,
+            })}
+        </ul>
+      </div>
+    </nav>
+  );
+}
+
+function SidebarBrand({ me, action }: { me: Me; action?: ReactNode }) {
+  return (
+    <div className="flex h-16 shrink-0 items-center gap-2 border-b border-white/10 px-4">
+      <span className="rounded-lg bg-white px-2 py-1">
+        <Logo href={homeFor(me)} className="text-ink-900" />
+      </span>
+      {action && <span className="ml-auto">{action}</span>}
+    </div>
+  );
+}
+
+/** Carte du compte en bas de la barre latérale. */
+function SidebarAccount({ me }: { me: Me }) {
+  return (
+    <div className="border-t border-white/10 p-3">
+      <Link
+        href="/compte"
+        className="flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-white/5"
+      >
+        <Avatar person={me} size="sm" className="ring-2 ring-white/10" />
+        <span className="min-w-0">
+          <span className="block truncate text-[13px] font-semibold text-white">
+            {me.firstName} {me.lastName}
+          </span>
+          <span className="block truncate text-[12px] text-ink-100/60">{roleLabels[me.role]}</span>
+        </span>
+      </Link>
+    </div>
+  );
+}
+
+function HeaderSearch() {
   const router = useRouter();
   const [q, setQ] = useState('');
   return (
-    <header className="sticky top-0 z-30 border-b border-border/70 print:hidden bg-surface/90 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-[1240px] items-center gap-3 px-4 sm:px-6">
-        <Logo href={homeFor(me)} className="text-ink-900" />
-
-        {/* Navigation centrale en pastilles */}
-        <nav aria-label="Navigation de l’espace" className="mx-auto hidden min-w-0 lg:block">
-          <ul className="scrollbar-none flex items-center gap-1 overflow-x-auto rounded-lg bg-surface-muted/70 p-1">
-            {items.map((item) => {
-              const active = isActive(pathname, item);
-              const Icon = item.icon;
-              const count = item.badge ? (counts[item.badge] ?? 0) : 0;
-              return (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    aria-current={active ? 'page' : undefined}
-                    aria-label={item.label}
-                    title={item.label}
-                    className={cn(
-                      'relative inline-flex h-10 items-center gap-2 rounded-md px-3 text-[14px] font-semibold whitespace-nowrap transition-colors',
-                      active
-                        ? 'bg-ink-900 text-white shadow-card'
-                        : 'text-muted-foreground hover:bg-surface hover:text-ink-900',
-                    )}
-                  >
-                    <Icon
-                      className={cn('size-[18px] shrink-0', active && 'text-amber-400')}
-                      aria-hidden
-                    />
-                    {active && <span>{item.short}</span>}
-                    {count > 0 && (
-                      <span className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-teal-600 px-1 text-[10px] font-semibold text-white tabular-nums">
-                        {count > 9 ? '9+' : count}
-                      </span>
-                    )}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
-
-        {/* Recherche à droite */}
-        <form
-          role="search"
-          className="relative ml-auto min-w-0 flex-1 lg:ml-0 lg:w-[220px] lg:flex-none xl:w-[260px]"
-          onSubmit={(e) => {
-            e.preventDefault();
-            router.push(q.trim() ? `/mentors?q=${encodeURIComponent(q.trim())}` : '/mentors');
-          }}
-        >
-          <Search
-            className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
-            aria-hidden
-          />
-          <label htmlFor="recherche-globale" className="sr-only">
-            Rechercher un mentor
-          </label>
-          <input
-            id="recherche-globale"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Rechercher un mentor…"
-            className="h-10 w-full rounded-md border border-border bg-background pr-3 pl-9 text-[14px] text-ink-900 outline-none placeholder:text-muted-foreground focus:border-teal-600 focus:bg-surface focus:ring-3 focus:ring-teal-600/15"
-          />
-        </form>
-        <div className="flex shrink-0 items-center gap-0.5">
-          {!isStaff(me.role) && <NotificationBell />}
-          <UserMenu me={me} compact />
-        </div>
-      </div>
-    </header>
+    <form
+      role="search"
+      className="relative hidden w-full max-w-md md:block"
+      onSubmit={(e) => {
+        e.preventDefault();
+        router.push(q.trim() ? `/mentors?q=${encodeURIComponent(q.trim())}` : '/mentors');
+      }}
+    >
+      <Search
+        className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+        aria-hidden
+      />
+      <label htmlFor="recherche-globale" className="sr-only">
+        Rechercher un mentor
+      </label>
+      <input
+        id="recherche-globale"
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder="Rechercher un mentor, une compétence…"
+        className="h-10 w-full rounded-lg border border-border bg-background pr-3 pl-9 text-[14px] text-ink-900 outline-none placeholder:text-muted-foreground focus:border-teal-600 focus:bg-surface focus:ring-3 focus:ring-teal-600/15"
+      />
+    </form>
   );
 }
 
@@ -292,18 +360,84 @@ function MemberLayout({ me, children }: { me: Me; children: ReactNode }) {
   const items = navFor(me);
   usePushSync(true);
   const counts = useBadgeCounts(!isStaff(me.role) && me.hasProfile);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open]);
+
   return (
     <div className="flex min-h-dvh flex-col bg-background">
       <OfflineBanner />
-      <TopNav me={me} items={items} counts={counts} />
-      <main
-        id="contenu"
-        className="mx-auto w-full max-w-[1240px] flex-1 px-4 pt-6 pb-28 sm:px-6 lg:pb-12"
-      >
-        <VerifyEmailBanner me={me} />
-        <PushPrompt />
-        {children}
-      </main>
+      <div className="flex flex-1">
+        {/* Barre latérale (ordinateur) */}
+        <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col bg-ink-950 lg:flex print:hidden">
+          <SidebarBrand me={me} />
+          <SidebarNav me={me} items={items} counts={counts} />
+          <SidebarAccount me={me} />
+        </aside>
+
+        {/* Tiroir (mobile et tablette) */}
+        {open && (
+          <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-label="Menu">
+            <button
+              type="button"
+              aria-label="Fermer le menu"
+              onClick={() => setOpen(false)}
+              className="absolute inset-0 animate-fade-in bg-ink-950/50"
+            />
+            <aside className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] animate-slide-up flex-col bg-ink-950 shadow-raised">
+              <SidebarBrand
+                me={me}
+                action={
+                  <button
+                    type="button"
+                    onClick={() => setOpen(false)}
+                    aria-label="Fermer le menu"
+                    className="-mr-1 inline-flex size-10 items-center justify-center rounded-md text-ink-100 hover:bg-white/10"
+                  >
+                    <X className="size-5" aria-hidden />
+                  </button>
+                }
+              />
+              <SidebarNav me={me} items={items} counts={counts} onNavigate={() => setOpen(false)} />
+              <SidebarAccount me={me} />
+            </aside>
+          </div>
+        )}
+
+        <div className="flex min-w-0 flex-1 flex-col">
+          <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border/70 bg-surface/90 px-4 backdrop-blur-md sm:px-6 print:hidden">
+            <button
+              type="button"
+              onClick={() => setOpen(true)}
+              aria-label="Ouvrir le menu"
+              className="inline-flex size-10 items-center justify-center rounded-md text-ink-900 hover:bg-surface-muted lg:hidden"
+            >
+              <Menu className="size-5" aria-hidden />
+            </button>
+            <span className="lg:hidden">
+              <Logo href={homeFor(me)} className="text-ink-900" />
+            </span>
+            <HeaderSearch />
+            <div className="ml-auto flex shrink-0 items-center gap-1">
+              <NotificationBell />
+              <UserMenu me={me} compact />
+            </div>
+          </header>
+          <main
+            id="contenu"
+            className="mx-auto w-full max-w-[1240px] flex-1 px-4 pt-6 pb-28 sm:px-6 lg:px-8 lg:pb-12"
+          >
+            <VerifyEmailBanner me={me} />
+            <PushPrompt />
+            {children}
+          </main>
+        </div>
+      </div>
       <MobileTabBar items={items} counts={counts} />
       <AssistantWidget role={me.role} />
     </div>

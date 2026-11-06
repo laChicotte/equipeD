@@ -96,6 +96,7 @@ export const auditActionLabels: Record<string, string> = {
   CERTIFICATE_REVOKED: 'Certificat révoqué',
   RESOURCE_REMOVED: 'Ressource retirée',
   OPPORTUNITY_ARCHIVED: 'Opportunité archivée',
+  TEAM_MEMBER_INVITED: 'Membre invité dans l’équipe',
   RESOURCE_APPROVED: 'Ressource publiée',
   RESOURCE_REJECTED: 'Ressource refusée',
 };
@@ -148,6 +149,14 @@ export function usePlatformMutations() {
           method: 'PATCH',
           body: { role },
         }),
+      onSuccess: refresh,
+    }),
+    invite: useMutation({
+      mutationFn: (body: { email: string; firstName: string; lastName: string }) =>
+        api<{ id: string; emailed: boolean; path: string | null; expiresAt: string }>(
+          '/admin/team/invite',
+          { method: 'POST', body },
+        ),
       onSuccess: refresh,
     }),
     revokeCertificate: useMutation({

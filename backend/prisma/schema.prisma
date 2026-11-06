@@ -180,6 +180,8 @@ model User {
   onboardedAt     DateTime?  @map("onboarded_at") @db.Timestamptz(3)
   /// Date de la dernière photo de profil (null = aucune) : sert aussi de clé de cache côté client.
   avatarUpdatedAt DateTime?  @map("avatar_updated_at") @db.Timestamptz(3)
+  /// Date de la bannière du profil (null : motif par défaut).
+  bannerUpdatedAt DateTime?  @map("banner_updated_at") @db.Timestamptz(3)
   createdAt       DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt       DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
 
@@ -226,6 +228,7 @@ model User {
   resourceReviews         ResourceReview[]
   resourceComments        ResourceComment[]
   emailVerificationTokens EmailVerificationToken[]
+  banner                  UserBanner?
 
   @@index([role, status])
   @@map("users")
@@ -240,6 +243,17 @@ model UserAvatar {
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@map("user_avatars")
+}
+
+/// Bannière du profil (image large en haut de la carte de profil), recadrée par le navigateur.
+model UserBanner {
+  userId    String   @id @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mimeType  String   @map("mime_type") @db.VarChar(32)
+  data      Bytes
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("user_banners")
 }
 
 /// Session d'authentification opaque : seul le hash SHA-256 du jeton est stocké.

@@ -17,7 +17,7 @@ import {
   UserMinus,
   UserPlus,
   Users,
-  type LucideIcon,
+  Video,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
@@ -33,8 +33,8 @@ import { Input, NativeSelect, Textarea } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/misc';
 import { DataTable } from '@/components/admin/data-table';
 import { FunnelChart, TrendChart, formatNumber } from '@/components/admin/charts';
-import { Panel } from '@/components/admin/ui';
-import { useAdminUsers } from '@/features/admin/api';
+import { Panel, Segmented, StatCard } from '@/components/admin/ui';
+import { useAdminOverview, useAdminUsers } from '@/features/admin/api';
 import { useMe } from '@/features/auth/api';
 import { formatDuration } from '@/features/certificates/api';
 import { useOpportunities, useOpportunityMutations } from '@/features/opportunities/api';
@@ -73,33 +73,14 @@ function Guard({ children }: { children: React.ReactNode }) {
 
 /* ── Pilotage ─────────────────────────────────────────────────────────────── */
 
-function Kpi({
-  label,
-  value,
-  hint,
-  icon: Icon,
-}: {
-  label: string;
-  value: string | number;
-  hint?: string;
-  icon: LucideIcon;
-}) {
+function KpiGroup({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className={cn(panel, 'min-w-0 p-3.5 sm:p-4')}>
-      <div className="flex items-start justify-between gap-2">
-        <span className="text-[13px] font-medium text-muted-foreground">{label}</span>
-        <span
-          className="inline-flex size-8 shrink-0 items-center justify-center rounded-md bg-ink-50 text-ink-800"
-          aria-hidden
-        >
-          <Icon className="size-4" />
-        </span>
-      </div>
-      <p className="mt-1 font-display text-[28px] leading-none font-semibold text-ink-900 tabular-nums">
-        {value}
-      </p>
-      {hint && <p className="mt-1.5 text-[12px] text-muted-foreground">{hint}</p>}
-    </div>
+    <section className="grid gap-3">
+      <h2 className="text-[12px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
+        {title}
+      </h2>
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">{children}</div>
+    </section>
   );
 }
 
@@ -147,89 +128,102 @@ export function PilotageView() {
             0,
           );
           return (
-            <div className="grid gap-6">
-              <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-                <Kpi
+            <div className="grid gap-8">
+              <KpiGroup title="Communauté">
+                <StatCard
                   label="Membres"
                   value={users}
-                  hint={`${m.users.byRole.MENTEE ?? 0} mentorés · ${m.users.byRole.MENTOR ?? 0} mentors · +${m.users.new7d} en 7 jours`}
                   icon={Users}
+                  hint={`${m.users.byRole.MENTEE ?? 0} mentorés · ${m.users.byRole.MENTOR ?? 0} mentors`}
+                  trend={m.activity.signups}
                 />
-                <Kpi
+                <StatCard
                   label="Mentors publiés"
                   value={m.mentors.published}
-                  hint={`${m.mentors.verified} vérifiés · ${m.mentors.toReview} à examiner`}
                   icon={ShieldPlus}
+                  hint={`${m.mentors.verified} vérifiés · ${m.mentors.toReview} à examiner`}
                 />
-                <Kpi
+                <StatCard
                   label="Taux d’acceptation"
                   value={
                     m.requests.acceptanceRate === null ? '—' : `${m.requests.acceptanceRate} %`
                   }
+                  icon={Inbox}
                   hint={
                     m.requests.medianResponseHours === null
                       ? 'Aucune décision encore'
                       : `Réponse médiane en ${m.requests.medianResponseHours} h`
                   }
-                  icon={Inbox}
                 />
-                <Kpi
-                  label="Mentorats en cours"
-                  value={m.mentorships.ACTIVE ?? 0}
-                  hint={`${m.mentorships.COMPLETED ?? 0} menés à terme`}
-                  icon={Users}
-                />
-                <Kpi
-                  label="Séances réalisées"
-                  value={m.sessions.byStatus.COMPLETED ?? 0}
-                  hint={`${m.sessions.completedHours} h d’accompagnement`}
-                  icon={CalendarCheck2}
-                />
-                <Kpi
+                <StatCard
                   label="Satisfaction"
                   value={
                     m.feedback.average === null
                       ? '—'
                       : `${m.feedback.average.toLocaleString('fr-FR')} / 5`
                   }
-                  hint={`${m.feedback.count} évaluation${m.feedback.count > 1 ? 's' : ''} de séance`}
                   icon={Star}
+                  hint={`${m.feedback.count} évaluation${m.feedback.count > 1 ? 's' : ''} de séance`}
                 />
-                <Kpi
+              </KpiGroup>
+              <KpiGroup title="Accompagnement">
+                <StatCard
+                  label="Mentorats en cours"
+                  value={m.mentorships.ACTIVE ?? 0}
+                  icon={Users}
+                  hint={`${m.mentorships.COMPLETED ?? 0} menés à terme`}
+                />
+                <StatCard
+                  label="Séances réalisées"
+                  value={m.sessions.byStatus.COMPLETED ?? 0}
+                  icon={CalendarCheck2}
+                  hint={`${m.sessions.completedHours} h d’accompagnement`}
+                  trend={m.activity.sessions}
+                />
+                <StatCard
+                  label="Objectifs atteints"
+                  value={m.goals.completed}
+                  icon={Target}
+                  hint={`sur ${m.goals.total} définis · ${m.goals.inProgress} en cours`}
+                />
+                <StatCard
                   label="Certificats délivrés"
                   value={m.certificates.valid}
+                  icon={Award}
                   hint={
                     m.certificates.revoked
                       ? `${m.certificates.revoked} révoqué(s)`
                       : 'Aucun révoqué'
                   }
-                  icon={Award}
                 />
-                <Kpi
-                  label="Messages échangés"
+              </KpiGroup>
+              <KpiGroup title="Échanges">
+                <StatCard
+                  label="Messages"
                   value={m.messages.total}
-                  hint={`${m.messages.last7d} ces 7 derniers jours`}
                   icon={MessagesSquare}
+                  hint={`${m.messages.last7d} ces 7 derniers jours`}
+                  trend={m.activity.messages}
                 />
-                <Kpi
-                  label="Objectifs atteints"
-                  value={m.goals.completed}
-                  hint={`sur ${m.goals.total} définis · ${m.goals.inProgress} en cours`}
-                  icon={Target}
-                />
-                <Kpi
+                <StatCard
                   label="Ateliers réalisés"
                   value={m.workshops.held}
-                  hint={`${m.workshops.participations} participation(s) · ${m.workshops.upcoming} à venir`}
                   icon={Presentation}
+                  hint={`${m.workshops.participations} participation(s) · ${m.workshops.upcoming} à venir`}
                 />
-                <Kpi
+                <StatCard
                   label="Appels audio"
                   value={m.calls.audio}
-                  hint={`${m.calls.audioMinutes} min · vidéo : ${m.calls.video} appel(s), ${m.calls.videoMinutes} min`}
                   icon={Phone}
+                  hint={`${m.calls.audioMinutes} min`}
                 />
-              </div>
+                <StatCard
+                  label="Appels vidéo"
+                  value={m.calls.video}
+                  icon={Video}
+                  hint={`${m.calls.videoMinutes} min`}
+                />
+              </KpiGroup>
 
               <section aria-labelledby="titre-activite">
                 <h2
@@ -493,59 +487,162 @@ export function TeamView() {
           )}
         </section>
 
-        <section className={cn(panel, 'p-5')} aria-labelledby="titre-nommer">
-          <h2 id="titre-nommer" className="font-display text-[17px] font-semibold text-ink-900">
-            Nommer un administrateur
-          </h2>
-          <p className="mt-1 text-[13px] text-muted-foreground">
-            Parmi les comptes actifs, sans mentorat en cours ni demande en attente.
-          </p>
-          <Field label="Rechercher un compte" className="mt-4">
-            <Input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Nom ou adresse email"
-            />
-          </Field>
-          <ul className="mt-3 grid gap-1">
-            {candidates.map((u) => (
-              <li
-                key={u.id}
-                className="flex items-center gap-3 rounded-md px-2 py-2 hover:bg-background"
-              >
-                <Avatar person={u} size="sm" />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[13px] font-semibold text-ink-900">
-                    {fullName(u)}
-                  </span>
-                  <span className="block truncate text-[11px] text-muted-foreground">
-                    {roleLabels[u.role]} · {u.email}
-                  </span>
-                </span>
-                <ConfirmButton
-                  variant="secondary"
-                  title={`Nommer ${u.firstName} administrateur ?`}
-                  description="Il ou elle pourra modérer les comptes, les mentors et les domaines. Ses accès de mentor ou de mentoré seront retirés."
-                  confirmLabel="Nommer administrateur"
-                  loading={changeRole.isPending && changeRole.variables?.id === u.id}
-                  onConfirm={() =>
-                    run(u.id, 'ADMIN', `${u.firstName} est maintenant administrateur`)
-                  }
+        <div className="grid content-start gap-6">
+          <InvitePanel />
+          <section className={cn(panel, 'p-5')} aria-labelledby="titre-nommer">
+            <h2 id="titre-nommer" className="font-display text-[17px] font-semibold text-ink-900">
+              Nommer un administrateur
+            </h2>
+            <p className="mt-1 text-[13px] text-muted-foreground">
+              Parmi les comptes actifs, sans mentorat en cours ni demande en attente.
+            </p>
+            <Field label="Rechercher un compte" className="mt-4">
+              <Input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Nom ou adresse email"
+              />
+            </Field>
+            <ul className="mt-3 grid gap-1">
+              {candidates.map((u) => (
+                <li
+                  key={u.id}
+                  className="flex items-center gap-3 rounded-md px-2 py-2 hover:bg-background"
                 >
-                  <UserPlus aria-hidden />
-                  Nommer
-                </ConfirmButton>
-              </li>
-            ))}
-            {q.trim().length >= 2 && candidates.length === 0 && (
-              <li className="px-2 py-3 text-[13px] text-muted-foreground">
-                Aucun compte correspondant.
-              </li>
-            )}
-          </ul>
-        </section>
+                  <Avatar person={u} size="sm" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[13px] font-semibold text-ink-900">
+                      {fullName(u)}
+                    </span>
+                    <span className="block truncate text-[11px] text-muted-foreground">
+                      {roleLabels[u.role]} · {u.email}
+                    </span>
+                  </span>
+                  <ConfirmButton
+                    variant="secondary"
+                    title={`Nommer ${u.firstName} administrateur ?`}
+                    description="Il ou elle pourra modérer les comptes, les mentors et les domaines. Ses accès de mentor ou de mentoré seront retirés."
+                    confirmLabel="Nommer administrateur"
+                    loading={changeRole.isPending && changeRole.variables?.id === u.id}
+                    onConfirm={() =>
+                      run(u.id, 'ADMIN', `${u.firstName} est maintenant administrateur`)
+                    }
+                  >
+                    <UserPlus aria-hidden />
+                    Nommer
+                  </ConfirmButton>
+                </li>
+              ))}
+              {q.trim().length >= 2 && candidates.length === 0 && (
+                <li className="px-2 py-3 text-[13px] text-muted-foreground">
+                  Aucun compte correspondant.
+                </li>
+              )}
+            </ul>
+          </section>
+        </div>
       </div>
     </Guard>
+  );
+}
+
+/** Invitation d'une nouvelle personne dans l'équipe (compte créé, lien d'activation). */
+function InvitePanel() {
+  const { invite } = usePlatformMutations();
+  const [form, setForm] = useState({ firstName: '', lastName: '', email: '' });
+  const [link, setLink] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const valid =
+    form.firstName.trim() && form.lastName.trim() && /^\S+@\S+\.\S+$/.test(form.email.trim());
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!valid) return;
+    invite.mutate(
+      {
+        firstName: form.firstName.trim(),
+        lastName: form.lastName.trim(),
+        email: form.email.trim().toLowerCase(),
+      },
+      {
+        onSuccess: (res) => {
+          if (res.emailed) {
+            toast.success(`Invitation envoyée à ${form.email.trim()}`, {
+              description: 'Le lien d’activation est valable 72 heures.',
+            });
+            setLink(null);
+          } else {
+            setLink(res.path ? `${window.location.origin}${res.path}` : null);
+            setCopied(false);
+          }
+          setForm({ firstName: '', lastName: '', email: '' });
+        },
+        onError: (err) => toast.error(errorMessage(err)),
+      },
+    );
+  };
+  return (
+    <section className={cn(panel, 'p-5')} aria-labelledby="titre-inviter">
+      <h2 id="titre-inviter" className="font-display text-[17px] font-semibold text-ink-900">
+        Inviter une personne
+      </h2>
+      <p className="mt-1 text-[13px] text-muted-foreground">
+        Pour vous aider à administrer : son compte est créé et elle reçoit un email pour choisir son
+        mot de passe (lien valable 72 heures).
+      </p>
+      <form onSubmit={submit} className="mt-4 grid gap-3">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Prénom">
+            <Input
+              value={form.firstName}
+              onChange={(e) => setForm({ ...form, firstName: e.target.value })}
+              maxLength={80}
+              autoComplete="off"
+            />
+          </Field>
+          <Field label="Nom">
+            <Input
+              value={form.lastName}
+              onChange={(e) => setForm({ ...form, lastName: e.target.value })}
+              maxLength={80}
+              autoComplete="off"
+            />
+          </Field>
+        </div>
+        <Field label="Adresse email">
+          <Input
+            type="email"
+            value={form.email}
+            onChange={(e) => setForm({ ...form, email: e.target.value })}
+            placeholder="prenom@exemple.org"
+            autoComplete="off"
+          />
+        </Field>
+        <div>
+          <Button type="submit" disabled={!valid} loading={invite.isPending}>
+            <UserPlus aria-hidden />
+            Envoyer l’invitation
+          </Button>
+        </div>
+      </form>
+      {link && (
+        <div className="mt-4 rounded-lg bg-amber-50 p-3 text-[13px] text-[#7a4a0f] ring-1 ring-amber-100">
+          <p className="font-semibold">Compte créé. Aucun email n’a pu être envoyé :</p>
+          <p className="mt-1">Remettez ce lien personnel à la personne (valable 72 heures).</p>
+          <div className="mt-2 flex items-center gap-2">
+            <code className="min-w-0 flex-1 truncate rounded bg-white px-2 py-1 text-[12px] text-ink-900">
+              {link}
+            </code>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => void navigator.clipboard.writeText(link).then(() => setCopied(true))}
+            >
+              {copied ? 'Copié' : 'Copier'}
+            </Button>
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -790,144 +887,174 @@ export function ContentView() {
   const opportunities = useOpportunities({ page: oppPage });
   const del = useDeleteResource();
   const { setArchived } = useOpportunityMutations();
+  const overview = useAdminOverview();
+  const pending = overview.data?.pendingResources ?? 0;
+  const [tab, setTab] = useState<'review' | 'resources' | 'opportunities'>('review');
   return (
     <Guard>
       <PageHeader
         title="Modération des contenus"
         description="Validation des documents proposés pour la bibliothèque, ressources publiques et opportunités. Chaque décision de l’équipe est inscrite au journal."
       />
+      <div className="mb-5">
+        <Segmented
+          label="Contenus"
+          value={tab}
+          onChange={setTab}
+          options={[
+            { value: 'review', label: 'À valider', hint: pending ? String(pending) : undefined },
+            {
+              value: 'resources',
+              label: 'Ressources publiques',
+              hint: resources.data ? String(resources.data.total) : undefined,
+            },
+            {
+              value: 'opportunities',
+              label: 'Opportunités',
+              hint: opportunities.data ? String(opportunities.data.total) : undefined,
+            },
+          ]}
+        />
+      </div>
       <div className="grid gap-8">
-        <ResourceReviewQueue />
-        <section aria-labelledby="titre-ressources" className="grid gap-3">
-          <h2 id="titre-ressources" className="font-display text-[16px] font-semibold text-ink-900">
-            Ressources publiques
-          </h2>
-          <DataTable
-            caption="Ressources publiques"
-            loading={resources.isPending}
-            rows={resources.data?.items ?? []}
-            rowKey={(r) => r.id}
-            empty="Aucune ressource publique."
-            server={
-              resources.data && {
-                page: resources.data.page,
-                totalPages: resources.data.totalPages,
-                total: resources.data.total,
-                pageSize: resources.data.pageSize,
-                onPageChange: setResPage,
+        {tab === 'review' && <ResourceReviewQueue />}
+        {tab === 'resources' && (
+          <section aria-labelledby="titre-ressources" className="grid gap-3">
+            <h2
+              id="titre-ressources"
+              className="font-display text-[16px] font-semibold text-ink-900"
+            >
+              Ressources publiques
+            </h2>
+            <DataTable
+              caption="Ressources publiques"
+              loading={resources.isPending}
+              rows={resources.data?.items ?? []}
+              rowKey={(r) => r.id}
+              empty="Aucune ressource publique."
+              server={
+                resources.data && {
+                  page: resources.data.page,
+                  totalPages: resources.data.totalPages,
+                  total: resources.data.total,
+                  pageSize: resources.data.pageSize,
+                  onPageChange: setResPage,
+                }
               }
-            }
-            columns={[
-              {
-                key: 'title',
-                header: 'Titre',
-                cell: (r) => <span className="font-semibold text-ink-900">{r.title}</span>,
-              },
-              {
-                key: 'author',
-                header: 'Auteur',
-                hideBelow: 'sm',
-                cell: (r) => <span className="whitespace-nowrap">{fullName(r.author)}</span>,
-              },
-              {
-                key: 'date',
-                header: 'Publiée le',
-                hideBelow: 'md',
-                cell: (r) => (
-                  <span className="whitespace-nowrap text-muted-foreground">
-                    {formatDate(r.createdAt)}
-                  </span>
-                ),
-              },
-              {
-                key: 'actions',
-                header: 'Actions',
-                align: 'right',
-                cell: (r) => (
-                  <ConfirmButton
-                    title="Retirer cette ressource ?"
-                    description="Elle disparaît de la bibliothèque. L’action est tracée dans le journal d’audit."
-                    confirmLabel="Retirer"
-                    loading={del.isPending && del.variables === r.id}
-                    onConfirm={() =>
-                      del.mutate(r.id, {
-                        onSuccess: () => toast.success('Ressource retirée'),
-                        onError: (e) => toast.error(errorMessage(e)),
-                      })
-                    }
-                  >
-                    <Trash2 aria-hidden />
-                    Retirer
-                  </ConfirmButton>
-                ),
-              },
-            ]}
-          />
-        </section>
-        <section aria-labelledby="titre-opps" className="grid gap-3">
-          <h2 id="titre-opps" className="font-display text-[16px] font-semibold text-ink-900">
-            Opportunités ouvertes
-          </h2>
-          <DataTable
-            caption="Opportunités ouvertes"
-            loading={opportunities.isPending}
-            rows={opportunities.data?.items ?? []}
-            rowKey={(o) => o.id}
-            empty="Aucune opportunité ouverte."
-            server={
-              opportunities.data && {
-                page: opportunities.data.page,
-                totalPages: opportunities.data.totalPages,
-                total: opportunities.data.total,
-                pageSize: opportunities.data.pageSize,
-                onPageChange: setOppPage,
-              }
-            }
-            columns={[
-              {
-                key: 'title',
-                header: 'Opportunité',
-                cell: (o) => (
-                  <div className="min-w-0">
-                    <p className="font-semibold text-ink-900">{o.title}</p>
-                    <p className="text-[12px] text-muted-foreground">{o.organization}</p>
-                  </div>
-                ),
-              },
-              {
-                key: 'author',
-                header: 'Publiée par',
-                hideBelow: 'sm',
-                cell: (o) => <span className="whitespace-nowrap">{fullName(o.author)}</span>,
-              },
-              {
-                key: 'actions',
-                header: 'Actions',
-                align: 'right',
-                cell: (o) => (
-                  <ConfirmButton
-                    title="Archiver cette opportunité ?"
-                    description="Elle n’est plus visible du public. L’action est tracée dans le journal d’audit."
-                    confirmLabel="Archiver"
-                    loading={setArchived.isPending && setArchived.variables?.id === o.id}
-                    onConfirm={() =>
-                      setArchived.mutate(
-                        { id: o.id, archived: true },
-                        {
-                          onSuccess: () => toast.success('Opportunité archivée'),
+              columns={[
+                {
+                  key: 'title',
+                  header: 'Titre',
+                  cell: (r) => <span className="font-semibold text-ink-900">{r.title}</span>,
+                },
+                {
+                  key: 'author',
+                  header: 'Auteur',
+                  hideBelow: 'sm',
+                  cell: (r) => <span className="whitespace-nowrap">{fullName(r.author)}</span>,
+                },
+                {
+                  key: 'date',
+                  header: 'Publiée le',
+                  hideBelow: 'md',
+                  cell: (r) => (
+                    <span className="whitespace-nowrap text-muted-foreground">
+                      {formatDate(r.createdAt)}
+                    </span>
+                  ),
+                },
+                {
+                  key: 'actions',
+                  header: 'Actions',
+                  align: 'right',
+                  cell: (r) => (
+                    <ConfirmButton
+                      title="Retirer cette ressource ?"
+                      description="Elle disparaît de la bibliothèque. L’action est tracée dans le journal d’audit."
+                      confirmLabel="Retirer"
+                      loading={del.isPending && del.variables === r.id}
+                      onConfirm={() =>
+                        del.mutate(r.id, {
+                          onSuccess: () => toast.success('Ressource retirée'),
                           onError: (e) => toast.error(errorMessage(e)),
-                        },
-                      )
-                    }
-                  >
-                    <Archive aria-hidden />
-                    Archiver
-                  </ConfirmButton>
-                ),
-              },
-            ]}
-          />
-        </section>
+                        })
+                      }
+                    >
+                      <Trash2 aria-hidden />
+                      Retirer
+                    </ConfirmButton>
+                  ),
+                },
+              ]}
+            />
+          </section>
+        )}
+        {tab === 'opportunities' && (
+          <section aria-labelledby="titre-opps" className="grid gap-3">
+            <h2 id="titre-opps" className="font-display text-[16px] font-semibold text-ink-900">
+              Opportunités ouvertes
+            </h2>
+            <DataTable
+              caption="Opportunités ouvertes"
+              loading={opportunities.isPending}
+              rows={opportunities.data?.items ?? []}
+              rowKey={(o) => o.id}
+              empty="Aucune opportunité ouverte."
+              server={
+                opportunities.data && {
+                  page: opportunities.data.page,
+                  totalPages: opportunities.data.totalPages,
+                  total: opportunities.data.total,
+                  pageSize: opportunities.data.pageSize,
+                  onPageChange: setOppPage,
+                }
+              }
+              columns={[
+                {
+                  key: 'title',
+                  header: 'Opportunité',
+                  cell: (o) => (
+                    <div className="min-w-0">
+                      <p className="font-semibold text-ink-900">{o.title}</p>
+                      <p className="text-[12px] text-muted-foreground">{o.organization}</p>
+                    </div>
+                  ),
+                },
+                {
+                  key: 'author',
+                  header: 'Publiée par',
+                  hideBelow: 'sm',
+                  cell: (o) => <span className="whitespace-nowrap">{fullName(o.author)}</span>,
+                },
+                {
+                  key: 'actions',
+                  header: 'Actions',
+                  align: 'right',
+                  cell: (o) => (
+                    <ConfirmButton
+                      title="Archiver cette opportunité ?"
+                      description="Elle n’est plus visible du public. L’action est tracée dans le journal d’audit."
+                      confirmLabel="Archiver"
+                      loading={setArchived.isPending && setArchived.variables?.id === o.id}
+                      onConfirm={() =>
+                        setArchived.mutate(
+                          { id: o.id, archived: true },
+                          {
+                            onSuccess: () => toast.success('Opportunité archivée'),
+                            onError: (e) => toast.error(errorMessage(e)),
+                          },
+                        )
+                      }
+                    >
+                      <Archive aria-hidden />
+                      Archiver
+                    </ConfirmButton>
+                  ),
+                },
+              ]}
+            />
+          </section>
+        )}
       </div>
     </Guard>
   );

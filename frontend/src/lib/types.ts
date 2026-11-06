@@ -50,6 +50,8 @@ export interface Me {
   lastName: string;
   /** Date de la photo de profil (null : initiales). */
   avatarUpdatedAt?: string | null;
+  /** Date de la bannière du profil (null : motif par défaut). */
+  bannerUpdatedAt?: string | null;
   role: Role;
   timezone: string;
   onboardedAt: string | null;
@@ -117,6 +119,7 @@ export interface MentorCard {
   lastName: string;
   /** Date de la photo de profil (null : initiales). */
   avatarUpdatedAt?: string | null;
+  bannerUpdatedAt?: string | null;
   headline: string;
   bio: string;
   currentPosition: string | null;

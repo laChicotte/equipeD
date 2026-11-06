@@ -69,7 +69,8 @@ export class MailService {
   constructor(private readonly config: AppConfigService) {}
 
   get enabled(): boolean {
-    return this.config.get('RESEND_API_KEY').length > 0;
+    // Jamais d'envoi réel pendant les tests automatisés (ils simulent ce service).
+    return this.config.get('RESEND_API_KEY').length > 0 && this.config.get('NODE_ENV') !== 'test';
   }
 
   /** Adresse publique du site, pour les liens des emails. */

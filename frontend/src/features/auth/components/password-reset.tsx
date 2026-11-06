@@ -1,11 +1,11 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { ArrowLeft, Check, Copy, KeyRound, MailCheck } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
@@ -171,17 +171,20 @@ export function ResetPasswordForm() {
   const params = useSearchParams();
   const router = useRouter();
   const token = params.get('jeton') ?? '';
-  const check = useQuery({
-    queryKey: ['password-reset', token],
-    queryFn: () =>
+  // Vérification du lien une seule fois à l'ouverture (appel direct, sans cache de requêtes).
+  const check = useMutation({
+    mutationFn: () =>
       api<{ valid: true; firstName: string; expiresAt: string }>('/auth/password-reset/check', {
         method: 'POST',
         body: { token },
       }),
-    enabled: token.length >= 20,
-    retry: false,
-    staleTime: Infinity,
   });
+  const started = useRef(false);
+  useEffect(() => {
+    if (started.current || token.length < 20) return;
+    started.current = true;
+    check.mutate();
+  }, [token, check]);
   const reset = useMutation({
     mutationFn: (newPassword: string) =>
       api<{ ok: true }>('/auth/password-reset', { method: 'POST', body: { token, newPassword } }),
@@ -215,7 +218,7 @@ export function ResetPasswordForm() {
       </div>
     );
   }
-  if (check.isPending) return <Skeleton className="h-72" />;
+  if (!check.isSuccess) return <Skeleton className="h-72" />;
 
   return (
     <div>

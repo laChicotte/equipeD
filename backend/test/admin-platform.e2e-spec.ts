@@ -1,3 +1,4 @@
+import request from 'supertest';
 import type { INestApplication } from '@nestjs/common';
 import {
   API,
@@ -167,5 +168,37 @@ describe('Administration : pilotage, équipe, journal et certificats', () => {
       .get(`${API}/admin/audit?action=MENTOR_MODERATED`)
       .expect(200);
     expect(audit.body.items.some((i: { targetId: string }) => i.targetId === mentor.id)).toBe(true);
+  });
+
+  it('invite une nouvelle personne dans l’équipe, qui active son compte par le lien', async () => {
+    const email = `invitee-${Date.now()}@example.test`;
+    const res = await adminAgent
+      .post(`${API}/admin/team/invite`)
+      .send({ email, firstName: 'Nouvelle', lastName: 'Admin' })
+      .expect(201);
+    // Sans service d'email (tests) : le lien est renvoyé pour être remis en main propre.
+    expect(res.body.emailed).toBe(false);
+    expect(res.body.path).toContain('/reinitialiser-mot-de-passe?jeton=');
+    await adminAgent
+      .post(`${API}/admin/team/invite`)
+      .send({ email, firstName: 'Doublon', lastName: 'Admin' })
+      .expect(409);
+    const mentor = await createMentor(app);
+    await mentor.agent
+      .post(`${API}/admin/team/invite`)
+      .send({ email: `x-${Date.now()}@example.test`, firstName: 'X', lastName: 'Y' })
+      .expect(403);
+
+    const token = new URLSearchParams(res.body.path.split('?')[1]).get('jeton');
+    await request(app.getHttpServer())
+      .post(`${API}/auth/password-reset`)
+      .set('Origin', 'http://localhost:3000')
+      .send({ token, newPassword: 'EquipeAdmin2026' })
+      .expect(200);
+    const agent = await loginAs(app, email, 'EquipeAdmin2026');
+    const me = await agent.get(`${API}/auth/me`).expect(200);
+    expect(me.body.role).toBe('ADMIN');
+    const team = await adminAgent.get(`${API}/admin/team`).expect(200);
+    expect(team.body.map((u: { email: string }) => u.email)).toContain(email);
   });
 });

@@ -15,13 +15,7 @@ import {
 import Link from 'next/link';
 import { useState } from 'react';
 import { DataTable } from '@/components/admin/data-table';
-import {
-  DonutChart,
-  FunnelChart,
-  GroupedBars,
-  TrendChart,
-  formatNumber,
-} from '@/components/admin/charts';
+import { DonutChart, FunnelChart, TrendChart, formatNumber } from '@/components/admin/charts';
 import { Panel, Segmented, StatCard } from '@/components/admin/ui';
 import { AccessDenied, ErrorState, PageHeader } from '@/components/feedback/states';
 import { Badge } from '@/components/ui/badge';
@@ -189,6 +183,93 @@ function RecentActions() {
   );
 }
 
+/** Équilibre offre et demande, une ligne par domaine, sans surcharge. */
+function DomainBalance({ domains }: { domains: Metrics['domains'] }) {
+  const rows = domains
+    .map((d) => ({ ...d, demand: d.menteeInterests + d.requests }))
+    .sort((a, b) => b.demand - b.mentors - (a.demand - a.mentors));
+  const max = Math.max(1, ...rows.map((r) => Math.max(r.mentors, r.demand)));
+  const status = (r: (typeof rows)[number]) =>
+    r.demand > 0 && r.mentors === 0
+      ? { tone: 'danger' as const, label: 'Aucun mentor' }
+      : r.demand > r.mentors * 2
+        ? { tone: 'warning' as const, label: 'À renforcer' }
+        : { tone: 'success' as const, label: 'Équilibré' };
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[420px] text-left text-[14px]">
+        <thead>
+          <tr className="border-y border-border/70 bg-surface-muted/50 text-[12px] font-semibold tracking-wide text-muted-foreground uppercase">
+            <th scope="col" className="px-5 py-2.5 sm:px-6">
+              Domaine
+            </th>
+            <th scope="col" className="hidden px-3 py-2.5 sm:table-cell">
+              Offre et demande
+            </th>
+            <th scope="col" className="px-3 py-2.5 text-right">
+              Mentors
+            </th>
+            <th scope="col" className="px-3 py-2.5 text-right">
+              Demande
+            </th>
+            <th scope="col" className="px-5 py-2.5 text-right sm:px-6">
+              État
+            </th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-border/60">
+          {rows.map((r) => {
+            const st = status(r);
+            return (
+              <tr key={r.id}>
+                <td
+                  className="max-w-[220px] truncate px-5 py-2.5 text-ink-900 sm:px-6"
+                  title={r.name}
+                >
+                  {r.name}
+                </td>
+                <td className="hidden w-[30%] px-3 py-2.5 sm:table-cell">
+                  <div className="grid gap-1" aria-hidden>
+                    <span className="h-1.5 rounded-full bg-surface-muted">
+                      <span
+                        className="block h-full rounded-full bg-[#2f8a63]"
+                        style={{ width: `${(r.mentors / max) * 100}%` }}
+                      />
+                    </span>
+                    <span className="h-1.5 rounded-full bg-surface-muted">
+                      <span
+                        className="block h-full rounded-full bg-[#c0502a]"
+                        style={{ width: `${(r.demand / max) * 100}%` }}
+                      />
+                    </span>
+                  </div>
+                </td>
+                <td className="px-3 py-2.5 text-right font-semibold tabular-nums">{r.mentors}</td>
+                <td className="px-3 py-2.5 text-right tabular-nums">{r.demand}</td>
+                <td className="px-5 py-2.5 text-right sm:px-6">
+                  <Badge tone={st.tone}>{st.label}</Badge>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colSpan={5} className="px-5 pt-3 pb-1 text-[12px] text-muted-foreground sm:px-6">
+              <span className="mr-4 inline-flex items-center gap-1.5">
+                <span className="size-2 rounded-full bg-[#2f8a63]" aria-hidden /> Mentors
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="size-2 rounded-full bg-[#c0502a]" aria-hidden /> Demande
+              </span>
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  );
+}
+
 export function AdminDashboard() {
   const { data: me } = useMe();
   const overview = useAdminOverview();
@@ -326,22 +407,11 @@ export function AdminDashboard() {
           <div className="grid gap-6 lg:grid-cols-3">
             <Panel
               title="Offre et demande par domaine"
-              description="Repérez les domaines où il manque des mentors."
+              description="Mentors disponibles face à la demande (mentorés intéressés et demandes reçues)."
               className="lg:col-span-2"
+              bodyClassName="px-0 pb-2 sm:px-0"
             >
-              <GroupedBars
-                series={['Mentors', 'Mentorés intéressés', 'Demandes reçues']}
-                rows={m.domains
-                  .filter((d) => d.isActive)
-                  .map((d) => ({
-                    label: d.name,
-                    values: [d.mentors, d.menteeInterests, d.requests],
-                    note:
-                      d.mentors === 0 && d.menteeInterests + d.requests > 0 ? (
-                        <Badge tone="warning">Mentors manquants</Badge>
-                      ) : undefined,
-                  }))}
-              />
+              <DomainBalance domains={m.domains.filter((d) => d.isActive)} />
             </Panel>
             <div className="grid content-start gap-6">
               <Panel title="Mentorats" description="Depuis le lancement.">

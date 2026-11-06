@@ -20,8 +20,7 @@ import {
   type PathProposal,
 } from './api';
 
-const PRIVACY_NOTE =
-  'Votre texte est envoyé à OpenAI, sans votre nom. Évitez d’y écrire des informations personnelles.';
+const PRIVACY_NOTE = 'Évitez d’y écrire des informations personnelles (téléphone, adresse…).';
 
 /** Orientation : le besoin en langage courant devient des domaines et compétences à explorer. */
 export function OrientationPanel({
@@ -156,7 +155,6 @@ export function OrientationPanel({
 export function WhyThisMentor({ mentorId }: { mentorId: string }) {
   const explanation = useMentorExplanation(mentorId);
   const online = useOnline();
-  const aiOn = useAiAvailable();
   const data = explanation.data;
 
   if (!data) {
@@ -173,11 +171,6 @@ export function WhyThisMentor({ mentorId }: { mentorId: string }) {
           <Sparkles className="size-3.5" aria-hidden />
           {explanation.isPending ? 'Analyse en cours…' : 'Pourquoi ce mentor ?'}
         </button>
-        {aiOn && (
-          <span className="text-[12px] text-muted-foreground">
-            Vos objectifs sont envoyés à OpenAI, sans votre nom.
-          </span>
-        )}
       </span>
     );
   }
@@ -270,7 +263,7 @@ export function PathProposalDialog({
           <Field
             label="Sur quoi insister ?"
             optional
-            hint="L’objectif initial, le domaine et la situation du mentoré sont envoyés à OpenAI, sans aucun nom ni message."
+            hint="Par exemple : priorité au premier emploi, ou à la préparation d’un concours."
           >
             <Input
               value={focus}

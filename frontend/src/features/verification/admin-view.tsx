@@ -4,29 +4,29 @@ import {
   AlertTriangle,
   BadgeCheck,
   ExternalLink,
+  Eye,
   FileText,
   GraduationCap,
-  Inbox,
   ShieldCheck,
   ShieldX,
 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { AccessDenied, EmptyState, ErrorState, PageHeader } from '@/components/feedback/states';
+import { AccessDenied, ErrorState, PageHeader } from '@/components/feedback/states';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
 import { NativeSelect, Textarea } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/misc';
 import { useMe } from '@/features/auth/api';
 import { errorMessage } from '@/lib/api';
 import { formatDate, fullName, plural } from '@/lib/format';
 import { modalityLabels } from '@/lib/labels';
 import type { AdminVerification, VerificationKind, VerificationRequestStatus } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { Pagination } from '@/components/admin/data-table';
+import { DataTable } from '@/components/admin/data-table';
+import { Segmented } from '@/components/admin/ui';
 import { documentUrl, useAdminVerifications, useDecision } from './api';
 import { RequestStatusBadge } from './parts';
 
@@ -136,14 +136,18 @@ function DecisionDialog({
   );
 }
 
-function RequestCard({ r }: { r: AdminVerification }) {
+function RequestCard({ r, bare = false }: { r: AdminVerification; bare?: boolean }) {
   const [decision, setDecision] = useState<'approve' | 'reject' | null>(null);
   const p = r.mentorProfile;
   const application = r.kind === 'MENTOR_APPLICATION';
   const blocked = application && r.history.activeMentorshipsAsMentee > 0;
 
   return (
-    <article className="rounded-lg bg-surface p-5 shadow-card ring-1 ring-border/70 sm:p-6">
+    <article
+      className={cn(
+        bare ? '' : 'rounded-lg bg-surface p-5 shadow-card ring-1 ring-border/70 sm:p-6',
+      )}
+    >
       <header className="flex flex-wrap items-start gap-3">
         <Avatar person={r.user} size="lg" />
         <div className="min-w-0 flex-1">
@@ -273,108 +277,160 @@ function RequestCard({ r }: { r: AdminVerification }) {
 }
 
 /** File d'examen des vérifications de profil et des candidatures de mentor. */
-const PER_PAGE = 5;
-
 export function AdminVerificationsView() {
   const { data: me } = useMe();
   const [status, setStatus] = useState<VerificationRequestStatus>('PENDING');
   const [kind, setKind] = useState<VerificationKind | ''>('');
   const list = useAdminVerifications(status, kind || undefined);
-  const [page, setPage] = useState(1);
+  const [openId, setOpenId] = useState<string | null>(null);
   if (!me) return null;
   if (me.role !== 'ADMIN') {
     return <AccessDenied message="Cet espace est réservé à l’équipe d’administration." />;
   }
+  const rows = list.data ?? [];
+  const opened = rows.find((r) => r.id === openId) ?? null;
 
   return (
-    <div className="mx-auto max-w-5xl animate-fade-in">
+    <div className="animate-fade-in">
       <PageHeader
         title="Vérifications"
         description="Profils de mentors à vérifier et candidatures de mentorés qui souhaitent devenir mentors."
       />
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-        <div
-          role="tablist"
-          aria-label="Statut"
-          className="inline-flex rounded-full bg-surface-muted p-1"
-        >
-          {TABS.map((t) => (
-            <button
-              key={t.value}
-              type="button"
-              role="tab"
-              aria-selected={status === t.value}
-              onClick={() => {
-                setStatus(t.value);
-                setPage(1);
-              }}
-              className={cn(
-                'h-9 rounded-full px-4 text-[14px] font-semibold transition-colors',
-                status === t.value
-                  ? 'bg-surface text-ink-900 shadow-card'
-                  : 'text-muted-foreground hover:text-ink-900',
-              )}
+      <div className="mb-4">
+        <Segmented
+          label="Statut"
+          value={status}
+          onChange={setStatus}
+          options={TABS.map((t) => ({ value: t.value, label: t.label }))}
+        />
+      </div>
+      {list.isError ? (
+        <ErrorState error={list.error} onRetry={() => void list.refetch()} />
+      ) : (
+        <DataTable
+          caption="Demandes de vérification"
+          loading={list.isPending}
+          rows={rows}
+          rowKey={(r) => r.id}
+          searchText={(r) =>
+            `${r.user.firstName} ${r.user.lastName} ${r.user.email} ${r.mentorProfile?.headline ?? ''}`
+          }
+          searchPlaceholder="Nom, email ou titre"
+          empty={
+            status === 'PENDING'
+              ? 'Aucune demande en attente : tout est à jour.'
+              : 'Aucune demande dans cette catégorie.'
+          }
+          toolbar={
+            <NativeSelect
+              aria-label="Type de demande"
+              value={kind}
+              onChange={(e) => setKind(e.target.value as VerificationKind | '')}
+              className="h-10 w-auto min-w-48 py-0 text-[14px]"
             >
-              {t.label}
-            </button>
-          ))}
-        </div>
-        <label className="flex items-center gap-2 text-[14px]">
-          <span className="sr-only">Type de demande</span>
-          <NativeSelect
-            value={kind}
-            onChange={(e) => {
-              setKind(e.target.value as VerificationKind | '');
-              setPage(1);
-            }}
-            className="h-10 w-auto"
+              <option value="">Tous les types</option>
+              <option value="MENTOR_APPLICATION">Candidatures mentor</option>
+              <option value="MENTOR_VERIFICATION">Vérifications de profil</option>
+            </NativeSelect>
+          }
+          columns={[
+            {
+              key: 'person',
+              header: 'Personne',
+              sortValue: (r) => `${r.user.lastName} ${r.user.firstName}`,
+              cell: (r) => (
+                <div className="flex min-w-0 items-center gap-3">
+                  <Avatar person={r.user} size="sm" />
+                  <div className="max-w-[200px] min-w-0">
+                    <p className="truncate font-semibold text-ink-900">{fullName(r.user)}</p>
+                    <p className="truncate text-[12px] text-muted-foreground">{r.user.email}</p>
+                  </div>
+                </div>
+              ),
+            },
+            {
+              key: 'kind',
+              header: 'Type',
+              sortValue: (r) => r.kind,
+              cell: (r) => (
+                <Badge tone={r.kind === 'MENTOR_APPLICATION' ? 'amber' : 'ink'}>
+                  {r.kind === 'MENTOR_APPLICATION' ? (
+                    <GraduationCap aria-hidden />
+                  ) : (
+                    <ShieldCheck aria-hidden />
+                  )}
+                  {kindLabel[r.kind]}
+                </Badge>
+              ),
+            },
+            {
+              key: 'profile',
+              header: 'Profil',
+              hideBelow: 'lg',
+              cell: (r) => (
+                <span className="line-clamp-1 max-w-[260px] text-muted-foreground">
+                  {r.mentorProfile?.headline ?? '—'}
+                </span>
+              ),
+            },
+            {
+              key: 'docs',
+              header: 'Justificatifs',
+              align: 'right',
+              hideBelow: 'md',
+              sortValue: (r) => r.documents.length,
+              cell: (r) => (
+                <span className="inline-flex items-center gap-1 tabular-nums">
+                  <FileText className="size-3.5 text-muted-foreground" aria-hidden />
+                  {r.documents.length}
+                </span>
+              ),
+            },
+            {
+              key: 'date',
+              header: 'Envoyée le',
+              hideBelow: 'sm',
+              sortValue: (r) => r.createdAt,
+              cell: (r) => (
+                <span className="whitespace-nowrap text-muted-foreground">
+                  {formatDate(r.createdAt)}
+                </span>
+              ),
+            },
+            {
+              key: 'status',
+              header: 'Statut',
+              hideBelow: 'sm',
+              cell: (r) => <RequestStatusBadge status={r.status} />,
+            },
+            {
+              key: 'actions',
+              header: 'Actions',
+              align: 'right',
+              cell: (r) => (
+                <Button
+                  size="sm"
+                  variant={r.status === 'PENDING' ? 'primary' : 'secondary'}
+                  onClick={() => setOpenId(r.id)}
+                >
+                  <Eye aria-hidden />
+                  {r.status === 'PENDING' ? 'Examiner' : 'Voir'}
+                </Button>
+              ),
+            },
+          ]}
+        />
+      )}
+      {opened && (
+        <Dialog open onOpenChange={(o) => !o && setOpenId(null)}>
+          <DialogContent
+            title={`${kindLabel[opened.kind]} · ${fullName(opened.user)}`}
+            className="sm:max-w-2xl"
           >
-            <option value="">Toutes les demandes</option>
-            <option value="MENTOR_APPLICATION">Candidatures mentor</option>
-            <option value="MENTOR_VERIFICATION">Vérifications de profil</option>
-          </NativeSelect>
-        </label>
-      </div>
-      <div className="mt-6 grid gap-4">
-        {list.isPending ? (
-          <>
-            <Skeleton className="h-64" />
-            <Skeleton className="h-64" />
-          </>
-        ) : list.isError ? (
-          <ErrorState error={list.error} onRetry={() => void list.refetch()} />
-        ) : list.data.length === 0 ? (
-          <EmptyState
-            icon={Inbox}
-            title={status === 'PENDING' ? 'Aucune demande en attente' : 'Aucune demande'}
-            description={
-              status === 'PENDING'
-                ? 'Les nouvelles demandes de vérification et candidatures apparaîtront ici.'
-                : 'Aucune demande ne correspond à ce filtre.'
-            }
-          />
-        ) : (
-          <>
-            {list.data.slice((page - 1) * PER_PAGE, page * PER_PAGE).map((r) => (
-              <RequestCard key={r.id} r={r} />
-            ))}
-            {list.data.length > PER_PAGE && (
-              <div className="overflow-hidden rounded-xl bg-surface ring-1 ring-border/70 [&>div]:border-t-0">
-                <Pagination
-                  page={page}
-                  totalPages={Math.ceil(list.data.length / PER_PAGE)}
-                  total={list.data.length}
-                  pageSize={PER_PAGE}
-                  onPageChange={(p) => {
-                    setPage(p);
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                />
-              </div>
-            )}
-          </>
-        )}
-      </div>
+            <RequestCard r={opened} bare />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

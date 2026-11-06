@@ -24,6 +24,7 @@ import { Skeleton } from '@/components/ui/misc';
 import { ConfirmedBadge } from './mentor-card';
 import { WhyThisMentor } from '@/features/ai/ai-parts';
 import { useMe } from '@/features/auth/api';
+import { ProfileBanner } from '@/features/account/profile-banner';
 import { useMentor, useMentorAvailability, useMentors } from '@/features/catalog/api';
 import { BookDialog, groupByDay } from '@/features/scheduling/book-dialog';
 import { isApiError } from '@/lib/api';
@@ -158,6 +159,7 @@ function WhyBox({ mentorId }: { mentorId: string }) {
 export function MentorProfile() {
   const { id } = useParams<{ id: string }>();
   const { data: mentor, isPending, isError, error, refetch } = useMentor(id);
+  const { data: viewer } = useMe();
 
   if (isError) {
     if (isApiError(error) && error.statusCode === 404) {
@@ -195,16 +197,11 @@ export function MentorProfile() {
         <div className="grid min-w-0 gap-2">
           {/* Carte d'en-tête : couverture, avatar, identité, actions */}
           <section className="overflow-hidden rounded-lg bg-surface shadow-card ring-1 ring-border/70">
-            <div className="relative isolate h-32 overflow-hidden bg-ink-900 sm:h-48">
-              <div className="pattern-kente absolute inset-0 -z-10 opacity-[0.12]" aria-hidden />
-              <div
-                className="absolute -top-16 right-10 -z-10 size-72 rounded-full bg-amber-400/25 blur-3xl"
-                aria-hidden
-              />
-              <div
-                className="absolute -bottom-24 left-1/3 -z-10 size-64 rounded-full bg-teal-500/25 blur-3xl"
-                aria-hidden
-              />
+            <ProfileBanner
+              person={mentor}
+              editable={viewer?.id === mentor.id}
+              className="h-32 sm:h-48"
+            >
               <Link
                 href="/mentors"
                 className="absolute top-3 left-3 inline-flex h-8 items-center gap-1.5 rounded-full bg-black/25 px-3 text-[13px] font-semibold text-white backdrop-blur-sm transition-colors hover:bg-black/40"
@@ -212,7 +209,7 @@ export function MentorProfile() {
                 <ArrowLeft className="size-4" aria-hidden />
                 Annuaire
               </Link>
-            </div>
+            </ProfileBanner>
             <div className="px-5 pb-6 sm:px-6">
               <Avatar
                 person={mentor}

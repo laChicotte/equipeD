@@ -47,3 +47,6 @@ next-env.d.ts
 /blob-report/
 /playwright/.cache/
 /.next-e2e/
+/.next-test/
+/.next-check/
+/.next-push/

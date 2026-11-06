@@ -255,7 +255,7 @@ export function AssistantWidget({ role }: { role: AssistantRole }) {
               </button>
             </div>
             <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
-              Réponses générées par IA (OpenAI), à partir du guide de la plateforme : elles peuvent
+              Réponses générées automatiquement à partir du guide de la plateforme : elles peuvent
               contenir des erreurs. N’écrivez pas d’informations personnelles.
             </p>
           </form>

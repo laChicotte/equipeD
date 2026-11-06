@@ -12,14 +12,28 @@ import {
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { ApiTags } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, IsString, Length, Max, Min } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import {
+  IsEmail,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  Length,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 import { recordAudit } from '../../common/audit.js';
 import { CurrentUser, Roles } from '../../common/auth/decorators.js';
 import type { AuthUser } from '../../common/auth/auth-user.js';
 import { conflict, forbidden, notFound } from '../../common/errors.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import { NotificationsService } from '../notifications/notifications.module.js';
+import { MailService } from '../mail/mail.module.js';
+import { AppConfigService } from '../../config/app-config.service.js';
+import { generateSessionToken, hashSessionToken } from '../../common/auth/session-token.js';
+import { hashPassword } from '../auth/password.js';
 import { buildImpactCsv } from './impact-report.js';
 
 export class ChangeRoleDto {
@@ -27,6 +41,28 @@ export class ChangeRoleDto {
   @IsIn(['ADMIN', 'MENTOR', 'MENTEE'], { message: 'Rôle attendu : ADMIN, MENTOR ou MENTEE.' })
   role!: 'ADMIN' | 'MENTOR' | 'MENTEE';
 }
+
+export class InviteTeamMemberDto {
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim().toLowerCase() : value,
+  )
+  @IsEmail({}, { message: 'Adresse email invalide.' })
+  @MaxLength(254)
+  email!: string;
+
+  @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString()
+  @Length(1, 80, { message: 'Le prénom est obligatoire.' })
+  firstName!: string;
+
+  @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString()
+  @Length(1, 80, { message: 'Le nom est obligatoire.' })
+  lastName!: string;
+}
+
+/** Une invitation reste valable 72 heures. */
+const INVITATION_TTL_MS = 72 * 3_600_000;
 
 export class RevokeCertificateDto {
   @IsString()
@@ -69,7 +105,75 @@ export class PlatformService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
+    private readonly mail: MailService,
+    private readonly config: AppConfigService,
   ) {}
+
+  /**
+   * Invite une nouvelle personne dans l'équipe : son compte administrateur est créé et elle
+   * choisit elle-même son mot de passe grâce à un lien personnel (72 h, usage unique), envoyé
+   * par email. Sans service d'email, le lien est renvoyé pour être remis en main propre.
+   */
+  async invite(actor: AuthUser, dto: InviteTeamMemberDto) {
+    const existing = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+      select: { id: true },
+    });
+    if (existing) {
+      throw conflict(
+        'EMAIL_TAKEN',
+        'Un compte existe déjà avec cette adresse : retrouvez-le dans « Nommer un administrateur ».',
+      );
+    }
+    const token = generateSessionToken();
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + INVITATION_TTL_MS);
+    // Mot de passe aléatoire jamais communiqué : la personne choisit le sien avec le lien.
+    const passwordHash = await hashPassword(generateSessionToken());
+    const user = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.user.create({
+        data: {
+          email: dto.email,
+          firstName: dto.firstName,
+          lastName: dto.lastName,
+          role: 'ADMIN',
+          passwordHash,
+          onboardedAt: now,
+          emailVerifiedAt: now,
+        },
+        select: { id: true, email: true, firstName: true, lastName: true },
+      });
+      await tx.passwordResetToken.create({
+        data: {
+          userId: created.id,
+          tokenHash: hashSessionToken(token, this.config.get('SESSION_SECRET')),
+          expiresAt,
+          createdById: actor.id,
+        },
+      });
+      await recordAudit(tx, actor, {
+        action: 'TEAM_MEMBER_INVITED',
+        targetType: 'USER',
+        targetId: created.id,
+        summary: `${dto.firstName} ${dto.lastName} invité·e dans l'équipe d'administration`,
+      });
+      return created;
+    });
+    const path = `/reinitialiser-mot-de-passe?jeton=${encodeURIComponent(token)}`;
+    const emailed = await this.mail.send({
+      to: user.email,
+      subject: 'Invitation dans l’équipe TalentsConnect',
+      heading: `${actor.firstName} vous invite dans l’équipe`,
+      paragraphs: [
+        `Bonjour ${user.firstName},`,
+        `${actor.firstName} ${actor.lastName} vous a ajouté·e à l’équipe d’administration de TalentsConnect : vérification des profils, modération des contenus et suivi de la plateforme.`,
+        'Choisissez votre mot de passe pour activer votre compte. Ce lien est valable 72 heures et ne fonctionne qu’une seule fois.',
+      ],
+      action: { label: 'Activer mon compte', url: this.mail.link(path) },
+      footnote: 'Vous ne vous attendiez pas à cette invitation ? Ignorez simplement cet email.',
+    });
+    return { id: user.id, emailed, path: emailed ? null : path, expiresAt };
+  }
 
   /** Tableau de pilotage : uniquement des chiffres calculés sur la base, aucun contenu privé. */
   async metrics() {
@@ -486,6 +590,12 @@ export class PlatformController {
   @Get('team')
   team() {
     return this.service.team();
+  }
+
+  /** Invite une nouvelle personne dans l'équipe d'administration (email avec lien d'activation). */
+  @Post('team/invite')
+  invite(@CurrentUser() actor: AuthUser, @Body() dto: InviteTeamMemberDto) {
+    return this.service.invite(actor, dto);
   }
 
   @Patch('users/:id/role')

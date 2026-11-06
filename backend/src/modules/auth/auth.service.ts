@@ -149,6 +149,7 @@ export class AuthService {
         firstName: true,
         lastName: true,
         avatarUpdatedAt: true,
+        bannerUpdatedAt: true,
         role: true,
         timezone: true,
         onboardedAt: true,

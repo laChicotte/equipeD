@@ -23,6 +23,7 @@ import { AssistantWidget } from '@/features/ai/assistant-widget';
 import { OfflineBanner } from '@/features/offline/offline-banner';
 import type { Me } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { Avatar } from '@/components/ui/avatar';
 import { Logo } from './logo';
 import { usePushSync } from '@/lib/push';
 import { NotificationBell } from './notification-bell';
@@ -90,16 +91,22 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
                     onClick={onNavigate}
                     aria-current={active ? 'page' : undefined}
                     className={cn(
-                      'flex h-10 items-center gap-3 rounded-md px-3 text-[14px] font-medium transition-colors',
+                      'relative flex h-10 items-center gap-3 rounded-lg px-3 text-[14px] font-medium transition-colors',
                       active
                         ? 'bg-white/10 text-white'
-                        : 'text-ink-100 hover:bg-white/5 hover:text-white',
+                        : 'text-ink-100/85 hover:bg-white/5 hover:text-white',
                     )}
                   >
+                    {active && (
+                      <span
+                        className="absolute top-2 bottom-2 left-0 w-[3px] rounded-r-full bg-amber-400"
+                        aria-hidden
+                      />
+                    )}
                     <Icon
                       className={cn(
                         'size-[18px] shrink-0',
-                        active ? 'text-amber-400' : 'text-ink-100/70',
+                        active ? 'text-amber-400' : 'text-ink-100/60',
                       )}
                       aria-hidden
                     />
@@ -150,6 +157,17 @@ export function AdminShell({ me, children }: { me: Me; children: ReactNode }) {
         <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col bg-ink-950 lg:flex print:hidden">
           <SidebarBrand />
           <SidebarNav />
+          <div className="border-t border-white/10 p-3">
+            <div className="flex items-center gap-3 rounded-lg p-2">
+              <Avatar person={me} size="sm" className="ring-2 ring-white/10" />
+              <span className="min-w-0">
+                <span className="block truncate text-[13px] font-semibold text-white">
+                  {me.firstName} {me.lastName}
+                </span>
+                <span className="block truncate text-[12px] text-ink-100/60">Administration</span>
+              </span>
+            </div>
+          </div>
         </aside>
 
         {/* Tiroir (mobile et tablette) */}

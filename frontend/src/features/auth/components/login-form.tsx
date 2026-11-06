@@ -12,7 +12,7 @@ import { homeFor, useLogin } from '@/features/auth/api';
 import { api } from '@/lib/api';
 import { applyApiError } from '@/lib/forms';
 import type { Me } from '@/lib/types';
-import { isDemoMode, isStaff } from '@/lib/utils';
+import { isStaff } from '@/lib/utils';
 import { AuthHeading, PasswordInput } from './password-input';
 
 const schema = z.object({
@@ -20,31 +20,6 @@ const schema = z.object({
   password: z.string().min(1, 'Saisissez votre mot de passe.'),
 });
 type Values = z.infer<typeof schema>;
-
-const DEMO_ACCOUNTS = [
-  {
-    email: 'aminata@demo.talents-connectes.test',
-    label: 'Aminata',
-    role: 'Mentorée — parcours principal',
-  },
-  {
-    email: 'fatoumata@demo.talents-connectes.test',
-    label: 'Fatoumata',
-    role: 'Mentore — développement web',
-  },
-  {
-    email: 'mohamed@demo.talents-connectes.test',
-    label: 'Mohamed',
-    role: 'Mentoré déjà accompagné',
-  },
-  {
-    email: 'thierno@demo.talents-connectes.test',
-    label: 'Thierno',
-    role: 'Mentor — entrepreneuriat',
-  },
-  { email: 'admin@demo.talents-connectes.test', label: 'Admin', role: 'Modération' },
-];
-const DEMO_PASSWORD = 'Mentorat2026!';
 
 function safeNext(next: string | null): string | null {
   return next && next.startsWith('/') && !next.startsWith('//') ? next : null;
@@ -59,7 +34,7 @@ export function LoginForm() {
     resolver: zodResolver(schema),
     defaultValues: { email: '', password: '' },
   });
-  const { register, handleSubmit, setError, setValue, formState } = form;
+  const { register, handleSubmit, setError, formState } = form;
 
   const onSubmit = handleSubmit((values) => {
     login.mutate(values, {
@@ -104,31 +79,6 @@ export function LoginForm() {
           Créer un compte
         </Link>
       </p>
-
-      {isDemoMode && (
-        <details className="group mt-8 border-t border-border pt-4 text-sm">
-          <summary className="cursor-pointer font-medium text-muted-foreground hover:text-foreground">
-            Essayer avec un compte de démonstration
-          </summary>
-          <ul className="mt-2 grid gap-0.5">
-            {DEMO_ACCOUNTS.map((a) => (
-              <li key={a.email}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setValue('email', a.email, { shouldValidate: true });
-                    setValue('password', DEMO_PASSWORD, { shouldValidate: true });
-                  }}
-                  className="flex w-full items-center justify-between gap-3 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-surface-muted"
-                >
-                  <span className="font-semibold">{a.label}</span>
-                  <span className="truncate text-xs text-muted-foreground">{a.role}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
     </div>
   );
 }

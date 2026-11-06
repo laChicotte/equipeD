@@ -59,9 +59,42 @@ async function readBody(req: Request, max: number): Promise<Buffer> {
 const tooLarge = () =>
   new DomainError(HttpStatus.PAYLOAD_TOO_LARGE, 'AVATAR_TOO_LARGE', 'La photo dépasse 1 Mo.');
 
+/** Photo de profil ou bannière : même contrôle, même règle de visibilité. */
+export type ImageKind = 'avatar' | 'banner';
+
 @Injectable()
 export class AvatarService {
   constructor(private readonly prisma: PrismaService) {}
+
+  async saveBanner(user: AuthUser, data: Buffer) {
+    const mimeType = this.check(data);
+    const now = new Date();
+    await this.prisma.$transaction([
+      this.prisma.userBanner.upsert({
+        where: { userId: user.id },
+        create: { userId: user.id, mimeType, data: new Uint8Array(data) },
+        update: { mimeType, data: new Uint8Array(data) },
+      }),
+      this.prisma.user.update({ where: { id: user.id }, data: { bannerUpdatedAt: now } }),
+    ]);
+    return { bannerUpdatedAt: now };
+  }
+
+  async removeBanner(user: AuthUser) {
+    await this.prisma.$transaction([
+      this.prisma.userBanner.deleteMany({ where: { userId: user.id } }),
+      this.prisma.user.update({ where: { id: user.id }, data: { bannerUpdatedAt: null } }),
+    ]);
+  }
+
+  private check(data: Buffer) {
+    if (data.length === 0) throw unprocessable('AVATAR_EMPTY', 'Aucune image reçue.');
+    const mimeType = detectImageType(data);
+    if (!mimeType) {
+      throw unprocessable('AVATAR_INVALID_TYPE', 'Formats acceptés : JPEG, PNG ou WebP.');
+    }
+    return mimeType;
+  }
 
   async save(user: AuthUser, data: Buffer) {
     if (data.length === 0) {
@@ -96,22 +129,24 @@ export class AvatarService {
    *  - sinon : la personne elle-même, un administrateur, ou quelqu'un lié par une demande,
    *    un mentorat ou un groupe d'accompagnement. Tout autre cas répond 404 (on ne révèle pas l'existence de la photo).
    */
-  async read(ownerId: string, viewer: AuthUser | undefined) {
+  async read(ownerId: string, viewer: AuthUser | undefined, kind: ImageKind = 'avatar') {
     const owner = await this.prisma.user.findUnique({
       where: { id: ownerId },
       select: {
         status: true,
-        avatar: { select: { mimeType: true, data: true } },
+        avatar: kind === 'avatar' ? { select: { mimeType: true, data: true } } : false,
+        banner: kind === 'banner' ? { select: { mimeType: true, data: true } } : false,
         mentorProfile: { select: { isPublished: true } },
       },
     });
-    const missing = notFound('AVATAR_NOT_FOUND', 'Photo introuvable.');
-    if (!owner?.avatar || owner.status !== 'ACTIVE') throw missing;
+    const image = kind === 'avatar' ? owner?.avatar : owner?.banner;
+    const missing = notFound('AVATAR_NOT_FOUND', 'Image introuvable.');
+    if (!image || owner?.status !== 'ACTIVE') throw missing;
 
     const publicMentor = owner.mentorProfile?.isPublished === true;
     if (!publicMentor && !(await this.canSeePrivate(ownerId, viewer))) throw missing;
 
-    return { ...owner.avatar, isPublic: publicMentor };
+    return { ...image, isPublic: publicMentor };
   }
 
   private async canSeePrivate(ownerId: string, viewer: AuthUser | undefined) {
@@ -150,6 +185,39 @@ export class AvatarController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(@CurrentUser() user: AuthUser) {
     await this.avatars.remove(user);
+  }
+
+  /** Bannière du profil : corps binaire (JPEG, PNG ou WebP), 1 Mo maximum. */
+  @Put('profile/me/banner')
+  @ApiConsumes('image/jpeg', 'image/png', 'image/webp')
+  async uploadBanner(@CurrentUser() user: AuthUser, @Req() req: Request) {
+    return this.avatars.saveBanner(user, await readBody(req, AVATAR_MAX_BYTES));
+  }
+
+  @Delete('profile/me/banner')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async removeBanner(@CurrentUser() user: AuthUser) {
+    await this.avatars.removeBanner(user);
+  }
+
+  /** Bannière d'un utilisateur (mêmes règles de visibilité que la photo). */
+  @Public()
+  @Get('users/:id/banner')
+  async readBanner(
+    @Param('id') id: string,
+    @Req() req: AuthenticatedRequest,
+    @Res() res: Response,
+  ) {
+    const banner = await this.avatars.read(id, req.user, 'banner');
+    res
+      .status(200)
+      .type(banner.mimeType)
+      .set({
+        'Cache-Control': `${banner.isPublic ? 'public' : 'private'}, max-age=31536000, immutable`,
+        'Content-Disposition': 'inline',
+        'Cross-Origin-Resource-Policy': 'same-origin',
+      })
+      .send(Buffer.from(banner.data));
   }
 
   /** Photo d'un utilisateur (l'URL contient ?v=<date> : la réponse peut être mise en cache longtemps). */

@@ -28,6 +28,7 @@ const mentorCardSelect = {
   firstName: true,
   lastName: true,
   avatarUpdatedAt: true,
+  bannerUpdatedAt: true,
   mentorProfile: {
     select: {
       headline: true,
@@ -484,6 +485,7 @@ export class MentorsService {
       firstName: row.firstName,
       lastName: row.lastName,
       avatarUpdatedAt: row.avatarUpdatedAt,
+      bannerUpdatedAt: row.bannerUpdatedAt,
       headline: p.headline,
       bio: excerpt ? truncate(p.bio, 220) : p.bio,
       currentPosition: p.currentPosition,
