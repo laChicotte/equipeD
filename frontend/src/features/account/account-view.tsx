@@ -2,6 +2,7 @@
 
 import {
   BadgeCheck,
+  Compass,
   Database,
   Download,
   GraduationCap,
@@ -34,6 +35,7 @@ import type { Me } from '@/lib/types';
 import { cn, isStaff } from '@/lib/utils';
 import { useAccountMutations } from './api';
 import { AvatarSection } from './avatar-editor';
+import { startGuidedTour } from '@/features/tour/guided-tour';
 
 /** Bloc de réglages : un titre, puis des lignes séparées. */
 function Panel({
@@ -588,6 +590,16 @@ export function AccountView() {
               {label}
             </button>
           ))}
+          {!isStaff(me.role) && (
+            <button
+              type="button"
+              onClick={startGuidedTour}
+              className="inline-flex h-10 shrink-0 items-center gap-2.5 rounded-md px-3 text-left text-[14px] font-medium whitespace-nowrap text-teal-700 transition-colors hover:bg-surface hover:text-ink-900 lg:mt-2 lg:w-full lg:border-t lg:border-border/70 lg:pt-2 lg:whitespace-normal"
+            >
+              <Compass className="size-4 shrink-0" aria-hidden />
+              Revoir la visite guidée
+            </button>
+          )}
         </nav>
         <div className="min-w-0">
           {active === 'profil' && <ProfileSection me={me} />}

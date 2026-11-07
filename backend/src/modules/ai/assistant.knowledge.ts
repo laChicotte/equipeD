@@ -141,6 +141,7 @@ L'administrateur a son propre espace, avec une barre latérale (un menu à ouvri
 
 ## Mon compte
 Sections : Profil (photo de profil recadrée, prénom, nom, fuseau horaire ; l'email ne se modifie pas), Vérification ou Devenir mentor, Sécurité (changer de mot de passe, se déconnecter de tous les appareils), Données et confidentialité (économie de données, données gardées sur l'appareil, export de toutes ses données au format JSON, suppression définitive du compte par anonymisation).
+Visite guidée : à la première connexion d'un mentoré ou d'un mentor, quelques bulles présentent les rubriques clés (trouver un mentor ou demandes reçues, messagerie, disponibilités, séances, objectifs, certificat). On peut la passer à tout moment ; pour la revoir : « Mon compte », bouton « Revoir la visite guidée ».
 
 ## Connexion faible, hors ligne et application
 - Installer l'application : menu du compte, « Installer l'application » (selon le navigateur ; sur iPhone, utiliser « Sur l'écran d'accueil » de Safari).

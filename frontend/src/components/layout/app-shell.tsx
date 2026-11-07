@@ -32,6 +32,7 @@ import { Logo } from './logo';
 import { PublicFooter, PublicHeader } from './public-header';
 import { NotificationBell } from './notification-bell';
 import { UserMenu } from './user-menu';
+import { GuidedTour } from '@/features/tour/guided-tour';
 
 interface NavItem {
   href: string;
@@ -117,6 +118,9 @@ function navFor(me: Me): NavItem[] {
   ];
 }
 
+/** Repère de la visite guidée sur un lien de navigation (`/mentorats` → `mentorats`). */
+const tourKey = (item: NavItem) => item.href.slice(1);
+
 function isActive(pathname: string, item: NavItem) {
   if (item.exact) return pathname === item.href;
   return pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -159,6 +163,7 @@ function TopNav({
                 <li key={item.href}>
                   <Link
                     href={item.href}
+                    data-tour={tourKey(item)}
                     aria-current={active ? 'page' : undefined}
                     aria-label={item.label}
                     title={item.label}
@@ -237,6 +242,7 @@ function MobileTabBar({ items, counts }: { items: NavItem[]; counts: Record<stri
               <li key={item.href} className="flex-1">
                 <Link
                   href={item.href}
+                  data-tour={tourKey(item)}
                   aria-current={active ? 'page' : undefined}
                   className={cn(
                     'relative flex h-16 flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors',
@@ -306,6 +312,7 @@ function MemberLayout({ me, children }: { me: Me; children: ReactNode }) {
       </main>
       <MobileTabBar items={items} counts={counts} />
       <AssistantWidget role={me.role} />
+      <GuidedTour me={me} />
     </div>
   );
 }
