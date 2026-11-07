@@ -58,7 +58,7 @@ ${p}${button}${foot}
 }
 
 /**
- * Envoi d'emails transactionnels (Resend). Sans clé : désactivé, la plateforme garde son
+ * Envoi d'emails transactionnels (Resend, ou Mailpit en local si MAILPIT_URL). Sans clé : désactivé, la plateforme garde son
  * fonctionnement sans email (lien de réinitialisation remis par l'équipe). Ne lève jamais
  * d'exception : un échec d'envoi n'annule pas l'action principale.
  */
@@ -70,7 +70,13 @@ export class MailService {
 
   get enabled(): boolean {
     // Jamais d'envoi réel pendant les tests automatisés (ils simulent ce service).
-    return this.config.get('RESEND_API_KEY').length > 0 && this.config.get('NODE_ENV') !== 'test';
+    if (this.config.get('NODE_ENV') === 'test') return false;
+    return this.usesMailpit || this.config.get('RESEND_API_KEY').length > 0;
+  }
+
+  /** Développement : emails capturés par Mailpit (interface web sur MAILPIT_URL). */
+  private get usesMailpit(): boolean {
+    return this.config.get('MAILPIT_URL').length > 0;
   }
 
   /** Adresse publique du site, pour les liens des emails. */
@@ -82,21 +88,9 @@ export class MailService {
     if (!this.enabled) return false;
     const { html, text } = renderMail(message);
     try {
-      const res = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        signal: AbortSignal.timeout(10_000),
-        headers: {
-          Authorization: `Bearer ${this.config.get('RESEND_API_KEY')}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          from: this.config.get('MAIL_FROM'),
-          to: [message.to],
-          subject: message.subject,
-          html,
-          text,
-        }),
-      });
+      const res = this.usesMailpit
+        ? await this.sendToMailpit(message, html, text)
+        : await this.sendToResend(message, html, text);
       if (!res.ok) {
         // Jamais l'adresse ni le contenu dans les journaux.
         this.logger.warn(`Email non envoyé (HTTP ${res.status})`);
@@ -107,6 +101,42 @@ export class MailService {
       this.logger.warn(`Email non envoyé : ${(error as Error).name}`);
       return false;
     }
+  }
+
+  /** API d'envoi de Mailpit (https://mailpit.axllent.org/docs/api-v1/). */
+  private sendToMailpit(message: MailMessage, html: string, text: string) {
+    const from = this.config.get('MAIL_FROM');
+    const match = /^\s*(.*?)\s*<([^>]+)>\s*$/.exec(from);
+    return fetch(`${this.config.get('MAILPIT_URL')}/api/v1/send`, {
+      method: 'POST',
+      signal: AbortSignal.timeout(10_000),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        From: match ? { Name: match[1], Email: match[2] } : { Email: from },
+        To: [{ Email: message.to }],
+        Subject: message.subject,
+        HTML: html,
+        Text: text,
+      }),
+    });
+  }
+
+  private sendToResend(message: MailMessage, html: string, text: string) {
+    return fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      signal: AbortSignal.timeout(10_000),
+      headers: {
+        Authorization: `Bearer ${this.config.get('RESEND_API_KEY')}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: this.config.get('MAIL_FROM'),
+        to: [message.to],
+        subject: message.subject,
+        html,
+        text,
+      }),
+    });
   }
 }
 

@@ -47,6 +47,11 @@ export interface AppEnv {
   RESEND_API_KEY: string;
   /** Expéditeur (domaine vérifié chez Resend). */
   MAIL_FROM: string;
+  /**
+   * Développement : URL de Mailpit (ex. http://127.0.0.1:8025). Les emails y sont capturés au
+   * lieu de partir chez Resend. Ignorée en production.
+   */
+  MAILPIT_URL: string;
   /** Adresse publique du site, pour les liens des emails (défaut : première origine de WEB_ORIGINS). */
   PUBLIC_APP_URL: string;
 }
@@ -132,6 +137,9 @@ export function validateEnv(raw: Record<string, unknown>): AppEnv {
     errors.push('VAPID_PUBLIC_KEY et VAPID_PRIVATE_KEY vont ensemble (ou aucune des deux)');
   }
 
+  const mailpitUrl = nodeEnv === 'production' ? '' : optional('MAILPIT_URL').replace(/\/+$/, '');
+  if (mailpitUrl && !/^https?:\/\//.test(mailpitUrl)) errors.push('MAILPIT_URL doit être une URL');
+
   const env: AppEnv = {
     NODE_ENV: nodeEnv as AppEnv['NODE_ENV'],
     PORT: port,
@@ -152,6 +160,7 @@ export function validateEnv(raw: Record<string, unknown>): AppEnv {
     VAPID_SUBJECT: str('VAPID_SUBJECT', 'mailto:contact@talentsconnect.test'),
     RESEND_API_KEY: optional('RESEND_API_KEY'),
     MAIL_FROM: str('MAIL_FROM', 'TalentsConnect <noreply@wistechnologie.com>'),
+    MAILPIT_URL: mailpitUrl,
     PUBLIC_APP_URL: str('PUBLIC_APP_URL', origins[0] ?? 'http://localhost:3000').replace(
       /\/+$/,
       '',

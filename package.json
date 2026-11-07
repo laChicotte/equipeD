@@ -10,6 +10,8 @@
   "scripts": {
     "db:up": "docker compose -f backend/docker-compose.yml up -d",
     "db:down": "docker compose -f backend/docker-compose.yml down",
+    "mail:up": "docker compose -f backend/docker-compose.yml --profile mail up -d mailpit",
+    "mail:down": "docker compose -f backend/docker-compose.yml --profile mail stop mailpit",
     "db:migrate": "pnpm --filter backend prisma:migrate",
     "db:deploy": "pnpm --filter backend prisma:deploy",
     "db:seed": "pnpm --filter backend prisma:seed",
