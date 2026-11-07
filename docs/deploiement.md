@@ -84,7 +84,8 @@ En local, sans HTTPS, le cookie `Secure` de production n'est pas conservé par l
 
 Le site tourne sur le VPS `207.58.174.79` (Ubuntu 24.04, alias SSH `vps-runner`), à côté de la pré-production WIS AI, sans la modifier.
 
-- Adresses : `https://talentsconnect.wistechnologie.com` (enregistrement DNS A chez LWS vers `207.58.174.79`) et `https://207-58-174-79.sslip.io` (sans DNS, toujours disponible).
+- Adresse officielle : `https://d.talentsconnect.fr` (sous-domaine fourni par les organisateurs, enregistrement A vers `207.58.174.79`). Adresses secondaires : `https://talentsconnect.wistechnologie.com` (DNS chez LWS) et `https://207-58-174-79.sslip.io` (sans DNS, toujours disponible).
+- Dans `/opt/talentsconnect/.env` : `PUBLIC_APP_URL=https://d.talentsconnect.fr` (liens des emails) et `WEB_ORIGINS` avec les trois adresses, la principale en premier (contrôle CSRF et WebSocket).
 - `/opt/talentsconnect` : `app/` (clone de `laChicotte/equipeD`), `compose.yml` (copie de `deploy/vps/compose.yml`), `.env` (secrets générés sur le serveur, `chmod 600`), `deploy.sh`.
 - Services Docker : `app` (Next.js + API, écoute seulement sur `127.0.0.1:3300`), `postgres` (volume `talentsconnect_pgdata`), `coturn` (relais des appels).
 - Caddy (sur l'hôte) : bloc de `deploy/vps/Caddyfile.snippet` ajouté à `/etc/caddy/Caddyfile`, certificats HTTPS automatiques. Sauvegarde : `/etc/caddy/Caddyfile.bak-*-avant-talentsconnect`.

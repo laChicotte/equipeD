@@ -1,5 +1,5 @@
 # TalentsConnect (hackathon « Talents connectés ») -> conteneur sur 127.0.0.1:3300
 # À ajouter au Caddyfile de l'hôte, puis : caddy validate --config /etc/caddy/Caddyfile && systemctl reload caddy
-talentsconnect.wistechnologie.com, 207-58-174-79.sslip.io {
+d.talentsconnect.fr, talentsconnect.wistechnologie.com, 207-58-174-79.sslip.io {
 	reverse_proxy 127.0.0.1:3300
 }
